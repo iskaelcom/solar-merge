@@ -10,10 +10,10 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.solarmerge.app"
+      "bundleIdentifier": "com.iskael.solarmerge"
     },
     "android": {
-      "package": "com.solarmerge.app"
+      "package": "com.iskael.solarmerge"
     },
     "web": {
       "bundler": "metro",
