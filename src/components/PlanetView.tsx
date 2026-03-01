@@ -16,20 +16,20 @@ const SATURN_ID = 8;
 
 // Static PNG requires — bundled at build time, zero runtime SVG overhead
 const PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
-  1:  require('../../assets/planets/moon.png'),
-  2:  require('../../assets/planets/mercury.png'),
-  3:  require('../../assets/planets/mars.png'),
-  4:  require('../../assets/planets/venus.png'),
-  5:  require('../../assets/planets/earth.png'),
-  6:  require('../../assets/planets/neptune.png'),
-  7:  require('../../assets/planets/uranus.png'),
-  8:  require('../../assets/planets/saturn.png'),
-  9:  require('../../assets/planets/jupiter.png'),
+  1: require('../../assets/planets/moon.png'),
+  2: require('../../assets/planets/mercury.png'),
+  3: require('../../assets/planets/mars.png'),
+  4: require('../../assets/planets/venus.png'),
+  5: require('../../assets/planets/earth.png'),
+  6: require('../../assets/planets/neptune.png'),
+  7: require('../../assets/planets/uranus.png'),
+  8: require('../../assets/planets/saturn.png'),
+  9: require('../../assets/planets/jupiter.png'),
   10: require('../../assets/planets/sun.png'),
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
-export function PlanetView({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, style }: Props) {
+export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, style }: Props) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
@@ -53,7 +53,7 @@ export function PlanetView({ planetId, x, y, angle = 0, ghost = false, isMergeSp
       tension: 280,
       useNativeDriver: true,
     }).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -89,10 +89,10 @@ export function PlanetView({ planetId, x, y, angle = 0, ghost = false, isMergeSp
       </Animated.View>
     </View>
   );
-}
+});
 
 /** Small inline planet thumbnail (for next-planet preview / evo bar) */
-export function PlanetThumb({ planetId, size = 40 }: { planetId: number; size?: number }) {
+export const PlanetThumb = React.memo(({ planetId, size = 40 }: { planetId: number; size?: number }) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
@@ -109,7 +109,7 @@ export function PlanetThumb({ planetId, size = 40 }: { planetId: number; size?: 
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

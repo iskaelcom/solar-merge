@@ -229,36 +229,43 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const newExplosions = pendingExplosionsRef.current.splice(0);
       const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
 
-      setState((prev) => {
-        if (prev.gameOver) return prev;
+      // Skip React state updates if the physics world is stable and no new events happened.
+      // This is the primary driver for saving CPU/Battery on mobile.
+      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0;
+      const isSceneActive = physicsRef.current.hasActiveBodies();
 
-        const updated: RenderPlanet[] = allPlanets
-          .filter((p) => !spawns.some((s) => s.id === p.id)) // exclude brand-new spawns (added below)
-          .map((p) => {
-            const pos = p.body.position;
-            return {
-              id: p.id,
-              planetId: p.planetId,
-              x: pos.x,
-              y: pos.y,
-              angle: p.body.angle,
-            } as RenderPlanet;
+      if (hasEvents || isSceneActive || stateRef.current.gameOver) {
+        setState((prev) => {
+          if (prev.gameOver) return prev;
+
+          const updated: RenderPlanet[] = allPlanets
+            .filter((p) => !spawns.some((s) => s.id === p.id)) // exclude brand-new spawns (added below)
+            .map((p) => {
+              const pos = p.body.position;
+              return {
+                id: p.id,
+                planetId: p.planetId,
+                x: pos.x,
+                y: pos.y,
+                angle: p.body.angle,
+              } as RenderPlanet;
+            });
+
+          // Add newly merged spawns
+          spawns.forEach((s) => {
+            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0 });
           });
 
-        // Add newly merged spawns
-        spawns.forEach((s) => {
-          updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0 });
+          return {
+            ...prev,
+            planets: updated,
+            explosions: [...prev.explosions, ...newExplosions],
+            mergeSpawnIds: freshMergeIds.length > 0
+              ? [...prev.mergeSpawnIds, ...freshMergeIds]
+              : prev.mergeSpawnIds,
+          };
         });
-
-        return {
-          ...prev,
-          planets: updated,
-          explosions: [...prev.explosions, ...newExplosions],
-          mergeSpawnIds: freshMergeIds.length > 0
-            ? [...prev.mergeSpawnIds, ...freshMergeIds]
-            : prev.mergeSpawnIds,
-        };
-      });
+      }
 
       // Clear merge spawn IDs after pop animation finishes (~900ms)
       if (freshMergeIds.length > 0) {

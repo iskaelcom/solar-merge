@@ -198,7 +198,7 @@ export function GameScreen() {
 }
 
 // ── Stars decoration ──────────────────────────────────────────────────────────
-function Stars() {
+const Stars = React.memo(() => {
   const stars = React.useMemo(
     () =>
       Array.from({ length: 40 }, (_, i) => ({
@@ -230,10 +230,10 @@ function Stars() {
       ))}
     </View>
   );
-}
+});
 
 // ── Evolution progress bar at bottom ─────────────────────────────────────────
-function EvolutionBar() {
+const EvolutionBar = React.memo(() => {
   return (
     <View style={styles.evoBar}>
       {PLANETS.map((p, i) => (
@@ -244,7 +244,7 @@ function EvolutionBar() {
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: {

@@ -40,6 +40,7 @@ export class SolarPhysics {
 
     this.engine = Matter.Engine.create({
       gravity: { x: 0, y: GRAVITY },
+      enableSleeping: true,
     });
 
     this.createWalls();
@@ -164,6 +165,18 @@ export class SolarPhysics {
 
   getAllPlanets(): PhysicsPlanet[] {
     return Array.from(this.planets.values());
+  }
+
+  /**
+   * Returns true if any planet is NOT sleeping.
+   * Useful to skip React renders when the scene is static.
+   */
+  hasActiveBodies(): boolean {
+    if (this.planets.size === 0) return false;
+    for (const p of this.planets.values()) {
+      if (!p.body.isSleeping) return true;
+    }
+    return false;
   }
 
   /** 
