@@ -147,3 +147,7 @@ export const FRICTION_AIR = 0.01;
 
 // Score combo reset time (ms)
 export const COMBO_RESET_TIME = 2500;
+
+// Star power-up
+export const STAR_RADIUS = 15;          // physics radius (px)
+export const STAR_SPAWN_INTERVAL = 6;   // spawn a star every N planet drops

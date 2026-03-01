@@ -7,11 +7,17 @@ import {
   RESTITUTION,
   FRICTION,
   FRICTION_AIR,
+  STAR_RADIUS,
 } from './constants';
 
 export interface PhysicsPlanet {
   id: string;
   planetId: number;
+  body: Matter.Body;
+}
+
+export interface StarPhysicsBody {
+  id: string;
   body: Matter.Body;
 }
 
@@ -23,14 +29,26 @@ export interface MergeEvent {
   y: number;
 }
 
+export interface StarUpgradeEvent {
+  starId: string;
+  planetId: string;   // physics id of the planet that got upgraded
+  planetTypeId: number;
+  x: number;
+  y: number;
+}
+
 type MergeCallback = (event: MergeEvent) => void;
+type StarUpgradeCallback = (event: StarUpgradeEvent) => void;
 
 export class SolarPhysics {
   engine: Matter.Engine;
   private planets: Map<string, PhysicsPlanet> = new Map();
+  private stars: Map<string, StarPhysicsBody> = new Map();
   private mergeCallbacks: MergeCallback[] = [];
+  private starUpgradeCallbacks: StarUpgradeCallback[] = [];
   private pendingMergeKeys: Set<string> = new Set();
   private pendingRemovalIds: Set<string> = new Set();
+  private pendingStarRemovalIds: Set<string> = new Set();
   width: number;
   height: number;
 
@@ -91,6 +109,40 @@ export class SolarPhysics {
     Matter.Events.on(this.engine, 'collisionStart', (event) => {
       event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
+
+        // ── Star-planet collision ────────────────────────────────────────
+        const starA = this.getStarByBodyId(bodyA.id);
+        const starB = this.getStarByBodyId(bodyB.id);
+
+        if (starA || starB) {
+          const star = starA || starB!;
+          const otherBody = starA ? bodyB : bodyA;
+          const planet = this.getByBodyId(otherBody.id);
+
+          if (
+            planet &&
+            !this.pendingStarRemovalIds.has(star.id) &&
+            !this.pendingRemovalIds.has(planet.id)
+          ) {
+            this.pendingStarRemovalIds.add(star.id);
+            this.pendingRemovalIds.add(planet.id);
+
+            const px = planet.body.position.x;
+            const py = planet.body.position.y;
+
+            setTimeout(() => {
+              this.removeStar(star.id);
+              if (this.planets.has(planet.id)) this.removePlanet(planet.id);
+
+              this.starUpgradeCallbacks.forEach((cb) =>
+                cb({ starId: star.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
+              );
+            }, 0);
+          }
+          return; // don't process as planet-planet merge
+        }
+
+        // ── Planet-planet merge ──────────────────────────────────────────
         const pA = this.getByBodyId(bodyA.id);
         const pB = this.getByBodyId(bodyB.id);
 
@@ -123,11 +175,48 @@ export class SolarPhysics {
     });
   }
 
+  private getStarByBodyId(bodyId: number): StarPhysicsBody | undefined {
+    for (const s of this.stars.values()) {
+      if (s.body.id === bodyId) return s;
+    }
+    return undefined;
+  }
+
   private getByBodyId(bodyId: number): PhysicsPlanet | undefined {
     for (const p of this.planets.values()) {
       if (p.body.id === bodyId) return p;
     }
     return undefined;
+  }
+
+  addStar(id: string, x: number, y: number): void {
+    const body = Matter.Bodies.circle(x, y, STAR_RADIUS, {
+      restitution: 0.5,
+      friction: FRICTION,
+      frictionAir: FRICTION_AIR,
+      density: 0.001,
+      label: 'star_' + id,
+      collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
+    });
+    this.stars.set(id, { id, body });
+    Matter.Composite.add(this.engine.world, body);
+  }
+
+  removeStar(id: string): void {
+    const s = this.stars.get(id);
+    if (s) {
+      Matter.Composite.remove(this.engine.world, s.body);
+      this.stars.delete(id);
+      this.pendingStarRemovalIds.delete(id);
+    }
+  }
+
+  getAllStars(): StarPhysicsBody[] {
+    return Array.from(this.stars.values());
+  }
+
+  onStarUpgrade(cb: StarUpgradeCallback): void {
+    this.starUpgradeCallbacks.push(cb);
   }
 
   addPlanet(id: string, planetId: number, x: number, y: number): void {
@@ -172,9 +261,12 @@ export class SolarPhysics {
    * Useful to skip React renders when the scene is static.
    */
   hasActiveBodies(): boolean {
-    if (this.planets.size === 0) return false;
+    if (this.planets.size === 0 && this.stars.size === 0) return false;
     for (const p of this.planets.values()) {
       if (!p.body.isSleeping) return true;
+    }
+    for (const s of this.stars.values()) {
+      if (!s.body.isSleeping) return true;
     }
     return false;
   }
@@ -246,8 +338,10 @@ export class SolarPhysics {
   reset(): void {
     Matter.Engine.clear(this.engine);
     this.planets.clear();
+    this.stars.clear();
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
+    this.pendingStarRemovalIds.clear();
     Matter.World.clear(this.engine.world, false);
     this.engine.gravity.y = GRAVITY;
     this.createWalls();
@@ -257,5 +351,6 @@ export class SolarPhysics {
   destroy(): void {
     Matter.Engine.clear(this.engine);
     this.planets.clear();
+    this.stars.clear();
   }
 }

@@ -8,8 +8,10 @@ import {
   DROP_DELAY,
   MAX_SPAWN_LEVEL,
   COMBO_RESET_TIME,
+  STAR_RADIUS,
+  STAR_SPAWN_INTERVAL,
 } from './constants';
-import { GameState, RenderPlanet, Explosion } from './types';
+import { GameState, RenderPlanet, RenderStar, Explosion } from './types';
 
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
@@ -47,10 +49,12 @@ const shuffle = (array: number[]) => {
 
 const INITIAL_STATE: GameState = {
   planets: [],
+  stars: [],
   score: 0,
   highScore: 0,
   currentPlanetId: 1,
   nextPlanetId: 2,
+  currentIsStar: false,
   pointerX: GAME_WIDTH / 2,
   isDropping: false,
   gameOver: false,
@@ -76,6 +80,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const isDroppingRef = useRef<boolean>(false);
   // Shuffle bag for levels 1-6 variety
   const bagRef = useRef<number[]>([]);
+  // Star power-up tracking
+  const pendingStarSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
+  const dropCountRef = useRef<number>(0);
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle([1, 2, 3, 4, 5, 6]);
@@ -184,6 +191,50 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       });
     });
 
+    // ── Star upgrade handler ─────────────────────────────────────────────
+    engine.onStarUpgrade(({ starId, planetId, planetTypeId, x, y }) => {
+      const newId = genId();
+      const nextPlanetTypeId = Math.min(planetTypeId + 1, PLANETS.length);
+
+      if (planetTypeId < PLANETS.length) {
+        const nextSize = PLANETS[nextPlanetTypeId - 1].size;
+        const spawnY = Math.max(y, nextSize + 10);
+        engine.addPlanet(newId, nextPlanetTypeId, x, spawnY);
+        pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y: spawnY });
+        pendingMergeSpawnIdsRef.current.push(newId);
+
+        const planet = PLANETS[planetTypeId - 1];
+        engine.applyMergeShockwave(x, spawnY, planet.size, newId);
+      }
+
+      // Gold explosion at the hit point
+      const planet = PLANETS[planetTypeId - 1];
+      pendingExplosionsRef.current.push({
+        id: `exp_star_${Date.now()}_${Math.random()}`,
+        x,
+        y,
+        planetSize: planet.size,
+        color: '#FFD600',
+        scale: Math.max(0.8, planet.size / 30),
+      });
+
+      // Score + remove old planet & star from render state
+      setState((prev) => {
+        const earned = planet.score;
+        const newScore = prev.score + earned;
+        const newHighScore = Math.max(prev.highScore, newScore);
+        if (newHighScore > prev.highScore) storage.set(newHighScore);
+
+        return {
+          ...prev,
+          score: newScore,
+          highScore: newHighScore,
+          planets: prev.planets.filter((p) => p.id !== planetId),
+          stars: prev.stars.filter((s) => s.id !== starId),
+        };
+      });
+    });
+
     physicsRef.current = engine;
   }, [gameWidth, gameHeight]);
 
@@ -224,14 +275,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         }
       }
 
-      // Collect pending spawns, explosions, and merge spawn IDs
+      // Collect pending spawns, explosions, merge spawn IDs, and star spawns
       const spawns = pendingSpawnsRef.current.splice(0);
       const newExplosions = pendingExplosionsRef.current.splice(0);
       const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
+      const starSpawns = pendingStarSpawnsRef.current.splice(0);
+
+      // Sync star positions from physics (source of truth)
+      const allStars = physicsRef.current.getAllStars();
 
       // Skip React state updates if the physics world is stable and no new events happened.
       // This is the primary driver for saving CPU/Battery on mobile.
-      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0;
+      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0 || starSpawns.length > 0;
       const isSceneActive = physicsRef.current.hasActiveBodies();
 
       if (hasEvents || isSceneActive || stateRef.current.gameOver) {
@@ -256,9 +311,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0 });
           });
 
+          // Sync stars from physics
+          const updatedStars: RenderStar[] = allStars.map((s) => ({
+            id: s.id,
+            x: s.body.position.x,
+            y: s.body.position.y,
+            angle: s.body.angle,
+          }));
+
           return {
             ...prev,
             planets: updated,
+            stars: updatedStars,
             explosions: [...prev.explosions, ...newExplosions],
             mergeSpawnIds: freshMergeIds.length > 0
               ? [...prev.mergeSpawnIds, ...freshMergeIds]
@@ -314,6 +378,24 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       if (isDroppingRef.current || prev.gameOver || !physicsRef.current) return prev;
       isDroppingRef.current = true;
 
+      // ── Drop a star ────────────────────────────────────────────────────
+      if (prev.currentIsStar) {
+        const clampedX = Math.max(STAR_RADIUS + 2, Math.min(gameWidth - STAR_RADIUS - 2, x));
+        const startY = STAR_RADIUS + 2;
+        const id = genId();
+        physicsRef.current.addStar(id, clampedX, startY);
+        pendingStarSpawnsRef.current.push({ id, x: clampedX, y: startY });
+
+        return {
+          ...prev,
+          currentIsStar: false,
+          // currentPlanetId already holds the planet that comes after the star
+          pointerX: clampedX,
+          isDropping: true,
+        };
+      }
+
+      // ── Drop a planet ──────────────────────────────────────────────────
       const planet = PLANETS[prev.currentPlanetId - 1];
       const clampedX = Math.max(planet.size + 2, Math.min(gameWidth - planet.size - 2, x));
       const startY = planet.size + 2;
@@ -329,9 +411,16 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         angle: 0,
       };
 
+      // Every STAR_SPAWN_INTERVAL drops, inject a star as the NEXT current item
+      dropCountRef.current += 1;
+      const injectStar = dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
+
       return {
         ...prev,
         planets: [...prev.planets, newPlanet],
+        // If injecting star: star becomes current; currentPlanetId stores the planet
+        // that will be held AFTER the star is dropped (= prev.nextPlanetId).
+        currentIsStar: injectStar,
         currentPlanetId: prev.nextPlanetId,
         nextPlanetId: getFromBag(prev.nextPlanetId),
         pointerX: clampedX,
@@ -359,6 +448,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pendingSpawnsRef.current = [];
     pendingExplosionsRef.current = [];
     pendingMergeSpawnIdsRef.current = [];
+    pendingStarSpawnsRef.current = [];
+    dropCountRef.current = 0;
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
 
     setState((prev) => {
@@ -370,9 +461,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         highScore: Math.max(prev.highScore, prev.score),
         currentPlanetId: current,
         nextPlanetId: next,
+        currentIsStar: false,
         pointerX: gameWidth / 2,
         explosions: [],
         mergeSpawnIds: [],
+        stars: [],
       };
     });
 

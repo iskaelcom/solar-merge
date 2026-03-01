@@ -15,12 +15,21 @@ export interface Explosion {
   scale: number;
 }
 
+export interface RenderStar {
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+}
+
 export interface GameState {
   planets: RenderPlanet[];
+  stars: RenderStar[];
   score: number;
   highScore: number;
-  currentPlanetId: number;
-  nextPlanetId: number;
+  currentPlanetId: number;  // planet to drop (ignored when currentIsStar=true)
+  nextPlanetId: number;     // planet after current (or after the star)
+  currentIsStar: boolean;   // true → user is holding a star to drop
   pointerX: number;
   isDropping: boolean;
   gameOver: boolean;
