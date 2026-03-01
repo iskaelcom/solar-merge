@@ -414,45 +414,43 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, []);
 
   const dropPlanet = useCallback((x: number) => {
-    setState((prev) => {
-      if (isDroppingRef.current || prev.gameOver || !physicsRef.current) return prev;
-      isDroppingRef.current = true;
+    if (isDroppingRef.current || stateRef.current.gameOver || !physicsRef.current) return;
+    isDroppingRef.current = true;
 
-      // ── Drop a star ────────────────────────────────────────────────────
-      if (prev.currentIsStar) {
-        const clampedX = Math.max(STAR_RADIUS + 2, Math.min(gameWidth - STAR_RADIUS - 2, x));
-        const startY = STAR_RADIUS + 2;
-        const id = genId();
-        physicsRef.current.addStar(id, clampedX, startY);
-        pendingStarSpawnsRef.current.push({ id, x: clampedX, y: startY });
+    const prev = stateRef.current;
 
-        return {
-          ...prev,
-          currentIsStar: false,
-          // currentPlanetId already holds the planet that comes after the star
-          pointerX: clampedX,
-          isDropping: true,
-        };
-      }
+    // ── Drop a star ────────────────────────────────────────────────────
+    if (prev.currentIsStar) {
+      const clampedX = Math.max(STAR_RADIUS + 2, Math.min(gameWidth - STAR_RADIUS - 2, x));
+      const startY = STAR_RADIUS + 2;
+      const id = genId();
+      physicsRef.current.addStar(id, clampedX, startY);
+      pendingStarSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
-      // ── Drop a black hole ──────────────────────────────────────────────
-      if (prev.currentIsBlackHole) {
-        const clampedX = Math.max(BLACK_HOLE_RADIUS + 2, Math.min(gameWidth - BLACK_HOLE_RADIUS - 2, x));
-        const startY = BLACK_HOLE_RADIUS + 2;
-        const id = genId();
-        physicsRef.current.addBlackHole(id, clampedX, startY);
-        pendingBlackHoleSpawnsRef.current.push({ id, x: clampedX, y: startY });
+      setState((s) => ({
+        ...s,
+        currentIsStar: false,
+        pointerX: clampedX,
+        isDropping: true,
+      }));
+    }
+    // ── Drop a black hole ──────────────────────────────────────────────
+    else if (prev.currentIsBlackHole) {
+      const clampedX = Math.max(BLACK_HOLE_RADIUS + 2, Math.min(gameWidth - BLACK_HOLE_RADIUS - 2, x));
+      const startY = BLACK_HOLE_RADIUS + 2;
+      const id = genId();
+      physicsRef.current.addBlackHole(id, clampedX, startY);
+      pendingBlackHoleSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
-        return {
-          ...prev,
-          currentIsBlackHole: false,
-          // currentPlanetId already holds the planet that comes after the black hole
-          pointerX: clampedX,
-          isDropping: true,
-        };
-      }
-
-      // ── Drop a planet ──────────────────────────────────────────────────
+      setState((s) => ({
+        ...s,
+        currentIsBlackHole: false,
+        pointerX: clampedX,
+        isDropping: true,
+      }));
+    }
+    // ── Drop a planet ──────────────────────────────────────────────────
+    else {
       const planet = PLANETS[prev.currentPlanetId - 1];
       const clampedX = Math.max(planet.size + 2, Math.min(gameWidth - planet.size - 2, x));
       const startY = planet.size + 2;
@@ -469,22 +467,22 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       };
 
       // Determine special injection: black hole every 10, star every 6 (BH takes priority)
+      // We increment and check this OUTSIDE setState to avoid double-triggers in Dev mode.
       dropCountRef.current += 1;
       const injectBlackHole = dropCountRef.current % BLACK_HOLE_SPAWN_INTERVAL === 0;
       const injectStar = !injectBlackHole && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
 
-      return {
-        ...prev,
-        planets: [...prev.planets, newPlanet],
+      setState((s) => ({
+        ...s,
+        planets: [...s.planets, newPlanet],
         currentIsBlackHole: injectBlackHole,
         currentIsStar: injectStar,
-        // currentPlanetId stores the planet held AFTER the special (or just the next planet)
-        currentPlanetId: prev.nextPlanetId,
-        nextPlanetId: getFromBag(prev.nextPlanetId),
+        currentPlanetId: s.nextPlanetId,
+        nextPlanetId: getFromBag(s.nextPlanetId),
         pointerX: clampedX,
         isDropping: true,
-      };
-    });
+      }));
+    }
 
     setTimeout(() => {
       // Clear the combo banner when the player gets control back — banner
