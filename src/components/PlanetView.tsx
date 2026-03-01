@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, Text, StyleSheet } from 'react-native';
+import { Animated, View, Image, StyleSheet } from 'react-native';
 import { PLANETS } from '../constants';
-import { PLANET_SVG_MAP } from './PlanetSVG';
 
 interface Props {
   planetId: number;
@@ -13,32 +12,44 @@ interface Props {
   style?: object;
 }
 
-// Saturn's SVG is 2× wider than tall (viewBox 200×100) to show its ring system.
-// For every other planet, SVG is square (viewBox 100×100).
 const SATURN_ID = 8;
 
-/** A planet rendered as an absolutely-positioned SVG circle. */
+// Static PNG requires — bundled at build time, zero runtime SVG overhead
+const PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1:  require('../../assets/planets/moon.png'),
+  2:  require('../../assets/planets/mercury.png'),
+  3:  require('../../assets/planets/mars.png'),
+  4:  require('../../assets/planets/venus.png'),
+  5:  require('../../assets/planets/earth.png'),
+  6:  require('../../assets/planets/neptune.png'),
+  7:  require('../../assets/planets/uranus.png'),
+  8:  require('../../assets/planets/saturn.png'),
+  9:  require('../../assets/planets/jupiter.png'),
+  10: require('../../assets/planets/sun.png'),
+};
+
+/** A planet rendered as an absolutely-positioned PNG image. */
 export function PlanetView({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, style }: Props) {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
-  const PlanetSVGComponent = PLANET_SVG_MAP[planetId];
   const diameter = planet.size * 2;
   const r = planet.size;
 
+  // Saturn PNG is 2:1 — rendered wider so rings show
   const isSaturn = planetId === SATURN_ID;
-  const svgW = isSaturn ? diameter * 2 : diameter;
-  const svgH = diameter;
+  const imgW = isSaturn ? diameter * 2 : diameter;
+  const imgH = diameter;
   const leftExtra = isSaturn ? r : 0;
 
-  // Spring "pop" only for merge-spawned planets; dropped planets and ghost appear normally
+  // Spring "pop" only for merge-spawned planets
   const scaleAnim = useRef(new Animated.Value(isMergeSpawn ? 0.1 : 1)).current;
 
   useEffect(() => {
     if (!isMergeSpawn) return;
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 3,    // low friction = bouncy overshoot
+      friction: 3,
       tension: 280,
       useNativeDriver: true,
     }).start();
@@ -50,8 +61,8 @@ export function PlanetView({ planetId, x, y, angle = 0, ghost = false, isMergeSp
       style={[
         styles.container,
         {
-          width: svgW,
-          height: svgH,
+          width: imgW,
+          height: imgH,
           left: x - r - leftExtra,
           top: y - r,
           opacity: ghost ? 0.5 : 1,
@@ -59,52 +70,22 @@ export function PlanetView({ planetId, x, y, angle = 0, ghost = false, isMergeSp
         style,
       ]}
     >
-      {/* Inner animated wrapper handles scale + rotate so the outer
-          View only owns position — keeps transforms clean */}
       <Animated.View
         style={{
-          width: svgW,
-          height: svgH,
+          width: imgW,
+          height: imgH,
           transform: [
             { rotate: `${angle}rad` },
             { scale: scaleAnim },
           ],
         }}
       >
-        {PlanetSVGComponent ? (
-          <PlanetSVGComponent size={diameter} />
-        ) : (
-          <View
-            style={{
-              width: diameter,
-              height: diameter,
-              borderRadius: r,
-              backgroundColor: planet.color,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: leftExtra,
-            }}
-          >
-            <Text style={{ fontSize: r * 0.8 }}>{planet.face}</Text>
-          </View>
-        )}
-
-        {/* Glow ring — only on the planet body, not the ring wings */}
-        {!ghost && (
-          <View
-            style={[
-              styles.glow,
-              {
-                width: diameter + 8,
-                height: diameter + 8,
-                borderRadius: r + 4,
-                left: leftExtra - 4,
-                top: -4,
-                borderColor: planet.color,
-              },
-            ]}
-          />
-        )}
+        <Image
+          source={PLANET_IMAGES[planetId]}
+          style={{ width: imgW, height: imgH }}
+          resizeMode="contain"
+          fadeDuration={0}
+        />
       </Animated.View>
     </View>
   );
@@ -115,29 +96,17 @@ export function PlanetThumb({ planetId, size = 40 }: { planetId: number; size?: 
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
-  const PlanetSVGComponent = PLANET_SVG_MAP[planetId];
-
   const isSaturn = planetId === SATURN_ID;
   const thumbW = isSaturn ? size * 1.8 : size;
 
   return (
     <View style={{ width: thumbW, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {PlanetSVGComponent ? (
-        <PlanetSVGComponent size={size} />
-      ) : (
-        <View
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: planet.color,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: size * 0.45 }}>{planet.face}</Text>
-        </View>
-      )}
+      <Image
+        source={PLANET_IMAGES[planetId]}
+        style={{ width: thumbW, height: size }}
+        resizeMode="contain"
+        fadeDuration={0}
+      />
     </View>
   );
 }
@@ -146,11 +115,5 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     overflow: 'visible',
-  },
-  glow: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    opacity: 0.3,
   },
 });
