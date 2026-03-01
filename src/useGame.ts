@@ -242,8 +242,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Black hole suck handler ──────────────────────────────────────────
     engine.onBlackHoleSuck(({ blackHoleId, planetId, planetTypeId, x, y }) => {
-      // Dark implosion explosion at the planet's position
       const planet = PLANETS[planetTypeId - 1];
+
+      // Pull surrounding planets inward — they should react, not stand still
+      engine.applyBlackHoleSuction(x, y, planet.size);
+
+      // Dark implosion explosion at the planet's position
       pendingExplosionsRef.current.push({
         id: `exp_bh_${Date.now()}_${Math.random()}`,
         x,

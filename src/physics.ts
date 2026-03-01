@@ -305,6 +305,42 @@ export class SolarPhysics {
     this.blackHoleSuckCallbacks.push(cb);
   }
 
+  /**
+   * Inward gravitational suction: pull all nearby planets toward (x, y).
+   * Opposite of applyMergeShockwave — velocity is directed INWARD.
+   * Called when a black hole absorbs a planet so surrounding bodies react.
+   */
+  applyBlackHoleSuction(x: number, y: number, suckedPlanetSize: number): void {
+    const intensity = Math.sqrt(suckedPlanetSize / 15);
+    const maxKick = suckedPlanetSize * 0.2 * intensity;
+    const suckRadius = suckedPlanetSize * 4.5 * intensity;
+
+    this.planets.forEach((p) => {
+      if (this.pendingRemovalIds.has(p.id)) return;
+
+      // Vector FROM planet TOWARD the black hole center — inward pull
+      const dx = x - p.body.position.x;
+      const dy = y - p.body.position.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1 || dist > suckRadius) return;
+
+      const falloff = 1 - dist / suckRadius;
+      const kick = maxKick * falloff;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      Matter.Body.setVelocity(p.body, {
+        x: p.body.velocity.x + nx * kick,
+        y: p.body.velocity.y + ny * kick,
+      });
+
+      // Wake sleeping bodies so they respond to the pull
+      if ((p.body as any).isSleeping) {
+        (p.body as any).isSleeping = false;
+      }
+    });
+  }
+
   addPlanet(id: string, planetId: number, x: number, y: number): void {
     const planet = PLANETS[planetId - 1];
     const radius = planet.size * planet.hitboxRatio;
