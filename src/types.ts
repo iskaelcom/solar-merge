@@ -22,14 +22,22 @@ export interface RenderStar {
   angle: number;
 }
 
+export interface RenderBlackHole {
+  id: string;
+  x: number;
+  y: number;
+}
+
 export interface GameState {
   planets: RenderPlanet[];
   stars: RenderStar[];
+  blackHoles: RenderBlackHole[];
   score: number;
   highScore: number;
-  currentPlanetId: number;  // planet to drop (ignored when currentIsStar=true)
-  nextPlanetId: number;     // planet after current (or after the star)
-  currentIsStar: boolean;   // true → user is holding a star to drop
+  currentPlanetId: number;     // planet to drop (ignored when holding a special)
+  nextPlanetId: number;        // planet after current (or after the special)
+  currentIsStar: boolean;      // true → user is holding a star to drop
+  currentIsBlackHole: boolean; // true → user is holding a black hole to drop
   pointerX: number;
   isDropping: boolean;
   gameOver: boolean;

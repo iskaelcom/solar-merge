@@ -8,6 +8,7 @@ import {
   FRICTION,
   FRICTION_AIR,
   STAR_RADIUS,
+  BLACK_HOLE_RADIUS,
 } from './constants';
 
 export interface PhysicsPlanet {
@@ -37,18 +38,35 @@ export interface StarUpgradeEvent {
   y: number;
 }
 
+export interface BlackHolePhysicsBody {
+  id: string;
+  body: Matter.Body;
+}
+
+export interface BlackHoleSuckEvent {
+  blackHoleId: string;
+  planetId: string;
+  planetTypeId: number;
+  x: number;
+  y: number;
+}
+
 type MergeCallback = (event: MergeEvent) => void;
 type StarUpgradeCallback = (event: StarUpgradeEvent) => void;
+type BlackHoleSuckCallback = (event: BlackHoleSuckEvent) => void;
 
 export class SolarPhysics {
   engine: Matter.Engine;
   private planets: Map<string, PhysicsPlanet> = new Map();
   private stars: Map<string, StarPhysicsBody> = new Map();
+  private blackHoles: Map<string, BlackHolePhysicsBody> = new Map();
   private mergeCallbacks: MergeCallback[] = [];
   private starUpgradeCallbacks: StarUpgradeCallback[] = [];
+  private blackHoleSuckCallbacks: BlackHoleSuckCallback[] = [];
   private pendingMergeKeys: Set<string> = new Set();
   private pendingRemovalIds: Set<string> = new Set();
   private pendingStarRemovalIds: Set<string> = new Set();
+  private pendingBlackHoleRemovalIds: Set<string> = new Set();
   width: number;
   height: number;
 
@@ -109,6 +127,37 @@ export class SolarPhysics {
     Matter.Events.on(this.engine, 'collisionStart', (event) => {
       event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
+
+        // ── Black hole-planet collision (suck/destroy) ───────────────────
+        const bhA = this.getBlackHoleByBodyId(bodyA.id);
+        const bhB = this.getBlackHoleByBodyId(bodyB.id);
+
+        if (bhA || bhB) {
+          const bh = bhA || bhB!;
+          const otherBody = bhA ? bodyB : bodyA;
+          const planet = this.getByBodyId(otherBody.id);
+
+          if (
+            planet &&
+            !this.pendingBlackHoleRemovalIds.has(bh.id) &&
+            !this.pendingRemovalIds.has(planet.id)
+          ) {
+            this.pendingBlackHoleRemovalIds.add(bh.id);
+            this.pendingRemovalIds.add(planet.id);
+
+            const px = planet.body.position.x;
+            const py = planet.body.position.y;
+
+            setTimeout(() => {
+              this.removeBlackHole(bh.id);
+              if (this.planets.has(planet.id)) this.removePlanet(planet.id);
+              this.blackHoleSuckCallbacks.forEach((cb) =>
+                cb({ blackHoleId: bh.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
+              );
+            }, 0);
+          }
+          return; // don't process as star or planet-planet
+        }
 
         // ── Star-planet collision ────────────────────────────────────────
         const starA = this.getStarByBodyId(bodyA.id);
@@ -175,6 +224,13 @@ export class SolarPhysics {
     });
   }
 
+  private getBlackHoleByBodyId(bodyId: number): BlackHolePhysicsBody | undefined {
+    for (const bh of this.blackHoles.values()) {
+      if (bh.body.id === bodyId) return bh;
+    }
+    return undefined;
+  }
+
   private getStarByBodyId(bodyId: number): StarPhysicsBody | undefined {
     for (const s of this.stars.values()) {
       if (s.body.id === bodyId) return s;
@@ -219,6 +275,36 @@ export class SolarPhysics {
     this.starUpgradeCallbacks.push(cb);
   }
 
+  addBlackHole(id: string, x: number, y: number): void {
+    const body = Matter.Bodies.circle(x, y, BLACK_HOLE_RADIUS, {
+      restitution: 0.3,
+      friction: FRICTION,
+      frictionAir: FRICTION_AIR,
+      density: 0.004, // slightly denser → sinks through other bodies
+      label: 'bh_' + id,
+      collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
+    });
+    this.blackHoles.set(id, { id, body });
+    Matter.Composite.add(this.engine.world, body);
+  }
+
+  removeBlackHole(id: string): void {
+    const bh = this.blackHoles.get(id);
+    if (bh) {
+      Matter.Composite.remove(this.engine.world, bh.body);
+      this.blackHoles.delete(id);
+      this.pendingBlackHoleRemovalIds.delete(id);
+    }
+  }
+
+  getAllBlackHoles(): BlackHolePhysicsBody[] {
+    return Array.from(this.blackHoles.values());
+  }
+
+  onBlackHoleSuck(cb: BlackHoleSuckCallback): void {
+    this.blackHoleSuckCallbacks.push(cb);
+  }
+
   addPlanet(id: string, planetId: number, x: number, y: number): void {
     const planet = PLANETS[planetId - 1];
     const radius = planet.size * planet.hitboxRatio;
@@ -261,12 +347,15 @@ export class SolarPhysics {
    * Useful to skip React renders when the scene is static.
    */
   hasActiveBodies(): boolean {
-    if (this.planets.size === 0 && this.stars.size === 0) return false;
+    if (this.planets.size === 0 && this.stars.size === 0 && this.blackHoles.size === 0) return false;
     for (const p of this.planets.values()) {
       if (!p.body.isSleeping) return true;
     }
     for (const s of this.stars.values()) {
       if (!s.body.isSleeping) return true;
+    }
+    for (const bh of this.blackHoles.values()) {
+      if (!bh.body.isSleeping) return true;
     }
     return false;
   }
@@ -339,9 +428,11 @@ export class SolarPhysics {
     Matter.Engine.clear(this.engine);
     this.planets.clear();
     this.stars.clear();
+    this.blackHoles.clear();
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
     this.pendingStarRemovalIds.clear();
+    this.pendingBlackHoleRemovalIds.clear();
     Matter.World.clear(this.engine.world, false);
     this.engine.gravity.y = GRAVITY;
     this.createWalls();
@@ -352,5 +443,6 @@ export class SolarPhysics {
     Matter.Engine.clear(this.engine);
     this.planets.clear();
     this.stars.clear();
+    this.blackHoles.clear();
   }
 }

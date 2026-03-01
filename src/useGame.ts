@@ -10,8 +10,10 @@ import {
   COMBO_RESET_TIME,
   STAR_RADIUS,
   STAR_SPAWN_INTERVAL,
+  BLACK_HOLE_RADIUS,
+  BLACK_HOLE_SPAWN_INTERVAL,
 } from './constants';
-import { GameState, RenderPlanet, RenderStar, Explosion } from './types';
+import { GameState, RenderPlanet, RenderStar, RenderBlackHole, Explosion } from './types';
 
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
@@ -50,11 +52,13 @@ const shuffle = (array: number[]) => {
 const INITIAL_STATE: GameState = {
   planets: [],
   stars: [],
+  blackHoles: [],
   score: 0,
   highScore: 0,
   currentPlanetId: 1,
   nextPlanetId: 2,
   currentIsStar: false,
+  currentIsBlackHole: false,
   pointerX: GAME_WIDTH / 2,
   isDropping: false,
   gameOver: false,
@@ -80,8 +84,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const isDroppingRef = useRef<boolean>(false);
   // Shuffle bag for levels 1-6 variety
   const bagRef = useRef<number[]>([]);
-  // Star power-up tracking
+  // Star / Black Hole power-up tracking
   const pendingStarSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
+  const pendingBlackHoleSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
   const dropCountRef = useRef<number>(0);
 
   const refillBag = useCallback(() => {
@@ -235,6 +240,27 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       });
     });
 
+    // ── Black hole suck handler ──────────────────────────────────────────
+    engine.onBlackHoleSuck(({ blackHoleId, planetId, planetTypeId, x, y }) => {
+      // Dark implosion explosion at the planet's position
+      const planet = PLANETS[planetTypeId - 1];
+      pendingExplosionsRef.current.push({
+        id: `exp_bh_${Date.now()}_${Math.random()}`,
+        x,
+        y,
+        planetSize: planet.size,
+        color: '#6a00cc',  // dark purple vortex
+        scale: Math.max(0.6, planet.size / 40),
+      });
+
+      // Remove planet & black hole from render state (no score — black hole is a utility)
+      setState((prev) => ({
+        ...prev,
+        planets: prev.planets.filter((p) => p.id !== planetId),
+        blackHoles: prev.blackHoles.filter((bh) => bh.id !== blackHoleId),
+      }));
+    });
+
     physicsRef.current = engine;
   }, [gameWidth, gameHeight]);
 
@@ -275,18 +301,20 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         }
       }
 
-      // Collect pending spawns, explosions, merge spawn IDs, and star spawns
+      // Collect pending spawns, explosions, merge spawn IDs, star/BH spawns
       const spawns = pendingSpawnsRef.current.splice(0);
       const newExplosions = pendingExplosionsRef.current.splice(0);
       const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
       const starSpawns = pendingStarSpawnsRef.current.splice(0);
+      const bhSpawns = pendingBlackHoleSpawnsRef.current.splice(0);
 
-      // Sync star positions from physics (source of truth)
+      // Sync positions from physics (source of truth)
       const allStars = physicsRef.current.getAllStars();
+      const allBlackHoles = physicsRef.current.getAllBlackHoles();
 
       // Skip React state updates if the physics world is stable and no new events happened.
-      // This is the primary driver for saving CPU/Battery on mobile.
-      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0 || starSpawns.length > 0;
+      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0
+        || starSpawns.length > 0 || bhSpawns.length > 0;
       const isSceneActive = physicsRef.current.hasActiveBodies();
 
       if (hasEvents || isSceneActive || stateRef.current.gameOver) {
@@ -319,10 +347,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             angle: s.body.angle,
           }));
 
+          // Sync black holes from physics
+          const updatedBlackHoles: RenderBlackHole[] = allBlackHoles.map((bh) => ({
+            id: bh.id,
+            x: bh.body.position.x,
+            y: bh.body.position.y,
+          }));
+
           return {
             ...prev,
             planets: updated,
             stars: updatedStars,
+            blackHoles: updatedBlackHoles,
             explosions: [...prev.explosions, ...newExplosions],
             mergeSpawnIds: freshMergeIds.length > 0
               ? [...prev.mergeSpawnIds, ...freshMergeIds]
@@ -395,6 +431,23 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         };
       }
 
+      // ── Drop a black hole ──────────────────────────────────────────────
+      if (prev.currentIsBlackHole) {
+        const clampedX = Math.max(BLACK_HOLE_RADIUS + 2, Math.min(gameWidth - BLACK_HOLE_RADIUS - 2, x));
+        const startY = BLACK_HOLE_RADIUS + 2;
+        const id = genId();
+        physicsRef.current.addBlackHole(id, clampedX, startY);
+        pendingBlackHoleSpawnsRef.current.push({ id, x: clampedX, y: startY });
+
+        return {
+          ...prev,
+          currentIsBlackHole: false,
+          // currentPlanetId already holds the planet that comes after the black hole
+          pointerX: clampedX,
+          isDropping: true,
+        };
+      }
+
       // ── Drop a planet ──────────────────────────────────────────────────
       const planet = PLANETS[prev.currentPlanetId - 1];
       const clampedX = Math.max(planet.size + 2, Math.min(gameWidth - planet.size - 2, x));
@@ -411,16 +464,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         angle: 0,
       };
 
-      // Every STAR_SPAWN_INTERVAL drops, inject a star as the NEXT current item
+      // Determine special injection: black hole every 10, star every 6 (BH takes priority)
       dropCountRef.current += 1;
-      const injectStar = dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
+      const injectBlackHole = dropCountRef.current % BLACK_HOLE_SPAWN_INTERVAL === 0;
+      const injectStar = !injectBlackHole && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
 
       return {
         ...prev,
         planets: [...prev.planets, newPlanet],
-        // If injecting star: star becomes current; currentPlanetId stores the planet
-        // that will be held AFTER the star is dropped (= prev.nextPlanetId).
+        currentIsBlackHole: injectBlackHole,
         currentIsStar: injectStar,
+        // currentPlanetId stores the planet held AFTER the special (or just the next planet)
         currentPlanetId: prev.nextPlanetId,
         nextPlanetId: getFromBag(prev.nextPlanetId),
         pointerX: clampedX,
@@ -449,6 +503,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pendingExplosionsRef.current = [];
     pendingMergeSpawnIdsRef.current = [];
     pendingStarSpawnsRef.current = [];
+    pendingBlackHoleSpawnsRef.current = [];
     dropCountRef.current = 0;
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
 
@@ -462,10 +517,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         currentPlanetId: current,
         nextPlanetId: next,
         currentIsStar: false,
+        currentIsBlackHole: false,
         pointerX: gameWidth / 2,
         explosions: [],
         mergeSpawnIds: [],
         stars: [],
+        blackHoles: [],
       };
     });
 

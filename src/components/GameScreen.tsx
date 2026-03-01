@@ -8,9 +8,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../useGame';
-import { PLANETS, DANGER_HEIGHT, STAR_RADIUS } from '../constants';
+import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView, StarThumb } from './StarView';
+import { BlackHoleView, BlackHoleThumb } from './BlackHoleView';
 import { GameOverModal } from './GameOverModal';
 import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
@@ -55,16 +56,21 @@ export function GameScreen() {
 
   const currentPlanet = PLANETS[state.currentPlanetId - 1];
 
-  // When a star is current, clamp by STAR_RADIUS; otherwise by planet size
-  const previewRadius = state.currentIsStar ? STAR_RADIUS : currentPlanet.size;
+  // Clamp preview by item radius (star / black hole / planet)
+  const previewRadius = state.currentIsStar
+    ? STAR_RADIUS
+    : state.currentIsBlackHole
+      ? BLACK_HOLE_RADIUS
+      : currentPlanet.size;
   const previewX = Math.max(
     previewRadius + 2,
     Math.min(gameWidth - previewRadius - 2, state.pointerX)
   );
   const previewY = previewRadius + 2;
 
-  // "After" slot: when star is current, currentPlanetId is what comes after the star
-  const afterPlanetId = state.currentIsStar ? state.currentPlanetId : state.nextPlanetId;
+  // "After" slot: when holding a special, currentPlanetId is the planet after it
+  const holdingSpecial = state.currentIsStar || state.currentIsBlackHole;
+  const afterPlanetId = holdingSpecial ? state.currentPlanetId : state.nextPlanetId;
 
   return (
     <LinearGradient colors={['#0a0a2e', '#12124a', '#1a1a5e']} style={styles.root}>
@@ -91,7 +97,9 @@ export function GameScreen() {
           <Text style={styles.nextLabel}>Next</Text>
           {state.currentIsStar
             ? <StarThumb size={36} />
-            : <PlanetThumb planetId={state.currentPlanetId} size={36} />}
+            : state.currentIsBlackHole
+              ? <BlackHoleThumb size={36} />
+              : <PlanetThumb planetId={state.currentPlanetId} size={36} />}
         </View>
 
         {/* Center logo — absolutely positioned so side boxes can't push it */}
@@ -155,11 +163,13 @@ export function GameScreen() {
             />
           )}
 
-          {/* Ghost / preview — star or planet */}
+          {/* Ghost / preview — black hole, star, or planet */}
           {!state.isDropping && (
-            state.currentIsStar
-              ? <StarView x={previewX} y={previewY} ghost />
-              : <PlanetView planetId={state.currentPlanetId} x={previewX} y={previewY} ghost />
+            state.currentIsBlackHole
+              ? <BlackHoleView x={previewX} y={previewY} ghost />
+              : state.currentIsStar
+                ? <StarView x={previewX} y={previewY} ghost />
+                : <PlanetView planetId={state.currentPlanetId} x={previewX} y={previewY} ghost />
           )}
 
           {/* All live planets */}
@@ -177,6 +187,11 @@ export function GameScreen() {
           {/* Star power-ups */}
           {state.stars.map((s) => (
             <StarView key={s.id} x={s.x} y={s.y} />
+          ))}
+
+          {/* Black holes */}
+          {state.blackHoles.map((bh) => (
+            <BlackHoleView key={bh.id} x={bh.x} y={bh.y} />
           ))}
 
           {/* Merge explosions */}

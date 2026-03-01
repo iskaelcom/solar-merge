@@ -151,3 +151,7 @@ export const COMBO_RESET_TIME = 2500;
 // Star power-up
 export const STAR_RADIUS = 15;          // physics radius (px)
 export const STAR_SPAWN_INTERVAL = 6;   // spawn a star every N planet drops
+
+// Black Hole power-up
+export const BLACK_HOLE_RADIUS = 20;     // physics radius (px)
+export const BLACK_HOLE_SPAWN_INTERVAL = 10; // spawn a black hole every N planet drops
