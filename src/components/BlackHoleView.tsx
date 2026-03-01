@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
-// Visual diameter is larger than physics radius (20) to show the glow aura
-const DIAMETER = 50;
+// Visual diameter is larger than physics radius (30) to show the glow aura
+const DIAMETER = 75;
 
 interface Props {
   x: number;
@@ -72,10 +72,10 @@ export const BlackHoleView = React.memo(({ x, y, ghost = false }: Props) => {
       <Svg width={DIAMETER} height={DIAMETER} style={{ position: 'absolute' }}>
         <Defs>
           <RadialGradient id="bh_outer" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%"   stopColor="#000000" stopOpacity="1" />
-            <Stop offset="38%"  stopColor="#1a003a" stopOpacity="1" />
-            <Stop offset="62%"  stopColor="#5500aa" stopOpacity="0.7" />
-            <Stop offset="85%"  stopColor="#8800ff" stopOpacity="0.25" />
+            <Stop offset="0%" stopColor="#000000" stopOpacity="1" />
+            <Stop offset="38%" stopColor="#1a003a" stopOpacity="1" />
+            <Stop offset="62%" stopColor="#5500aa" stopOpacity="0.7" />
+            <Stop offset="85%" stopColor="#8800ff" stopOpacity="0.25" />
             <Stop offset="100%" stopColor="#aa00ff" stopOpacity="0" />
           </RadialGradient>
         </Defs>
@@ -142,8 +142,8 @@ export const BlackHoleThumb = React.memo(({ size = 36 }: { size?: number }) => {
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Defs>
           <RadialGradient id="bht_glow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%"   stopColor="#000000" stopOpacity="1" />
-            <Stop offset="55%"  stopColor="#3d0080" stopOpacity="0.9" />
+            <Stop offset="0%" stopColor="#000000" stopOpacity="1" />
+            <Stop offset="55%" stopColor="#3d0080" stopOpacity="0.9" />
             <Stop offset="100%" stopColor="#7700cc" stopOpacity="0" />
           </RadialGradient>
         </Defs>
