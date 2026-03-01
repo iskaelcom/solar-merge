@@ -119,13 +119,15 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       }
 
       // Queue an explosion at the merge point
-      pendingExplosionsRef.current.push({
-        id: genId(),
+      const newExplosion: Explosion = {
+        id: `exp_${Date.now()}_${Math.random()}`,
         x,
         y,
         planetSize: planet.size,
         color: planet.color,
-      });
+        scale: Math.max(0.8, planet.size / 30),
+      };
+      pendingExplosionsRef.current.push(newExplosion);
 
       // Score & combo
       setState((prev) => {

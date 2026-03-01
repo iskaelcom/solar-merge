@@ -12,6 +12,7 @@ export interface Explosion {
   y: number;
   planetSize: number; // radius of the merged planet
   color: string;
+  scale: number;
 }
 
 export interface GameState {

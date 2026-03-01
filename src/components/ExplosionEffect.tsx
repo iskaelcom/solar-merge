@@ -8,24 +8,25 @@ interface Props {
   planetSize: number;
   /** Primary colour of the planet */
   color: string;
+  scale: number;
   onDone: () => void;
 }
 
-const NUM_DEBRIS = 10;
-const NUM_SPARKLES = 6;
-const BASE_R = 16; // ring base radius at scale 1 (Moon)
+const BASE_PARTICLES = 12;
+const NUM_SPARKLES = 8;
+const BASE_R = 16;
 
-export function ExplosionEffect({ x, y, planetSize, color, onDone }: Props) {
-  // Moon(25)=1x  Sun(130)≈5.2x
-  const s = planetSize / 25;
+export function ExplosionEffect({ x, y, planetSize, color, scale, onDone }: Props) {
+  const s = scale;
+  const numDebris = Math.floor(BASE_PARTICLES * Math.sqrt(s));
 
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
   // ── Pre-compute random particle data once ──────────────────────────────────
   const debrisData = useRef(
-    Array.from({ length: NUM_DEBRIS }, (_, i) => ({
-      angle: (i / NUM_DEBRIS) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+    Array.from({ length: numDebris }, (_, i) => ({
+      angle: (i / numDebris) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
       dist: (32 + Math.random() * 28) * s,
       size: 3 + Math.random() * 3,
       // 3 colour variants: planet, white, warm gold
@@ -41,20 +42,20 @@ export function ExplosionEffect({ x, y, planetSize, color, onDone }: Props) {
   ).current;
 
   // ── Animation values ───────────────────────────────────────────────────────
-  const flashScale   = useRef(new Animated.Value(0.1)).current;
+  const flashScale = useRef(new Animated.Value(0.1)).current;
   const flashOpacity = useRef(new Animated.Value(0)).current;
 
-  const glowScale   = useRef(new Animated.Value(0.1)).current;
+  const glowScale = useRef(new Animated.Value(0.1)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
 
-  const ring1Scale   = useRef(new Animated.Value(0.2)).current;
+  const ring1Scale = useRef(new Animated.Value(0.2)).current;
   const ring1Opacity = useRef(new Animated.Value(0.9)).current;
 
-  const ring2Scale   = useRef(new Animated.Value(0.2)).current;
+  const ring2Scale = useRef(new Animated.Value(0.2)).current;
   const ring2Opacity = useRef(new Animated.Value(0.7)).current;
 
   const debrisAnims = useRef(
-    Array.from({ length: NUM_DEBRIS }, () => ({
+    Array.from({ length: numDebris }, () => ({
       progress: new Animated.Value(0),
       opacity: new Animated.Value(0),
     }))
@@ -157,7 +158,7 @@ export function ExplosionEffect({ x, y, planetSize, color, onDone }: Props) {
         ])
       ),
     ]).start(() => onDoneRef.current());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const ringSide = BASE_R * 2;

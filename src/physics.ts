@@ -187,9 +187,11 @@ export class SolarPhysics {
    * excludeId = the newly-spawned planet (shouldn't push itself).
    */
   applyMergeShockwave(x: number, y: number, mergedPlanetSize: number, excludeId?: string): void {
-    // Reduced kick intensity to prevent violent chain reactions
-    const maxKick = mergedPlanetSize * 0.12;      // Moon≈3.0  Saturn≈10  Sun≈15.6 px/step
-    const shockRadius = mergedPlanetSize * 4.5;   // reach scales with planet size
+    // Scaling factor: larger planets create significantly more impact
+    // We use a base multiplier that grows with planet size
+    const intensity = Math.sqrt(mergedPlanetSize / 15); // normalized intensity factor
+    const maxKick = mergedPlanetSize * 0.25 * intensity;
+    const shockRadius = mergedPlanetSize * 5.5 * intensity;
 
     this.planets.forEach((p) => {
       if (p.id === excludeId) return;
@@ -200,16 +202,15 @@ export class SolarPhysics {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < 1 || dist > shockRadius) return;
 
-      // Linear falloff: full kick at dist=0, zero kick at dist=shockRadius
       const falloff = 1 - dist / shockRadius;
-      const kick = maxKick * falloff * falloff; // squared for more natural drop-off
+      const kick = maxKick * falloff;
 
       const nx = dx / dist;
       const ny = dy / dist;
 
       Matter.Body.setVelocity(p.body, {
         x: p.body.velocity.x + nx * kick,
-        y: p.body.velocity.y + ny * kick,
+        y: p.body.velocity.y + ny * kick * 0.8, // slightly less vertical kick to keep them in flow
       });
     });
   }

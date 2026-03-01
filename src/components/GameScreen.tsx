@@ -188,6 +188,7 @@ export function GameScreen() {
               y={exp.y}
               planetSize={exp.planetSize}
               color={exp.color}
+              scale={exp.scale}
               onDone={() => removeExplosion(exp.id)}
             />
           ))}
