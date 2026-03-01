@@ -9,6 +9,7 @@ export const PLANETS = [
     emoji: '🌙',
     score: 10,
     face: '😴',
+    hitboxRatio: 0.94,
   },
   {
     id: 2,
@@ -20,6 +21,7 @@ export const PLANETS = [
     emoji: '⚫',
     score: 20,
     face: '😵',
+    hitboxRatio: 0.94,
   },
   {
     id: 3,
@@ -31,6 +33,7 @@ export const PLANETS = [
     emoji: '🔴',
     score: 40,
     face: '😤',
+    hitboxRatio: 0.94,
   },
   {
     id: 4,
@@ -42,6 +45,7 @@ export const PLANETS = [
     emoji: '⭐',
     score: 80,
     face: '😍',
+    hitboxRatio: 0.94,
   },
   {
     id: 5,
@@ -53,6 +57,7 @@ export const PLANETS = [
     emoji: '🌍',
     score: 150,
     face: '😊',
+    hitboxRatio: 0.94,
   },
   {
     id: 6,
@@ -64,6 +69,7 @@ export const PLANETS = [
     emoji: '💙',
     score: 250,
     face: '😏',
+    hitboxRatio: 0.94,
   },
   {
     id: 7,
@@ -75,6 +81,7 @@ export const PLANETS = [
     emoji: '🩵',
     score: 400,
     face: '🤪',
+    hitboxRatio: 0.94,
   },
   {
     id: 8,
@@ -87,6 +94,7 @@ export const PLANETS = [
     score: 600,
     face: '😎',
     hasRings: true,
+    hitboxRatio: 0.88,
   },
   {
     id: 9,
@@ -99,6 +107,7 @@ export const PLANETS = [
     score: 900,
     face: '💪',
     hasStripes: true,
+    hitboxRatio: 0.94,
   },
   {
     id: 10,
@@ -111,10 +120,11 @@ export const PLANETS = [
     score: 1500,
     face: '🤩',
     hasRays: true,
+    hitboxRatio: 0.86,
   },
 ];
 
-export type PlanetData = (typeof PLANETS)[number] & { hasRings?: boolean; hasStripes?: boolean; hasRays?: boolean };
+export type PlanetData = (typeof PLANETS)[number] & { hasRings?: boolean; hasStripes?: boolean; hasRays?: boolean; hitboxRatio: number };
 
 // Game area dimensions (logical pixels)
 export const GAME_WIDTH = 360;

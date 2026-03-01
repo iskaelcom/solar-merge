@@ -131,7 +131,7 @@ export class SolarPhysics {
 
   addPlanet(id: string, planetId: number, x: number, y: number): void {
     const planet = PLANETS[planetId - 1];
-    const radius = planet.size;
+    const radius = planet.size * planet.hitboxRatio;
 
     const body = Matter.Bodies.circle(x, y, radius, {
       restitution: RESTITUTION,
