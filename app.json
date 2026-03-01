@@ -5,7 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.solarmerge.app"
@@ -14,7 +16,11 @@
       "package": "com.solarmerge.app"
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "baseUrl": "/solar-merge"
+    },
+    "experiments": {
+      "baseUrl": "/solar-merge"
     }
   }
 }
