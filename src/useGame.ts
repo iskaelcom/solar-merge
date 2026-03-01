@@ -14,6 +14,28 @@ import { GameState, RenderPlanet, Explosion } from './types';
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
 
+const HIGH_SCORE_KEY = 'solar-merge-highscore';
+
+const storage = {
+  get: (): number => {
+    try {
+      const val = typeof localStorage !== 'undefined' ? localStorage.getItem(HIGH_SCORE_KEY) : null;
+      return val ? parseInt(val, 10) : 0;
+    } catch {
+      return 0;
+    }
+  },
+  set: (score: number) => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(HIGH_SCORE_KEY, score.toString());
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  },
+};
+
 const shuffle = (array: number[]) => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -83,6 +105,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     // Basic init, will be properly shuffled in useEffect or initial call
     return {
       ...INITIAL_STATE,
+      highScore: storage.get(),
       currentPlanetId: 1,
       nextPlanetId: 2,
       pointerX: gameWidth / 2,
@@ -133,6 +156,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const earned = planet.score * combo;
         const newCombo = combo + 1;
         const newScore = prev.score + earned;
+        const newHighScore = Math.max(prev.highScore, newScore);
+
+        if (newHighScore > prev.highScore) {
+          storage.set(newHighScore);
+        }
 
         if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
         comboTimerRef.current = setTimeout(() => {
@@ -147,6 +175,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         return {
           ...prev,
           score: newScore,
+          highScore: newHighScore,
           combo: newCombo,
           showCombo: newCombo > 1,
           // Remove merged planets, merged-spawn added in game loop
@@ -179,11 +208,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       if (highest && highest.y < DANGER_HEIGHT && !isDroppingRef.current) {
         // Only Game Over if the planet is NOT falling fast (vY > -0.5 and vY < 2)
         if (Math.abs(highest.vy) < 1.0) {
-          setState((prev) => ({
-            ...prev,
-            gameOver: true,
-            highScore: Math.max(prev.highScore, prev.score),
-          }));
+          setState((prev) => {
+            const newHighScore = Math.max(prev.highScore, prev.score);
+            if (newHighScore > prev.highScore) {
+              storage.set(newHighScore);
+            }
+            return {
+              ...prev,
+              gameOver: true,
+              highScore: newHighScore,
+            };
+          });
           cancelAnimationFrame(rafRef.current);
           return;
         }
