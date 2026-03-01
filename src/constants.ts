@@ -133,9 +133,6 @@ export const GAME_HEIGHT = 580;
 // Danger zone height from top of game area (game over if planet above this for too long)
 export const DANGER_HEIGHT = 80;
 
-// Time (ms) a planet must be above danger line before game over
-export const DANGER_TIME = 2500;
-
 // Delay (ms) before next planet appears after dropping
 export const DROP_DELAY = 650;
 

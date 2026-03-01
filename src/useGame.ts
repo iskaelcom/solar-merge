@@ -5,7 +5,6 @@ import {
   GAME_WIDTH,
   GAME_HEIGHT,
   DANGER_HEIGHT,
-  DANGER_TIME,
   DROP_DELAY,
   MAX_SPAWN_LEVEL,
   COMBO_RESET_TIME,
@@ -35,7 +34,6 @@ const INITIAL_STATE: GameState = {
   gameOver: false,
   combo: 1,
   showCombo: false,
-  dangerProgress: 0,
   explosions: [],
   mergeSpawnIds: [],
 };
@@ -44,7 +42,6 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const physicsRef = useRef<SolarPhysics | null>(null);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
-  const dangerStartRef = useRef<number | null>(null);
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const comboTimerShowRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track merge-spawned planets that need to be added to render state
@@ -177,14 +174,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const allPlanets = physicsRef.current.getAllPlanets();
 
       // Game over check
-      const highestY = physicsRef.current.getHighestY();
-      let dangerProgress = 0;
+      const highest = physicsRef.current.getHighestPoint();
 
-      if (highestY < DANGER_HEIGHT && allPlanets.length > 0) {
-        if (!dangerStartRef.current) dangerStartRef.current = time;
-        const elapsed = time - dangerStartRef.current;
-        dangerProgress = Math.min(elapsed / DANGER_TIME, 1);
-        if (elapsed >= DANGER_TIME) {
+      if (highest && highest.y < DANGER_HEIGHT && !isDroppingRef.current) {
+        // Only Game Over if the planet is NOT falling fast (vY > -0.5 and vY < 2)
+        if (Math.abs(highest.vy) < 1.0) {
           setState((prev) => ({
             ...prev,
             gameOver: true,
@@ -193,8 +187,6 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           cancelAnimationFrame(rafRef.current);
           return;
         }
-      } else {
-        dangerStartRef.current = null;
       }
 
       // Collect pending spawns, explosions, and merge spawn IDs
@@ -226,7 +218,6 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         return {
           ...prev,
           planets: updated,
-          dangerProgress,
           explosions: [...prev.explosions, ...newExplosions],
           mergeSpawnIds: freshMergeIds.length > 0
             ? [...prev.mergeSpawnIds, ...freshMergeIds]
@@ -323,7 +314,6 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
   const restart = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
-    dangerStartRef.current = null;
     pendingSpawnsRef.current = [];
     pendingExplosionsRef.current = [];
     pendingMergeSpawnIdsRef.current = [];

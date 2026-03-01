@@ -166,15 +166,26 @@ export class SolarPhysics {
     return Array.from(this.planets.values());
   }
 
-  /** Returns the minimum Y value (top edge) of all settled planets */
-  getHighestY(): number {
+  /** 
+   * Returns the minimum Y value (top edge) of all settled planets 
+   * Only considers planets that are not falling fast (settled/overflowing).
+   */
+  getHighestPoint(): { y: number; vy: number } | null {
     let minY = this.height + 1;
+    let velocityAtMinY = 0;
+
+    if (this.planets.size === 0) return null;
+
     this.planets.forEach((p) => {
       const planet = PLANETS[p.planetId - 1];
       const topY = p.body.position.y - planet.size;
-      if (topY < minY) minY = topY;
+      if (topY < minY) {
+        minY = topY;
+        velocityAtMinY = p.body.velocity.y;
+      }
     });
-    return minY;
+
+    return { y: minY, vy: velocityAtMinY };
   }
 
   onMerge(cb: MergeCallback): void {
@@ -224,7 +235,6 @@ export class SolarPhysics {
     this.planets.clear();
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
-    this.mergeCallbacks = [];
     Matter.World.clear(this.engine.world, false);
     this.engine.gravity.y = GRAVITY;
     this.createWalls();

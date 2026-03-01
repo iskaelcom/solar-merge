@@ -130,16 +130,7 @@ export function GameScreen() {
           onResponderRelease={handleTouchEnd}
         >
           {/* Danger line */}
-          <View style={[styles.dangerLine, { top: DANGER_HEIGHT }]}>
-            {state.dangerProgress > 0 && (
-              <View
-                style={[
-                  styles.dangerFill,
-                  { width: `${state.dangerProgress * 100}%` as any },
-                ]}
-              />
-            )}
-          </View>
+          <View style={[styles.dangerLine, { top: DANGER_HEIGHT }]} />
           <Text style={[styles.dangerLabel, { top: DANGER_HEIGHT - 16 }]}>
             ⚠️ Danger zone
           </Text>

@@ -26,7 +26,6 @@ export interface GameState {
   gameOver: boolean;
   combo: number;
   showCombo: boolean;
-  dangerProgress: number; // 0-1 progress toward game over
   explosions: Explosion[];
   mergeSpawnIds: string[]; // IDs of planets freshly spawned from a merge (for pop animation)
 }
