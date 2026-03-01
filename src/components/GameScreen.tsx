@@ -25,14 +25,14 @@ export function GameScreen() {
   const gameWidth = Math.min(screenW - WALL_THICKNESS * 2, 400);
   const gameHeight = Math.max(350, screenH - reservedVertical);
 
-  const { state, setPointerX, dropPlanet, restart, removeExplosion } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef } = useGame(gameWidth, gameHeight);
 
   const isPointerActive = useRef(false);
   const currentPointerX = useRef(gameWidth / 2);
 
   // ── Touch / Mouse handlers ──────────────────────────────────────────────
   const handleTouchStart = (e: any) => {
-    if (state.gameOver || state.isDropping) return;
+    if (state.gameOver || state.isDropping || isDroppingRef.current) return;
     isPointerActive.current = true;
     const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
     currentPointerX.current = x;
@@ -47,7 +47,7 @@ export function GameScreen() {
   };
 
   const handleTouchEnd = () => {
-    if (!isPointerActive.current || state.gameOver || state.isDropping) return;
+    if (!isPointerActive.current || state.gameOver || state.isDropping || isDroppingRef.current) return;
     isPointerActive.current = false;
     dropPlanet(currentPointerX.current);
   };

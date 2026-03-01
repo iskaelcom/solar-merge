@@ -15,16 +15,21 @@ import { GameState, RenderPlanet, Explosion } from './types';
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
 
-function randomPlanetId(): number {
-  return Math.floor(Math.random() * MAX_SPAWN_LEVEL) + 1;
-}
+const shuffle = (array: number[]) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
 
 const INITIAL_STATE: GameState = {
   planets: [],
   score: 0,
   highScore: 0,
-  currentPlanetId: randomPlanetId(),
-  nextPlanetId: randomPlanetId(),
+  currentPlanetId: 1,
+  nextPlanetId: 2,
   pointerX: GAME_WIDTH / 2,
   isDropping: false,
   gameOver: false,
@@ -48,11 +53,44 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const pendingExplosionsRef = useRef<Explosion[]>([]);
   // Track IDs of planets spawned from a merge (for pop animation)
   const pendingMergeSpawnIdsRef = useRef<string[]>([]);
+  // Robust drop lock to prevent race conditions with multiple rapid taps
+  const isDroppingRef = useRef<boolean>(false);
+  // Shuffle bag for levels 1-6 variety
+  const bagRef = useRef<number[]>([]);
 
-  const [state, setState] = useState<GameState>(() => ({
-    ...INITIAL_STATE,
-    pointerX: gameWidth / 2,
-  }));
+  const refillBag = useCallback(() => {
+    bagRef.current = shuffle([1, 2, 3, 4, 5, 6]);
+  }, []);
+
+  const getFromBag = useCallback((excludeId?: number): number => {
+    if (bagRef.current.length === 0) refillBag();
+
+    // If the next planet is the same as excluded, swap with another or reshuffle
+    if (excludeId !== undefined && bagRef.current[0] === excludeId) {
+      if (bagRef.current.length > 1) {
+        // Swap with the next one
+        const temp = bagRef.current[0];
+        bagRef.current[0] = bagRef.current[1];
+        bagRef.current[1] = temp;
+      } else {
+        // Only one left and it's the excludeId? Reshuffle.
+        refillBag();
+        return getFromBag(excludeId);
+      }
+    }
+
+    return bagRef.current.shift()!;
+  }, [refillBag]);
+
+  const [state, setState] = useState<GameState>(() => {
+    // Basic init, will be properly shuffled in useEffect or initial call
+    return {
+      ...INITIAL_STATE,
+      currentPlanetId: 1,
+      nextPlanetId: 2,
+      pointerX: gameWidth / 2,
+    };
+  });
   const stateRef = useRef<GameState>(state);
   stateRef.current = state;
 
@@ -69,8 +107,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const planet = PLANETS[planetId - 1];
 
       if (nextPlanetId <= PLANETS.length) {
-        engine.addPlanet(newId, nextPlanetId, x, Math.max(y, PLANETS[nextPlanetId - 1].size));
-        pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y });
+        const nextSize = PLANETS[nextPlanetId - 1].size;
+        // Ensure the new planet doesn't spawn too high or get stuck in walls
+        const spawnY = Math.max(y, nextSize + 10);
+        engine.addPlanet(newId, nextPlanetId, x, spawnY);
+        pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y: spawnY });
         pendingMergeSpawnIdsRef.current.push(newId);
 
         // Shockwave — push all surrounding planets outward from the merge point
@@ -209,6 +250,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
   // ─── Init on mount ────────────────────────────────────────────────────────
   useEffect(() => {
+    refillBag();
+    const current = getFromBag();
+    const next = getFromBag(current);
+    setState(s => ({ ...s, currentPlanetId: current, nextPlanetId: next }));
+
     initPhysics();
     startLoop();
     return () => {
@@ -230,7 +276,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
   const dropPlanet = useCallback((x: number) => {
     setState((prev) => {
-      if (prev.isDropping || prev.gameOver || !physicsRef.current) return prev;
+      if (isDroppingRef.current || prev.gameOver || !physicsRef.current) return prev;
+      isDroppingRef.current = true;
 
       const planet = PLANETS[prev.currentPlanetId - 1];
       const clampedX = Math.max(planet.size + 2, Math.min(gameWidth - planet.size - 2, x));
@@ -251,7 +298,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         ...prev,
         planets: [...prev.planets, newPlanet],
         currentPlanetId: prev.nextPlanetId,
-        nextPlanetId: randomPlanetId(),
+        nextPlanetId: getFromBag(prev.nextPlanetId),
         pointerX: clampedX,
         isDropping: true,
       };
@@ -260,6 +307,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     setTimeout(() => {
       // Clear the combo banner when the player gets control back — banner
       // should only show during the settling phase, not while aiming.
+      isDroppingRef.current = false;
       setState((s) => ({ ...s, isDropping: false, showCombo: false }));
     }, DROP_DELAY);
   }, [gameWidth]);
@@ -279,15 +327,20 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pendingMergeSpawnIdsRef.current = [];
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
 
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      highScore: Math.max(prev.highScore, prev.score),
-      currentPlanetId: randomPlanetId(),
-      nextPlanetId: randomPlanetId(),
-      pointerX: gameWidth / 2,
-      explosions: [],
-      mergeSpawnIds: [],
-    }));
+    setState((prev) => {
+      refillBag();
+      const current = getFromBag();
+      const next = getFromBag(current);
+      return {
+        ...INITIAL_STATE,
+        highScore: Math.max(prev.highScore, prev.score),
+        currentPlanetId: current,
+        nextPlanetId: next,
+        pointerX: gameWidth / 2,
+        explosions: [],
+        mergeSpawnIds: [],
+      };
+    });
 
     // Re-init physics then restart loop
     setTimeout(() => {
@@ -296,5 +349,5 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }, 50);
   }, [gameWidth, initPhysics, startLoop]);
 
-  return { state, setPointerX, dropPlanet, restart, removeExplosion };
+  return { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef };
 }

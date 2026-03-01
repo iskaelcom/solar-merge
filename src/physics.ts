@@ -187,8 +187,9 @@ export class SolarPhysics {
    * excludeId = the newly-spawned planet (shouldn't push itself).
    */
   applyMergeShockwave(x: number, y: number, mergedPlanetSize: number, excludeId?: string): void {
-    const maxKick = mergedPlanetSize * 0.18;      // Moon≈4.5  Saturn≈15  Sun≈23 px/step
-    const shockRadius = mergedPlanetSize * 5;     // reach scales with planet size
+    // Reduced kick intensity to prevent violent chain reactions
+    const maxKick = mergedPlanetSize * 0.12;      // Moon≈3.0  Saturn≈10  Sun≈15.6 px/step
+    const shockRadius = mergedPlanetSize * 4.5;   // reach scales with planet size
 
     this.planets.forEach((p) => {
       if (p.id === excludeId) return;

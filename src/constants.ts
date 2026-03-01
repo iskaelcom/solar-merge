@@ -121,22 +121,22 @@ export const GAME_WIDTH = 360;
 export const GAME_HEIGHT = 580;
 
 // Danger zone height from top of game area (game over if planet above this for too long)
-export const DANGER_HEIGHT = 70;
+export const DANGER_HEIGHT = 80;
 
 // Time (ms) a planet must be above danger line before game over
-export const DANGER_TIME = 3000;
+export const DANGER_TIME = 2500;
 
 // Delay (ms) before next planet appears after dropping
-export const DROP_DELAY = 600;
+export const DROP_DELAY = 650;
 
 // Max planet level to randomly spawn (1-based index)
-export const MAX_SPAWN_LEVEL = 5;
+export const MAX_SPAWN_LEVEL = 6;
 
 // Physics settings
-export const GRAVITY = 1.2;
-export const RESTITUTION = 0.25; // bounciness
-export const FRICTION = 0.5;
-export const FRICTION_AIR = 0.008;
+export const GRAVITY = 1.25;
+export const RESTITUTION = 0.22; // bounciness reduced slightly
+export const FRICTION = 0.6;     // increased friction for stability
+export const FRICTION_AIR = 0.01;
 
 // Score combo reset time (ms)
 export const COMBO_RESET_TIME = 2500;
