@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Solar Merge",
+    "slug": "solar-merge",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.solarmerge.app"
+    },
+    "android": {
+      "package": "com.solarmerge.app"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

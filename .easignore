@@ -1,0 +1,36 @@
+# EAS Build ignore — keeps upload small by excluding dev-only files
+
+# Dependencies (EAS installs them fresh)
+node_modules/
+
+# Local builds & cache
+.expo/
+web-build/
+dist/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Local env (never upload secrets)
+.env
+.env.local
+.env.*.local
+
+# Tests & docs
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+README.md
+CHANGELOG.md
