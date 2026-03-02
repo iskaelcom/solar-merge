@@ -10,8 +10,10 @@ import { PlanetThumb } from './PlanetView';
 import { StarThumb } from './StarView';
 import { BlackHoleThumb } from './BlackHoleView';
 import { VirusPlanetThumb } from './VirusPlanetView';
+import { User } from 'firebase/auth';
 
 // ── Persistence ───────────────────────────────────────────────────────────────
+// ... existing markSeen / isTutorialSeen ...
 
 const TUTORIAL_KEY = 'solar-merge-tutorial-v2';
 
@@ -31,7 +33,7 @@ function markSeen(): void {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(TUTORIAL_KEY, '1');
     }
-  } catch {}
+  } catch { }
 }
 
 // ── Slide visuals ─────────────────────────────────────────────────────────────
@@ -173,7 +175,46 @@ function ReadyVisual() {
   );
 }
 
+function LeaderboardVisual({ user, onSignIn }: { user: User | null; onSignIn?: () => void }) {
+  if (user) {
+    return (
+      <View style={{ alignItems: 'center', gap: 10 }}>
+        <Text style={{ fontSize: 40 }}>✅</Text>
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+          Logged in as {user.displayName || 'Explorer'}!
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ alignItems: 'center', gap: 12 }}>
+      <Text style={{ fontSize: 36 }}>🏆</Text>
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#fff',
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          borderRadius: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        }}
+        onPress={onSignIn}
+      >
+        <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>
+          Sign in with Google
+        </Text>
+      </TouchableOpacity>
+      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center' }}>
+        Participate in the global rankings!
+      </Text>
+    </View>
+  );
+}
+
 const vis = StyleSheet.create({
+  // ... styles ...
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,6 +269,11 @@ const SLIDES: Slide[] = [
     visual: <DangerVisual />,
   },
   {
+    title: "Global Leaderboard 🏆",
+    body: "Compete with players worldwide! Sign in with Google to save your high scores and see your rank in the hall of fame.",
+    visual: 'leaderboard', // Special marker
+  },
+  {
     title: "Ready to Launch? 🚀",
     body: 'Merge your way from the Moon all the way to the Sun. The universe awaits — good luck, explorer!',
     visual: <ReadyVisual />,
@@ -239,14 +285,21 @@ const SLIDES: Slide[] = [
 interface Props {
   visible: boolean;
   onDone: () => void;
+  user: User | null;
+  onSignIn?: () => void;
 }
 
-export function TutorialOverlay({ visible, onDone }: Props) {
+export function TutorialOverlay({ visible, onDone, user, onSignIn }: Props) {
   const [page, setPage] = useState(0);
 
   const isFirst = page === 0;
   const isLast = page === SLIDES.length - 1;
   const slide = SLIDES[page];
+
+  let visual = slide.visual;
+  if (visual === 'leaderboard') {
+    visual = <LeaderboardVisual user={user} onSignIn={onSignIn} />;
+  }
 
   function handleNext() {
     if (isLast) {
@@ -286,7 +339,7 @@ export function TutorialOverlay({ visible, onDone }: Props) {
           )}
 
           {/* Visual */}
-          <View style={styles.visualArea}>{slide.visual}</View>
+          <View style={styles.visualArea}>{visual}</View>
 
           {/* Text */}
           <Text style={styles.title}>{slide.title}</Text>

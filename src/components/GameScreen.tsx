@@ -301,7 +301,12 @@ export function GameScreen() {
       )}
 
       {/* ── Tutorial overlay ──────────────────────────────────── */}
-      <TutorialOverlay visible={showTutorial} onDone={() => setShowTutorial(false)} />
+      <TutorialOverlay
+        visible={showTutorial}
+        onDone={() => setShowTutorial(false)}
+        user={user}
+        onSignIn={signIn}
+      />
 
       {/* ── Leaderboard overlay ───────────────────────────────── */}
       <LeaderboardModal
