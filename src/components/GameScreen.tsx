@@ -9,7 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useGame } from '../useGame';
+import { useGame, calculateChecksum } from '../useGame';
 import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
@@ -34,7 +34,7 @@ export function GameScreen() {
   const gameWidth = Math.min(screenW - WALL_THICKNESS * 2, 400);
   const gameHeight = Math.max(350, screenH - reservedVertical);
 
-  const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -45,10 +45,13 @@ export function GameScreen() {
   const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
   const { entries, loading: lbLoading, fetchError: lbError, userRank, submitScore } = useLeaderboard(user);
 
-  // Submit score to Firestore whenever the game ends
+  // Submit score to Firestore whenever the game ends.
+  // Use refs (not state) so DevTools tampering of state.score has zero effect.
   React.useEffect(() => {
     if (state.gameOver && user) {
-      submitScore(state.score, state.checksum, state.dropCount);
+      const realScore = scoreRef.current;
+      const realDropCount = dropCountRef.current;
+      submitScore(realScore, calculateChecksum(realScore, realDropCount), realDropCount);
     }
   }, [state.gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -103,6 +103,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const comboTimerShowRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Combo multiplier lives in a ref — invisible to React DevTools, cannot be tampered via state
   const comboRef = useRef<number>(1);
+  // Actual score lives in a ref — display-only copy goes to state, tampering state has no effect
+  const scoreRef = useRef<number>(0);
   // Track merge-spawned planets that need to be added to render state
   const pendingSpawnsRef = useRef<Array<{ id: string; planetId: number; x: number; y: number }>>([]);
   // Track explosions triggered by merges
@@ -202,10 +204,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           scale: Math.max(0.8, planet.size / 30),
         });
 
-        // Subtract score (no combo)
+        // Subtract score (no combo) — write through ref first
         setState((prev) => {
           const penalty = planet.score;
-          const newScore = Math.max(0, prev.score - penalty);
+          scoreRef.current = Math.max(0, scoreRef.current - penalty);
+          const newScore = scoreRef.current;
           return {
             ...prev,
             score: newScore,
@@ -265,7 +268,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
         setState((prev) => {
           const earned = planet.score * combo;
-          const newScore = prev.score + earned;
+          scoreRef.current += earned;
+          const newScore = scoreRef.current;
           const newHighScore = Math.max(prev.highScore, newScore);
 
           if (newHighScore > prev.highScore) {
@@ -342,7 +346,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
         setState((prev) => {
           const earned = planet.score;
-          const newScore = prev.score + earned;
+          scoreRef.current += earned;
+          const newScore = scoreRef.current;
           const newHighScore = Math.max(prev.highScore, newScore);
           if (newHighScore > prev.highScore) {
             storage.set(newHighScore, dropCountRef.current);
@@ -450,7 +455,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
       setState((prev) => {
         const earned = sun.score * 2 * combo; // both suns worth of score
-        const newScore = prev.score + earned;
+        scoreRef.current += earned;
+        const newScore = scoreRef.current;
         const newHighScore = Math.max(prev.highScore, newScore);
 
         if (newHighScore > prev.highScore) {
@@ -503,7 +509,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // Only Game Over if the planet is NOT falling fast (vY > -0.5 and vY < 2)
         if (Math.abs(highest.vy) < 1.0) {
           setState((prev) => {
-            const newHighScore = Math.max(prev.highScore, prev.score);
+            const newHighScore = Math.max(prev.highScore, scoreRef.current);
             if (newHighScore > prev.highScore) {
               storage.set(newHighScore, dropCountRef.current);
             }
@@ -511,7 +517,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
               ...prev,
               gameOver: true,
               highScore: newHighScore,
-              checksum: calculateChecksum(prev.score, dropCountRef.current),
+              checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
             };
           });
           cancelAnimationFrame(rafRef.current);
@@ -783,6 +789,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     physicsRef.current?.setShieldActive(false);
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
     comboRef.current = 1;
+    scoreRef.current = 0;
 
     setState((prev) => {
       refillBag();
@@ -814,5 +821,5 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }, 50);
   }, [gameWidth, initPhysics, startLoop]);
 
-  return { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef };
+  return { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef, scoreRef, dropCountRef };
 }

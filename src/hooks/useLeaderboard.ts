@@ -22,7 +22,21 @@ import { calculateChecksum } from '../useGame';
 //   match /databases/{database}/documents {
 //     match /scores/{userId} {
 //       allow read: if true;
-//       allow write: if request.auth != null && request.auth.uid == userId;
+//       allow write: if request.auth != null
+//         && request.auth.uid == userId
+//         // score must be a non-negative integer
+//         && request.resource.data.score is int
+//         && request.resource.data.score >= 0
+//         // dropCount must be a positive integer
+//         && request.resource.data.dropCount is int
+//         && request.resource.data.dropCount > 0
+//         // score can only increase — never decrease
+//         && (!resource.exists() || request.resource.data.score > resource.data.score)
+//         // score-per-drop ratio cap: generous upper bound for legitimate play
+//         // (avg max ~1500 per drop even with high combos + sun merges)
+//         && request.resource.data.score / request.resource.data.dropCount <= 5000
+//         // absolute ceiling — any score above this is implausible
+//         && request.resource.data.score <= 5000000;
 //     }
 //   }
 // }
@@ -89,6 +103,7 @@ export function useLeaderboard(user: User | null) {
           displayName: user.displayName ?? 'Anonymous',
           photoURL: user.photoURL ?? '',
           score,
+          dropCount,
           updatedAt: serverTimestamp(),
         });
       }
