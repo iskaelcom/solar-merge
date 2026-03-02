@@ -6,6 +6,7 @@ import {
   useWindowDimensions,
   Platform,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../useGame';
@@ -51,28 +52,6 @@ export function GameScreen() {
   const isPointerActive = useRef(false);
   const currentPointerX = useRef(gameWidth / 2);
 
-  // ── Touch / Mouse handlers ──────────────────────────────────────────────
-  const handleTouchStart = (e: any) => {
-    if (state.gameOver || state.isDropping || isDroppingRef.current) return;
-    isPointerActive.current = true;
-    const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
-    currentPointerX.current = x;
-    setPointerX(x);
-  };
-
-  const handleTouchMove = (e: any) => {
-    if (!isPointerActive.current || state.gameOver) return;
-    const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
-    currentPointerX.current = x;
-    setPointerX(x);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isPointerActive.current || state.gameOver || state.isDropping || isDroppingRef.current) return;
-    isPointerActive.current = false;
-    dropPlanet(currentPointerX.current);
-  };
-
   const currentPlanet = PLANETS[state.currentPlanetId - 1];
 
   // Clamp preview by item radius (virus / star / black hole / planet)
@@ -83,11 +62,51 @@ export function GameScreen() {
       : state.currentIsBlackHole
         ? BLACK_HOLE_RADIUS
         : currentPlanet.size;
-  const previewX = Math.max(
-    previewRadius + 2,
-    Math.min(gameWidth - previewRadius - 2, state.pointerX)
-  );
   const previewY = previewRadius + 2;
+
+  // Animated value drives the drop line + ghost position WITHOUT re-renders.
+  // This is the fix for the glitch: mouse hover bypasses React state entirely.
+  const pointerXAnim = useRef(new Animated.Value(gameWidth / 2)).current;
+  // Keep previewRadius accessible in event handlers without stale closures
+  const previewRadiusRef = useRef(previewRadius);
+  previewRadiusRef.current = previewRadius;
+
+  const clampPointerX = (x: number) =>
+    Math.max(previewRadiusRef.current + 2, Math.min(gameWidth - previewRadiusRef.current - 2, x));
+
+  // ── Touch / Mouse handlers ──────────────────────────────────────────────
+  const handleTouchStart = (e: any) => {
+    if (state.gameOver || state.isDropping || isDroppingRef.current) return;
+    isPointerActive.current = true;
+    const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
+    currentPointerX.current = x;
+    pointerXAnim.setValue(clampPointerX(x));
+    setPointerX(x);
+  };
+
+  const handleTouchMove = (e: any) => {
+    if (!isPointerActive.current || state.gameOver) return;
+    const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
+    currentPointerX.current = x;
+    pointerXAnim.setValue(clampPointerX(x));
+    setPointerX(x);
+  };
+
+  // Web only: update guide visuals directly via Animated — zero React re-renders
+  const handleMouseMove = (e: any) => {
+    if (state.gameOver || isPointerActive.current) return;
+    const x = e.nativeEvent.locationX ?? e.nativeEvent.offsetX;
+    if (x == null || isNaN(x)) return;
+    currentPointerX.current = x;
+    pointerXAnim.setValue(clampPointerX(x));
+  };
+
+  const handleTouchEnd = () => {
+    if (!isPointerActive.current || state.gameOver || state.isDropping || isDroppingRef.current) return;
+    isPointerActive.current = false;
+    dropPlanet(currentPointerX.current);
+  };
+
 
   // "After" slot: when holding a special, currentPlanetId is the planet after it
   const holdingSpecial = state.currentIsStar || state.currentIsBlackHole || state.currentIsVirus;
@@ -163,6 +182,7 @@ export function GameScreen() {
           onResponderGrant={handleTouchStart}
           onResponderMove={handleTouchMove}
           onResponderRelease={handleTouchEnd}
+          {...(Platform.OS === 'web' ? { onMouseMove: handleMouseMove } : {})}
         >
           {/* Danger line */}
           <View style={[styles.dangerLine, { top: DANGER_HEIGHT }]} />
@@ -186,13 +206,14 @@ export function GameScreen() {
             </>
           )}
 
-          {/* Drop guide line */}
+          {/* Drop guide line — Animated.Value drives left, no React re-render on hover */}
           {!state.isDropping && (
-            <View
+            <Animated.View
+              pointerEvents="none"
               style={[
                 styles.dropLine,
                 {
-                  left: previewX - 1,
+                  left: Animated.subtract(pointerXAnim, 1),
                   top: previewY * 2,
                   height: gameHeight - previewY * 2,
                 },
@@ -200,15 +221,25 @@ export function GameScreen() {
             />
           )}
 
-          {/* Ghost / preview — virus, black hole, star, or planet */}
+          {/* Ghost / preview — Animated wrapper moves horizontally without re-render */}
           {!state.isDropping && (
-            state.currentIsVirus
-              ? <VirusPlanetView x={previewX} y={previewY} ghost />
-              : state.currentIsBlackHole
-                ? <BlackHoleView x={previewX} y={previewY} ghost />
-                : state.currentIsStar
-                  ? <StarView x={previewX} y={previewY} ghost />
-                  : <PlanetView planetId={state.currentPlanetId} x={previewX} y={previewY} ghost />
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: Animated.subtract(pointerXAnim, previewRadius),
+                top: previewY - previewRadius,
+              }}
+            >
+              {state.currentIsVirus
+                ? <VirusPlanetView x={previewRadius} y={previewRadius} ghost />
+                : state.currentIsBlackHole
+                  ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
+                  : state.currentIsStar
+                    ? <StarView x={previewRadius} y={previewRadius} ghost />
+                    : <PlanetView planetId={state.currentPlanetId} x={previewRadius} y={previewRadius} ghost />
+              }
+            </Animated.View>
           )}
 
           {/* All live planets */}
