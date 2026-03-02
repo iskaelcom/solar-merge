@@ -335,13 +335,19 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           engine.applyMergeShockwave(x, spawnY, planet.size, newId);
         }
 
-        // Gold explosion
+        // ── Star + Sun: gravitational collapse — suck surrounding objects ──
+        const isSunHit = planetTypeId === PLANETS.length;
+        if (isSunHit) {
+          engine.applyBlackHoleSuction(x, y, planet.size);
+        }
+
+        // Explosion: dramatic dark-gold implosion for Sun, normal gold otherwise
         pendingExplosionsRef.current.push({
           id: `exp_star_${Date.now()}_${Math.random()}`,
           x, y,
           planetSize: planet.size,
-          color: '#FFD600',
-          scale: Math.max(0.8, planet.size / 30),
+          color: isSunHit ? '#FF6600' : '#FFD600',
+          scale: isSunHit ? Math.max(2.0, planet.size / 15) : Math.max(0.8, planet.size / 30),
         });
 
         setState((prev) => {
