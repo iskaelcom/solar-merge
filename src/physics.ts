@@ -449,6 +449,11 @@ export class SolarPhysics {
 
     this.planets.set(id, { id, planetId, body });
     Matter.Composite.add(this.engine.world, body);
+    // Ensure the body is awake and starts falling immediately.
+    // enableSleeping can cause a freshly-dropped planet to go to sleep on
+    // contact with an existing body, making it appear stuck at the top.
+    Matter.Body.setVelocity(body, { x: 0, y: 1 });
+    if ((body as any).isSleeping) (body as any).isSleeping = false;
   }
 
   removePlanet(id: string): void {
