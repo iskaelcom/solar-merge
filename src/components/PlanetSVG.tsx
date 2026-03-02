@@ -25,8 +25,8 @@ export function MoonSVG({ size, opacity = 1 }: P) {
     <Svg width={size} height={size} viewBox="0 0 100 100" style={{ opacity }}>
       <Defs>
         <RadialGradient id="mg1" cx="38%" cy="32%" r="65%">
-          <Stop offset="0%" stopColor="#F8F8FF" />
-          <Stop offset="100%" stopColor="#B0B0C8" />
+          <Stop offset="0%" stopColor="#FFFCE0" />
+          <Stop offset="100%" stopColor="#C8AC60" />
         </RadialGradient>
       </Defs>
       {/* Body */}

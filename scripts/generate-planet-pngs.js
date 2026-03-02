@@ -40,8 +40,8 @@ const PLANETS = [
 ['moon', 400, 400, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="400" height="400">
   <defs>
     <radialGradient id="g" cx="38%" cy="32%" r="65%">
-      <stop offset="0%" stop-color="#F8F8FF"/>
-      <stop offset="100%" stop-color="#B0B0C8"/>
+      <stop offset="0%" stop-color="#FFFCE0"/>
+      <stop offset="100%" stop-color="#C8AC60"/>
     </radialGradient>
   </defs>
   <circle cx="50" cy="50" r="47" fill="url(#g)"/>
