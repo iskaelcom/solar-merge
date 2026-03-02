@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame, calculateChecksum } from '../useGame';
-import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS } from '../constants';
+import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
 import { BlackHoleView } from './BlackHoleView';
@@ -25,15 +25,30 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 
 const WALL_THICKNESS = 6;
 
+// ── Outer shell: computes + debounces dimensions, remounts GameView on change ─
 export function GameScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
 
-  // Game area dimensions — leave room for header, sub-header, evo-bar and safe areas
   const topPad = Platform.OS === 'ios' ? 50 : 30;
   const reservedVertical = topPad + 42 + 56 + 36 + 12; // header + logoRow + evoBar + bottomPad
-  const gameWidth = Math.min(screenW - WALL_THICKNESS * 2, 400);
-  const gameHeight = Math.max(350, screenH - reservedVertical);
+  const rawW = Math.min(screenW - WALL_THICKNESS * 2, 400);
+  const rawH = Math.max(350, Math.min(
+    Math.round(rawW * GAME_HEIGHT / GAME_WIDTH), // enforce natural aspect ratio
+    screenH - reservedVertical,
+  ));
 
+  // Debounce so rapid resize doesn't spam remounts (300 ms settle time)
+  const [dims, setDims] = useState({ w: rawW, h: rawH });
+  useEffect(() => {
+    const t = setTimeout(() => setDims({ w: rawW, h: rawH }), 300);
+    return () => clearTimeout(t);
+  }, [rawW, rawH]);
+
+  return <GameView key={`${dims.w}x${dims.h}`} gameWidth={dims.w} gameHeight={dims.h} />;
+}
+
+// ── Inner game view: fully remounts when dimensions change ────────────────────
+function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
   const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
@@ -47,7 +62,7 @@ export function GameScreen() {
 
   // Submit score to Firestore whenever the game ends.
   // Use refs (not state) so DevTools tampering of state.score has zero effect.
-  React.useEffect(() => {
+  useEffect(() => {
     if (state.gameOver && user) {
       const realScore = scoreRef.current;
       const realDropCount = dropCountRef.current;
@@ -71,9 +86,7 @@ export function GameScreen() {
   const previewY = previewRadius + 2;
 
   // Animated value drives the drop line + ghost position WITHOUT re-renders.
-  // This is the fix for the glitch: mouse hover bypasses React state entirely.
   const pointerXAnim = useRef(new Animated.Value(gameWidth / 2)).current;
-  // Keep previewRadius accessible in event handlers without stale closures
   const previewRadiusRef = useRef(previewRadius);
   previewRadiusRef.current = previewRadius;
 
@@ -85,7 +98,6 @@ export function GameScreen() {
     if (state.gameOver || state.isDropping || isDroppingRef.current) return;
     isPointerActive.current = true;
 
-    // Stable screen coordinates
     const pageX = e.nativeEvent.pageX || e.nativeEvent.clientX;
     const x = pageX - layoutXRef.current;
 
@@ -101,7 +113,6 @@ export function GameScreen() {
 
     currentPointerX.current = x;
     pointerXAnim.setValue(clampPointerX(x));
-    // NO setPointerX(x) here — avoids React re-render per frame
   };
 
   const handleMouseMove = (e: any) => {
@@ -119,11 +130,9 @@ export function GameScreen() {
     if (!isPointerActive.current || state.gameOver || state.isDropping || isDroppingRef.current) return;
     isPointerActive.current = false;
 
-    // Final sync with state before drop
     setPointerX(currentPointerX.current);
     dropPlanet(currentPointerX.current);
   };
-
 
   // "After" slot: when holding a special, currentPlanetId is the planet after it
   const holdingSpecial = state.currentIsStar || state.currentIsBlackHole || state.currentIsVirus;
@@ -153,13 +162,11 @@ export function GameScreen() {
 
       {/* ── Row 2: Help | Logo (fixed center) | After ────────── */}
       <View style={[styles.subHeader, { width: gameWidth + WALL_THICKNESS * 2 }]}>
-        {/* Left — Help button (same fixed width as the old Next box) */}
         <TouchableOpacity style={styles.helpBox} onPress={() => setShowTutorial(true)}>
           <Text style={styles.helpIcon}>?</Text>
           <Text style={styles.helpLabel}>Help</Text>
         </TouchableOpacity>
 
-        {/* Center logo — absolutely positioned so side boxes can't push it */}
         <View style={styles.subHeaderCenter} pointerEvents="none">
           {state.showCombo ? (
             <View style={styles.comboBox}>
@@ -170,7 +177,6 @@ export function GameScreen() {
           )}
         </View>
 
-        {/* Right — same fixed width as left */}
         <View style={styles.nextBox}>
           <Text style={styles.nextLabel}>Next</Text>
           <PlanetThumb planetId={afterPlanetId} size={28} />
@@ -195,8 +201,7 @@ export function GameScreen() {
         <View
           ref={gameAreaRef}
           style={[styles.gameArea, { width: gameWidth, height: gameHeight }]}
-          onLayout={(e) => {
-            // Measure layout offset once to allow stable pageX calculations
+          onLayout={() => {
             gameAreaRef.current?.measure((_x, _y, _w, _h, pageX) => {
               if (pageX != null) layoutXRef.current = pageX;
             });
@@ -208,23 +213,20 @@ export function GameScreen() {
             ⚠️ Danger zone
           </Text>
 
-          {/* Shield bars — 3 stacked layers just below the danger line */}
+          {/* Shield bars */}
           {state.shieldLayers > 0 && (
             <>
-              {/* Layer 1 (top, last standing) — red */}
               <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 2, backgroundColor: '#FF3D00', shadowColor: '#FF3D00' }]} />
-              {/* Layer 2 (middle) — yellow */}
               {state.shieldLayers >= 2 && (
                 <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 8, backgroundColor: '#FFD600', shadowColor: '#FFD600' }]} />
               )}
-              {/* Layer 3 (bottom, outermost, first hit) — cyan */}
               {state.shieldLayers >= 3 && (
                 <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 14, backgroundColor: '#00E5FF', shadowColor: '#00E5FF' }]} />
               )}
             </>
           )}
 
-          {/* Drop guide line — Animated.Value drives left, no React re-render on hover */}
+          {/* Drop guide line */}
           {!state.isDropping && (
             <Animated.View
               pointerEvents="none"
@@ -239,7 +241,7 @@ export function GameScreen() {
             />
           )}
 
-          {/* Ghost / preview — Animated wrapper moves horizontally without re-render */}
+          {/* Ghost / preview */}
           {!state.isDropping && (
             <Animated.View
               pointerEvents="none"
@@ -301,8 +303,7 @@ export function GameScreen() {
             />
           ))}
 
-          {/* ── Event Interceptor Shield ────────────────────────── */}
-          {/* This layer sits on TOP of everything to capture touches without glitcing on children */}
+          {/* Event interceptor — captures all pointer events */}
           <View
             style={StyleSheet.absoluteFill}
             onStartShouldSetResponder={() => true}
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
   nextBox: {
     alignItems: 'center',
     gap: 4,
-    width: 68, // fixed width — prevents Saturn's wide thumb from pushing the logo
+    width: 68,
     zIndex: 1,
   },
   nextLabel: {
