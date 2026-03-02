@@ -18,6 +18,9 @@ import { GameOverModal } from './GameOverModal';
 import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
 import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
+import { LeaderboardModal } from './LeaderboardModal';
+import { useAuth } from '../hooks/useAuth';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 
 const WALL_THICKNESS = 6;
 
@@ -33,6 +36,17 @@ export function GameScreen() {
   const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef } = useGame(gameWidth, gameHeight);
 
   const [showTutorial, setShowTutorial] = useState(() => !isTutorialSeen());
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
+  const { entries, loading: lbLoading, userRank, submitScore } = useLeaderboard(user);
+
+  // Submit score to Firestore whenever the game ends
+  React.useEffect(() => {
+    if (state.gameOver && user) {
+      submitScore(state.score);
+    }
+  }, [state.gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPointerActive = useRef(false);
   const currentPointerX = useRef(gameWidth / 2);
@@ -84,7 +98,7 @@ export function GameScreen() {
       {/* ── Stars background ─────────────────────────────────── */}
       <Stars />
 
-      {/* ── Row 1: BEST | SCORE ───────────────────────────────── */}
+      {/* ── Row 1: BEST | SCORE | 🏆 ─────────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
         <View style={styles.bestBox}>
           <Text style={styles.bestLabel}>BEST</Text>
@@ -95,6 +109,10 @@ export function GameScreen() {
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{state.score.toLocaleString()}</Text>
         </View>
+
+        <TouchableOpacity style={styles.helpBtn} onPress={() => setShowLeaderboard(true)}>
+          <Text style={styles.helpText}>🏆</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Row 2: Help | Logo (fixed center) | After ────────── */}
@@ -246,6 +264,20 @@ export function GameScreen() {
 
       {/* ── Tutorial overlay ──────────────────────────────────── */}
       <TutorialOverlay visible={showTutorial} onDone={() => setShowTutorial(false)} />
+
+      {/* ── Leaderboard overlay ───────────────────────────────── */}
+      <LeaderboardModal
+        visible={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+        user={user}
+        authLoading={authLoading}
+        authError={authError}
+        entries={entries}
+        lbLoading={lbLoading}
+        userRank={userRank}
+        onSignIn={signIn}
+        onSignOut={signOut}
+      />
     </LinearGradient>
   );
 }
@@ -459,6 +491,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.95,
     shadowRadius: 6,
     elevation: 4,
+  },
+  helpBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpText: {
+    fontSize: 16,
+    lineHeight: 20,
   },
   helpBox: {
     alignItems: 'center',
