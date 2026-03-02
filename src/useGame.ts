@@ -535,6 +535,19 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           });
           loopActiveRef.current = false;
           cancelAnimationFrame(rafRef.current);
+
+          // Immediately free all physics + pending queues so CPU/memory drops to zero
+          pendingSpawnsRef.current = [];
+          pendingExplosionsRef.current = [];
+          pendingMergeSpawnIdsRef.current = [];
+          pendingStarSpawnsRef.current = [];
+          pendingBlackHoleSpawnsRef.current = [];
+          pendingVirusSpawnsRef.current = [];
+          if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+          if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+          physicsRef.current?.destroy();
+          physicsRef.current = null;
+
           return;
         }
       }
@@ -579,6 +592,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0 });
           });
 
+          // Remove stale IDs (merged/destroyed planets) from sick + mergeSpawn lists
+          const livePlanetIdSet = new Set(updated.map((p) => p.id));
+          const cleanSickIds = prev.sickPlanetIds.filter((id) => livePlanetIdSet.has(id));
+          const cleanMergeSpawnIds = prev.mergeSpawnIds.filter((id) => livePlanetIdSet.has(id));
+
           // Sync stars from physics
           const updatedStars: RenderStar[] = allStars.map((s) => ({
             id: s.id,
@@ -607,10 +625,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             stars: updatedStars,
             blackHoles: updatedBlackHoles,
             viruses: updatedViruses,
+            sickPlanetIds: cleanSickIds,
             explosions: [...prev.explosions, ...newExplosions],
             mergeSpawnIds: freshMergeIds.length > 0
-              ? [...prev.mergeSpawnIds, ...freshMergeIds]
-              : prev.mergeSpawnIds,
+              ? [...cleanMergeSpawnIds, ...freshMergeIds]
+              : cleanMergeSpawnIds,
           };
         });
       }

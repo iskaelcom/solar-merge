@@ -683,10 +683,25 @@ export class SolarPhysics {
   }
 
   destroy(): void {
+    Matter.World.clear(this.engine.world, false);
     Matter.Engine.clear(this.engine);
     this.planets.clear();
     this.stars.clear();
     this.blackHoles.clear();
     this.viruses.clear();
+    this.bodyIdToPlanet.clear();
+    this.bodyIdToStar.clear();
+    this.bodyIdToBlackHole.clear();
+    this.bodyIdToVirus.clear();
+    this.pendingMergeKeys.clear();
+    this.pendingRemovalIds.clear();
+    this.pendingStarRemovalIds.clear();
+    this.pendingBlackHoleRemovalIds.clear();
+    this.pendingVirusRemovalIds.clear();
+    this.mergeCallbacks = [];
+    this.starUpgradeCallbacks = [];
+    this.blackHoleSuckCallbacks = [];
+    this.virusInfectCallbacks = [];
+    this.sunMergeCallbacks = [];
   }
 }
