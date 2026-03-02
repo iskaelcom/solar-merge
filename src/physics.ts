@@ -66,10 +66,19 @@ export interface VirusInfectEvent {
   y: number;
 }
 
+export interface SunMergeEvent {
+  id1: string;        // physics id of first sun
+  id2: string;        // physics id of second sun
+  blackHoleId: string; // physics id of the spawned black hole
+  x: number;
+  y: number;
+}
+
 type MergeCallback = (event: MergeEvent) => void;
 type StarUpgradeCallback = (event: StarUpgradeEvent) => void;
 type BlackHoleSuckCallback = (event: BlackHoleSuckEvent) => void;
 type VirusInfectCallback = (event: VirusInfectEvent) => void;
+type SunMergeCallback = (event: SunMergeEvent) => void;
 
 export class SolarPhysics {
   engine: Matter.Engine;
@@ -81,6 +90,7 @@ export class SolarPhysics {
   private starUpgradeCallbacks: StarUpgradeCallback[] = [];
   private blackHoleSuckCallbacks: BlackHoleSuckCallback[] = [];
   private virusInfectCallbacks: VirusInfectCallback[] = [];
+  private sunMergeCallbacks: SunMergeCallback[] = [];
   private pendingMergeKeys: Set<string> = new Set();
   private pendingRemovalIds: Set<string> = new Set();
   private pendingStarRemovalIds: Set<string> = new Set();
@@ -250,7 +260,6 @@ export class SolarPhysics {
 
         if (!pA || !pB) return;
         if (pA.planetId !== pB.planetId) return;
-        if (pA.planetId >= PLANETS.length) return; // max level
         if (this.pendingRemovalIds.has(pA.id) || this.pendingRemovalIds.has(pB.id)) return;
 
         const key = [pA.id, pB.id].sort().join('|');
@@ -261,6 +270,23 @@ export class SolarPhysics {
 
         const midX = (bodyA.position.x + bodyB.position.x) / 2;
         const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+        // ── Two Suns merged → collapse into a Black Hole ─────────────────
+        if (pA.planetId >= PLANETS.length) {
+          setTimeout(() => {
+            if (this.planets.has(pA.id)) this.removePlanet(pA.id);
+            if (this.planets.has(pB.id)) this.removePlanet(pB.id);
+
+            const bhId = `sun_bh_${Date.now()}`;
+            this.addBlackHole(bhId, midX, midY);
+
+            this.sunMergeCallbacks.forEach((cb) =>
+              cb({ id1: pA.id, id2: pB.id, blackHoleId: bhId, x: midX, y: midY })
+            );
+            this.pendingMergeKeys.delete(key);
+          }, 0);
+          return;
+        }
 
         // Defer to next tick so we don't mutate during collision processing
         setTimeout(() => {
@@ -363,6 +389,10 @@ export class SolarPhysics {
 
   onBlackHoleSuck(cb: BlackHoleSuckCallback): void {
     this.blackHoleSuckCallbacks.push(cb);
+  }
+
+  onSunMerge(cb: SunMergeCallback): void {
+    this.sunMergeCallbacks.push(cb);
   }
 
   addVirus(id: string, x: number, y: number): void {

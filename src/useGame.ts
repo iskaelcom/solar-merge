@@ -406,6 +406,69 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       }));
     });
 
+    // ── Sun + Sun → Black Hole handler ───────────────────────────────────
+    engine.onSunMerge(({ id1, id2, blackHoleId, x, y }) => {
+      const sun = PLANETS[PLANETS.length - 1]; // Sun is the last planet (id 10)
+
+      // Clean up sick state for both suns if needed
+      sickPlanetIdsRef.current.delete(id1);
+      sickPlanetIdsRef.current.delete(id2);
+
+      // Flag the newly-spawned black hole so the game loop picks it up
+      pendingBlackHoleSpawnsRef.current.push({ id: blackHoleId, x, y });
+
+      // Strong suction — neighbouring planets get pulled toward the collapse point
+      engine.applyBlackHoleSuction(x, y, sun.size);
+
+      // Supernova explosion — large, golden-orange
+      pendingExplosionsRef.current.push({
+        id: `exp_sunbh_${Date.now()}_${Math.random()}`,
+        x,
+        y,
+        planetSize: sun.size,
+        color: '#FF6600',
+        scale: Math.max(2.0, sun.size / 15),
+      });
+
+      // Combo accounting (same logic as a normal merge)
+      const combo = comboRef.current;
+      const newCombo = combo + 1;
+      comboRef.current = newCombo;
+
+      if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+      comboTimerRef.current = setTimeout(() => {
+        comboRef.current = 1;
+        setState((s) => ({ ...s, comboDisplay: 1, showCombo: false }));
+      }, COMBO_RESET_TIME);
+
+      if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+      comboTimerShowRef.current = setTimeout(() => {
+        setState((s) => ({ ...s, showCombo: false }));
+      }, 1200);
+
+      dropsSinceLastMergeRef.current = 0;
+
+      setState((prev) => {
+        const earned = sun.score * 2 * combo; // both suns worth of score
+        const newScore = prev.score + earned;
+        const newHighScore = Math.max(prev.highScore, newScore);
+
+        if (newHighScore > prev.highScore) {
+          storage.set(newHighScore, dropCountRef.current);
+        }
+
+        return {
+          ...prev,
+          score: newScore,
+          highScore: newHighScore,
+          checksum: calculateChecksum(newScore, dropCountRef.current),
+          comboDisplay: newCombo,
+          showCombo: newCombo > 1,
+          planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
+        };
+      });
+    });
+
     // ── Shield hit handler ───────────────────────────────────────────────
     engine.onShieldHit(() => {
       shieldLayersRef.current = Math.max(0, shieldLayersRef.current - 1);
