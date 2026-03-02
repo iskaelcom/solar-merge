@@ -408,12 +408,131 @@ const PLANETS = [
 
 ];
 
+// ── Where each planet's face section starts (stripped for sick variant) ──────
+const FACE_START = {
+  moon:    '<!-- Closed sleepy eyes -->',
+  mercury: '<!-- Dizzy spiral eyes -->',
+  mars:    '<!-- Angry V brows -->',
+  venus:   '<!-- Heart eyes -->',
+  earth:   '<!-- Eyes -->',
+  neptune: '<!-- Half-closed mysterious eyes -->',
+  uranus:  '<!-- Big silly eyes -->',
+  saturn:  '<!-- Sunglasses frame -->',
+  jupiter: '<!-- Eyes -->',
+  sun:     '<!-- Sparkle eyes -->',
+};
+
+// Face ends just before this marker (Shine stays in body)
+const FACE_END = '<!-- Shine -->';
+
+// Strip the original face from an SVG string
+function stripFace(svg, name) {
+  const startMarker = FACE_START[name];
+  const startIdx    = svg.indexOf(startMarker);
+  const endIdx      = svg.indexOf(FACE_END);
+  if (startIdx === -1 || endIdx === -1 || startIdx >= endIdx) return svg;
+  // Remove everything from face start up to (but not including) '<!-- Shine -->'
+  return svg.slice(0, startIdx) + svg.slice(endIdx);
+}
+
+// ── Sick face for standard 100×100 planets (center 50,50) ────────────────────
+function sickFace100() {
+  return `
+  <!-- ── SICK FACE ── -->
+  <!-- Sickly green pallor over face area -->
+  <ellipse cx="50" cy="54" rx="34" ry="29" fill="rgba(40,160,10,0.20)"/>
+  <!-- Pale green sick blush -->
+  <ellipse cx="30" cy="62" rx="8" ry="5" fill="rgba(100,200,80,0.30)"/>
+  <ellipse cx="70" cy="62" rx="8" ry="5" fill="rgba(100,200,80,0.30)"/>
+  <!-- Sad brows (inner ends droop down) -->
+  <path d="M31 42 Q37 39 43 43" stroke="rgba(10,10,10,0.80)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M57 43 Q63 39 69 42" stroke="rgba(10,10,10,0.80)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Droopy sad eyes (arc curves downward) -->
+  <path d="M33 49 Q38 55 43 49" stroke="rgba(10,10,10,0.85)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M57 49 Q62 55 67 49" stroke="rgba(10,10,10,0.85)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Tears -->
+  <ellipse cx="35" cy="59" rx="2.5" ry="4" fill="rgba(80,150,255,0.80)"/>
+  <ellipse cx="65" cy="59" rx="2.5" ry="4" fill="rgba(80,150,255,0.80)"/>
+  <!-- Frown -->
+  <path d="M38 69 Q50 61 62 69" stroke="rgba(10,10,10,0.80)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Green sick spots -->
+  <circle cx="22" cy="32" r="5"   fill="rgba(70,210,10,0.70)"/>
+  <circle cx="22" cy="32" r="2.8" fill="rgba(130,240,60,0.75)"/>
+  <circle cx="77" cy="26" r="4"   fill="rgba(70,210,10,0.65)"/>
+  <circle cx="77" cy="26" r="2.2" fill="rgba(130,240,60,0.70)"/>
+  <circle cx="74" cy="71" r="3.5" fill="rgba(70,210,10,0.60)"/>
+  <circle cx="74" cy="71" r="1.8" fill="rgba(130,240,60,0.65)"/>`;
+}
+
+// ── Sick face for Saturn (200×100 viewBox, body center at x=100, y=50) ────────
+function sickFaceSaturn() {
+  return `
+  <!-- ── SICK FACE (Saturn) ── -->
+  <ellipse cx="100" cy="54" rx="34" ry="29" fill="rgba(40,160,10,0.20)"/>
+  <ellipse cx="80"  cy="62" rx="8" ry="5" fill="rgba(100,200,80,0.30)"/>
+  <ellipse cx="120" cy="62" rx="8" ry="5" fill="rgba(100,200,80,0.30)"/>
+  <path d="M81 42 Q87 39 93 43"   stroke="rgba(10,10,10,0.80)" stroke-width="3"   fill="none" stroke-linecap="round"/>
+  <path d="M107 43 Q113 39 119 42" stroke="rgba(10,10,10,0.80)" stroke-width="3"   fill="none" stroke-linecap="round"/>
+  <path d="M83 49 Q88 55 93 49"   stroke="rgba(10,10,10,0.85)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M107 49 Q112 55 117 49" stroke="rgba(10,10,10,0.85)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="85"  cy="59" rx="2.5" ry="4" fill="rgba(80,150,255,0.80)"/>
+  <ellipse cx="115" cy="59" rx="2.5" ry="4" fill="rgba(80,150,255,0.80)"/>
+  <path d="M88 69 Q100 61 112 69" stroke="rgba(10,10,10,0.80)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="72"  cy="32" r="5"   fill="rgba(70,210,10,0.70)"/>
+  <circle cx="72"  cy="32" r="2.8" fill="rgba(130,240,60,0.75)"/>
+  <circle cx="127" cy="26" r="4"   fill="rgba(70,210,10,0.65)"/>
+  <circle cx="127" cy="26" r="2.2" fill="rgba(130,240,60,0.70)"/>
+  <circle cx="124" cy="71" r="3.5" fill="rgba(70,210,10,0.60)"/>
+  <circle cx="124" cy="71" r="1.8" fill="rgba(130,240,60,0.65)"/>`;
+}
+
+// ── Sick face for Sun (110×110 viewBox, body center at x=55, y=55, scale≈1.1) ─
+function sickFaceSun() {
+  return `
+  <!-- ── SICK FACE (Sun) ── -->
+  <ellipse cx="55" cy="59" rx="37" ry="32" fill="rgba(40,160,10,0.20)"/>
+  <ellipse cx="33" cy="68" rx="9"  ry="5.5" fill="rgba(100,200,80,0.30)"/>
+  <ellipse cx="77" cy="68" rx="9"  ry="5.5" fill="rgba(100,200,80,0.30)"/>
+  <path d="M34 46 Q41 43 47 47" stroke="rgba(10,10,10,0.80)" stroke-width="3.3" fill="none" stroke-linecap="round"/>
+  <path d="M63 47 Q69 43 76 46" stroke="rgba(10,10,10,0.80)" stroke-width="3.3" fill="none" stroke-linecap="round"/>
+  <path d="M36 54 Q42 61 47 54" stroke="rgba(10,10,10,0.85)" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+  <path d="M63 54 Q68 61 74 54" stroke="rgba(10,10,10,0.85)" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="39" cy="65" rx="2.8" ry="4.4" fill="rgba(80,150,255,0.80)"/>
+  <ellipse cx="72" cy="65" rx="2.8" ry="4.4" fill="rgba(80,150,255,0.80)"/>
+  <path d="M42 76 Q55 67 68 76" stroke="rgba(10,10,10,0.80)" stroke-width="3.3" fill="none" stroke-linecap="round"/>
+  <circle cx="24" cy="35" r="5.5" fill="rgba(70,210,10,0.70)"/>
+  <circle cx="24" cy="35" r="3.1" fill="rgba(130,240,60,0.75)"/>
+  <circle cx="85" cy="29" r="4.4" fill="rgba(70,210,10,0.65)"/>
+  <circle cx="85" cy="29" r="2.4" fill="rgba(130,240,60,0.70)"/>
+  <circle cx="81" cy="78" r="3.9" fill="rgba(70,210,10,0.60)"/>
+  <circle cx="81" cy="78" r="2.0" fill="rgba(130,240,60,0.65)"/>`;
+}
+
+function sickFaceElements(name) {
+  if (name === 'saturn') return sickFaceSaturn();
+  if (name === 'sun')    return sickFaceSun();
+  return sickFace100();
+}
+
 async function main() {
-  console.log('Generating planet PNGs (original style)...\n');
+  console.log('Generating planet PNGs (normal + sick variants)...\n');
   for (const [name, w, h, svg] of PLANETS) {
+    // Normal
     const out = path.join(OUT, `${name}.png`);
     await sharp(Buffer.from(svg)).png().resize(w, h).toFile(out);
-    console.log(`  v ${name}.png  (${w}x${h})`);
+    console.log(`  ✓ ${name}.png  (${w}x${h})`);
+
+    // Sick variant: strip original face, inject sad face before <!-- Shine -->
+    const stripped    = stripFace(svg, name);
+    const shineIdx    = stripped.indexOf(FACE_END);
+    const sickFaceSvg = sickFaceElements(name);
+    const sickSvg     = shineIdx !== -1
+      ? stripped.slice(0, shineIdx) + sickFaceSvg + '\n  ' + stripped.slice(shineIdx)
+      : stripped.replace('</svg>', sickFaceSvg + '\n</svg>');
+
+    const outSick = path.join(OUT, `${name}-sick.png`);
+    await sharp(Buffer.from(sickSvg)).png().resize(w, h).toFile(outSick);
+    console.log(`  ✓ ${name}-sick.png`);
   }
   console.log('\nDone! Images saved to assets/planets/');
 }

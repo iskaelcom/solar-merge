@@ -29,6 +29,20 @@ const PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/planets/sun.png'),
 };
 
+// Sick variants — sad face baked into the PNG
+const SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/planets/moon-sick.png'),
+  2: require('../../assets/planets/mercury-sick.png'),
+  3: require('../../assets/planets/mars-sick.png'),
+  4: require('../../assets/planets/venus-sick.png'),
+  5: require('../../assets/planets/earth-sick.png'),
+  6: require('../../assets/planets/neptune-sick.png'),
+  7: require('../../assets/planets/uranus-sick.png'),
+  8: require('../../assets/planets/saturn-sick.png'),
+  9: require('../../assets/planets/jupiter-sick.png'),
+  10: require('../../assets/planets/sun-sick.png'),
+};
+
 /** A planet rendered as an absolutely-positioned PNG image. */
 export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, style }: Props) => {
   const planet = PLANETS[planetId - 1];
@@ -82,7 +96,7 @@ export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false
         }}
       >
         <Image
-          source={PLANET_IMAGES[planetId]}
+          source={isSick ? SICK_PLANET_IMAGES[planetId] : PLANET_IMAGES[planetId]}
           style={{ width: imgW, height: imgH }}
           resizeMode="contain"
           fadeDuration={0}
