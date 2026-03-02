@@ -3,7 +3,7 @@ export const PLANETS = [
     id: 1,
     name: 'Moon',
     diameter: 3474,
-    size: 25,
+    size: 17,    // radius (px) — base size, ratio ×1.3 per level
     color: '#E8E8F0',
     darkColor: '#9090A8',
     emoji: '🌙',
@@ -15,7 +15,7 @@ export const PLANETS = [
     id: 2,
     name: 'Mercury',
     diameter: 4879,
-    size: 30,
+    size: 22,    // 17 × 1.3
     color: '#B0B0B8',
     darkColor: '#606068',
     emoji: '⚫',
@@ -27,7 +27,7 @@ export const PLANETS = [
     id: 3,
     name: 'Mars',
     diameter: 6779,
-    size: 35,
+    size: 29,    // 22 × 1.3
     color: '#FF6B6B',
     darkColor: '#C0392B',
     emoji: '🔴',
@@ -39,7 +39,7 @@ export const PLANETS = [
     id: 4,
     name: 'Venus',
     diameter: 12104,
-    size: 45,
+    size: 38,    // 29 × 1.3
     color: '#FFD93D',
     darkColor: '#E67E22',
     emoji: '⭐',
@@ -51,7 +51,7 @@ export const PLANETS = [
     id: 5,
     name: 'Earth',
     diameter: 12742,
-    size: 47,
+    size: 49,    // 38 × 1.3
     color: '#4ECDC4',
     darkColor: '#1A6B8A',
     emoji: '🌍',
@@ -63,7 +63,7 @@ export const PLANETS = [
     id: 6,
     name: 'Neptune',
     diameter: 49244,
-    size: 60,
+    size: 64,    // 49 × 1.3
     color: '#5C6BC0',
     darkColor: '#283593',
     emoji: '💙',
@@ -75,7 +75,7 @@ export const PLANETS = [
     id: 7,
     name: 'Uranus',
     diameter: 50724,
-    size: 63,
+    size: 80,
     color: '#26C6DA',
     darkColor: '#00838F',
     emoji: '🩵',
@@ -87,7 +87,7 @@ export const PLANETS = [
     id: 8,
     name: 'Saturn',
     diameter: 116460,
-    size: 85,
+    size: 100,
     color: '#FFD54F',
     darkColor: '#E65100',
     emoji: '🪐',
@@ -100,7 +100,7 @@ export const PLANETS = [
     id: 9,
     name: 'Jupiter',
     diameter: 139820,
-    size: 100,
+    size: 130,
     color: '#FF8A65',
     darkColor: '#BF360C',
     emoji: '🟠',
@@ -113,7 +113,7 @@ export const PLANETS = [
     id: 10,
     name: 'Sun',
     diameter: 1391000,
-    size: 130,
+    size: 170,
     color: '#FFD600',
     darkColor: '#FF6F00',
     emoji: '☀️',
@@ -137,7 +137,7 @@ export const DANGER_HEIGHT = 30;
 export const DROP_DELAY = 650;
 
 // Max planet level to randomly spawn (1-based index)
-export const MAX_SPAWN_LEVEL = 6;
+export const MAX_SPAWN_LEVEL = 4;
 
 // Physics settings
 export const GRAVITY = 2;

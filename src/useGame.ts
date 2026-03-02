@@ -113,7 +113,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const pendingMergeSpawnIdsRef = useRef<string[]>([]);
   // Robust drop lock to prevent race conditions with multiple rapid taps
   const isDroppingRef = useRef<boolean>(false);
-  // Shuffle bag for levels 1-6 variety
+  // Shuffle bag for levels 1–MAX_SPAWN_LEVEL variety
   const bagRef = useRef<number[]>([]);
   // Star / Black Hole / Virus power-up tracking
   const pendingStarSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
@@ -129,7 +129,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const dropsSinceLastMergeRef = useRef<number>(0);
 
   const refillBag = useCallback(() => {
-    bagRef.current = shuffle([1, 2, 3, 4, 5, 6]);
+    bagRef.current = shuffle(Array.from({ length: MAX_SPAWN_LEVEL }, (_, i) => i + 1));
   }, []);
 
   const getFromBag = useCallback((excludeId?: number): number => {
