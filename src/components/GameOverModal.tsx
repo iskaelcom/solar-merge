@@ -15,9 +15,10 @@ interface Props {
   onRestart: () => void;
   userRank?: number | null;
   isSignedIn?: boolean;
+  onShowLeaderboard?: () => void;
 }
 
-export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn }: Props) {
+export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn, onShowLeaderboard }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -70,13 +71,20 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
           </View>
 
           {isSignedIn && (
-            <View style={[styles.rankBadge, userRank ? styles.rankBadgeTop : styles.rankBadgeOut]}>
+            <TouchableOpacity
+              style={[styles.rankBadge, userRank ? styles.rankBadgeTop : styles.rankBadgeOut]}
+              onPress={onShowLeaderboard}
+              activeOpacity={onShowLeaderboard ? 0.7 : 1}
+            >
               <Text style={[styles.rankText, userRank ? styles.rankTextTop : styles.rankTextOut]}>
                 {userRank
                   ? `${['🥇','🥈','🥉'][userRank - 1] ?? '🏅'} Rank #${userRank} di Leaderboard!`
                   : '📊 Belum masuk Top 10'}
               </Text>
-            </View>
+              {onShowLeaderboard && (
+                <Text style={styles.rankTapHint}>Tap to view →</Text>
+              )}
+            </TouchableOpacity>
           )}
 
           <View style={styles.planetHintRow}>
@@ -215,6 +223,11 @@ const styles = StyleSheet.create({
   rankTextOut: {
     color: 'rgba(255,255,255,0.45)',
     fontWeight: '500',
+  },
+  rankTapHint: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 10,
+    marginTop: 2,
   },
   planetHintRow: {
     marginBottom: 20,

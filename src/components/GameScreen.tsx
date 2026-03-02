@@ -265,6 +265,7 @@ export function GameScreen() {
           onRestart={restart}
           userRank={userRank}
           isSignedIn={!!user}
+          onShowLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
 
