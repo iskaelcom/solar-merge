@@ -259,7 +259,13 @@ export function GameScreen() {
 
       {/* ── Game Over overlay ─────────────────────────────────── */}
       {state.gameOver && (
-        <GameOverModal score={state.score} highScore={state.highScore} onRestart={restart} />
+        <GameOverModal
+          score={state.score}
+          highScore={state.highScore}
+          onRestart={restart}
+          userRank={userRank}
+          isSignedIn={!!user}
+        />
       )}
 
       {/* ── Tutorial overlay ──────────────────────────────────── */}

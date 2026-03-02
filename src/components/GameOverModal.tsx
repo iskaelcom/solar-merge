@@ -13,9 +13,11 @@ interface Props {
   score: number;
   highScore: number;
   onRestart: () => void;
+  userRank?: number | null;
+  isSignedIn?: boolean;
 }
 
-export function GameOverModal({ score, highScore, onRestart }: Props) {
+export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -66,6 +68,16 @@ export function GameOverModal({ score, highScore, onRestart }: Props) {
               <Text style={styles.bestValue}>{highScore.toLocaleString()}</Text>
             </View>
           </View>
+
+          {isSignedIn && (
+            <View style={[styles.rankBadge, userRank ? styles.rankBadgeTop : styles.rankBadgeOut]}>
+              <Text style={[styles.rankText, userRank ? styles.rankTextTop : styles.rankTextOut]}>
+                {userRank
+                  ? `${['🥇','🥈','🥉'][userRank - 1] ?? '🏅'} Rank #${userRank} di Leaderboard!`
+                  : '📊 Belum masuk Top 10'}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.planetHintRow}>
             <Text style={styles.hintText}>Merge planets to reach the ☀️ Sun!</Text>
@@ -176,6 +188,33 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  rankBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    marginBottom: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  rankBadgeTop: {
+    backgroundColor: 'rgba(255,214,0,0.15)',
+    borderColor: 'rgba(255,214,0,0.45)',
+  },
+  rankBadgeOut: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  rankText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  rankTextTop: {
+    color: '#FFD600',
+  },
+  rankTextOut: {
+    color: 'rgba(255,255,255,0.45)',
+    fontWeight: '500',
   },
   planetHintRow: {
     marginBottom: 20,
