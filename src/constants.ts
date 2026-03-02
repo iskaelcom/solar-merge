@@ -161,5 +161,7 @@ export const VIRUS_RADIUS = 22;          // physics radius (px)
 export const VIRUS_SPAWN_INTERVAL = 23;  // spawn a virus every N planet drops
 
 // Shield
-export const SHIELD_MAX_LAYERS = 3;      // total shield layers granted at once
-export const SHIELD_COMBO_THRESHOLD = 5; // combo count that triggers a shield grant
+export const SHIELD_MAX_LAYERS = 3;          // total shield layers granted at once
+export const SHIELD_THRESHOLD_DEFAULT = 5;   // starting minimum combo for first milestone
+export const SHIELD_THRESHOLD_MIN = 3;        // floor — threshold never drops below this
+export const SHIELD_THRESHOLD_ADAPT_DROPS = 30; // drops with no merge before threshold is lowered

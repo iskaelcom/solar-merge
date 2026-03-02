@@ -15,7 +15,9 @@ import {
   VIRUS_RADIUS,
   VIRUS_SPAWN_INTERVAL,
   SHIELD_MAX_LAYERS,
-  SHIELD_COMBO_THRESHOLD,
+  SHIELD_THRESHOLD_DEFAULT,
+  SHIELD_THRESHOLD_MIN,
+  SHIELD_THRESHOLD_ADAPT_DROPS,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 
@@ -101,6 +103,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const sickPlanetIdsRef = useRef<Set<string>>(new Set());
   // Shield layer count (source of truth for physics calls)
   const shieldLayersRef = useRef<number>(0);
+  // Adaptive threshold: starts at 5, drops to min 3 after 30 drops with no merge
+  const currentThresholdMinRef = useRef<number>(SHIELD_THRESHOLD_DEFAULT);
+  const dropsSinceLastMergeRef = useRef<number>(0);
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle([1, 2, 3, 4, 5, 6]);
@@ -229,8 +234,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             setState((s) => ({ ...s, showCombo: false }));
           }, 1200);
 
-          // Grant a fresh shield when combo first crosses the threshold
-          if (newCombo === SHIELD_COMBO_THRESHOLD && shieldLayersRef.current === 0) {
+          // Reset the "no-merge" drop counter on every merge
+          dropsSinceLastMergeRef.current = 0;
+
+          // Grant a fresh shield at each milestone: min, min+2, min+4
+          // (default: 5, 7, 9 — lowers if player struggles for 30 drops)
+          const min = currentThresholdMinRef.current;
+          if (newCombo === min || newCombo === min + 2 || newCombo === min + 4) {
             shieldLayersRef.current = SHIELD_MAX_LAYERS;
             physicsRef.current?.setShieldActive(true);
           }
@@ -603,6 +613,20 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Determine special injection. Priority: BH > Virus > Star.
       // Increment OUTSIDE setState to avoid double-triggers in React Dev mode.
       dropCountRef.current += 1;
+
+      // Adaptive shield threshold: lower if player hasn't merged in 30 drops
+      dropsSinceLastMergeRef.current += 1;
+      if (
+        dropsSinceLastMergeRef.current >= SHIELD_THRESHOLD_ADAPT_DROPS &&
+        currentThresholdMinRef.current > SHIELD_THRESHOLD_MIN
+      ) {
+        currentThresholdMinRef.current = Math.max(
+          SHIELD_THRESHOLD_MIN,
+          currentThresholdMinRef.current - 2,
+        );
+        dropsSinceLastMergeRef.current = 0;
+      }
+
       const injectBlackHole = dropCountRef.current % BLACK_HOLE_SPAWN_INTERVAL === 0;
       const injectVirus = !injectBlackHole && dropCountRef.current % VIRUS_SPAWN_INTERVAL === 0;
       const injectStar = !injectBlackHole && !injectVirus && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
@@ -646,6 +670,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     dropCountRef.current = 0;
     sickPlanetIdsRef.current.clear();
     shieldLayersRef.current = 0;
+    currentThresholdMinRef.current = SHIELD_THRESHOLD_DEFAULT;
+    dropsSinceLastMergeRef.current = 0;
     physicsRef.current?.setShieldActive(false);
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
 
