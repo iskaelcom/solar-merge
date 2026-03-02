@@ -10,6 +10,7 @@ import {
   STAR_RADIUS,
   BLACK_HOLE_RADIUS,
   VIRUS_RADIUS,
+  DANGER_HEIGHT,
 } from './constants';
 
 export interface PhysicsPlanet {
@@ -85,6 +86,11 @@ export class SolarPhysics {
   private pendingStarRemovalIds: Set<string> = new Set();
   private pendingBlackHoleRemovalIds: Set<string> = new Set();
   private pendingVirusRemovalIds: Set<string> = new Set();
+  // Shield
+  private shieldActive: boolean = false;
+  private shieldPassedPlanetIds: Set<string> = new Set();
+  private shieldRecentlyHitIds: Set<string> = new Set();
+  private shieldHitCallbacks: Array<() => void> = [];
   width: number;
   height: number;
 
@@ -451,6 +457,8 @@ export class SolarPhysics {
       Matter.Composite.remove(this.engine.world, p.body);
       this.planets.delete(id);
       this.pendingRemovalIds.delete(id);
+      this.shieldPassedPlanetIds.delete(id);
+      this.shieldRecentlyHitIds.delete(id);
     }
   }
 
@@ -543,8 +551,67 @@ export class SolarPhysics {
     });
   }
 
+  // ── Shield ──────────────────────────────────────────────────────────────
+
+  setShieldActive(active: boolean): void {
+    this.shieldActive = active;
+    if (!active) {
+      this.shieldPassedPlanetIds.clear();
+      this.shieldRecentlyHitIds.clear();
+    }
+  }
+
+  onShieldHit(cb: () => void): void {
+    this.shieldHitCallbacks.push(cb);
+  }
+
+  /**
+   * Called each physics step. Deflects upward-moving planets at the danger
+   * line when the shield is active, then fires the hit callbacks.
+   */
+  private checkShield(): void {
+    if (!this.shieldActive) return;
+
+    this.planets.forEach((pb) => {
+      const body = pb.body;
+      const planet = PLANETS[pb.planetId - 1];
+      const radius = planet.size;
+
+      // Mark planets that have settled into the game area (below the shield line)
+      if (body.position.y > DANGER_HEIGHT + 40) {
+        this.shieldPassedPlanetIds.add(pb.id);
+      }
+
+      if (!this.shieldPassedPlanetIds.has(pb.id)) return;
+      if (this.pendingRemovalIds.has(pb.id)) return;
+      if (this.shieldRecentlyHitIds.has(pb.id)) return;
+
+      // Planet top edge crossing the danger line while moving upward
+      if (body.position.y - radius < DANGER_HEIGHT && body.velocity.y < -0.5) {
+        // Debounce: ignore this planet for 600 ms after a hit
+        this.shieldRecentlyHitIds.add(pb.id);
+        setTimeout(() => this.shieldRecentlyHitIds.delete(pb.id), 600);
+
+        // Bounce the planet back downward
+        Matter.Body.setVelocity(body, {
+          x: body.velocity.x * 0.7,
+          y: Math.abs(body.velocity.y) * 0.5,
+        });
+
+        // Clamp position just inside the shield
+        Matter.Body.setPosition(body, {
+          x: body.position.x,
+          y: DANGER_HEIGHT + radius + 2,
+        });
+
+        this.shieldHitCallbacks.forEach((cb) => cb());
+      }
+    });
+  }
+
   step(delta: number): void {
     Matter.Engine.update(this.engine, Math.min(delta, 33));
+    this.checkShield();
   }
 
   reset(): void {
@@ -558,6 +625,10 @@ export class SolarPhysics {
     this.pendingStarRemovalIds.clear();
     this.pendingBlackHoleRemovalIds.clear();
     this.pendingVirusRemovalIds.clear();
+    this.shieldActive = false;
+    this.shieldPassedPlanetIds.clear();
+    this.shieldRecentlyHitIds.clear();
+    this.shieldHitCallbacks = [];
     Matter.World.clear(this.engine.world, false);
     this.engine.gravity.y = GRAVITY;
     this.createWalls();

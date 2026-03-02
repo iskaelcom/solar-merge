@@ -154,6 +154,22 @@ export function GameScreen() {
             ⚠️ Danger zone
           </Text>
 
+          {/* Shield bars — 3 stacked layers just below the danger line */}
+          {state.shieldLayers > 0 && (
+            <>
+              {/* Layer 1 (top, last standing) — red */}
+              <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 2, backgroundColor: '#FF3D00', shadowColor: '#FF3D00' }]} />
+              {/* Layer 2 (middle) — yellow */}
+              {state.shieldLayers >= 2 && (
+                <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 8, backgroundColor: '#FFD600', shadowColor: '#FFD600' }]} />
+              )}
+              {/* Layer 3 (bottom, outermost, first hit) — cyan */}
+              {state.shieldLayers >= 3 && (
+                <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 14, backgroundColor: '#00E5FF', shadowColor: '#00E5FF' }]} />
+              )}
+            </>
+          )}
+
           {/* Drop guide line */}
           {!state.isDropping && (
             <View
@@ -432,6 +448,16 @@ const styles = StyleSheet.create({
     color: 'rgba(255,80,80,0.6)',
     fontSize: 9,
     fontWeight: '600',
+  },
+  shieldBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.95,
+    shadowRadius: 6,
+    elevation: 4,
   },
   dropLine: {
     position: 'absolute',

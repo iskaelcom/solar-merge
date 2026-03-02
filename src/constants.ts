@@ -159,3 +159,7 @@ export const BLACK_HOLE_SPAWN_INTERVAL = 29; // spawn a black hole every N plane
 // Virus Planet power-up
 export const VIRUS_RADIUS = 22;          // physics radius (px)
 export const VIRUS_SPAWN_INTERVAL = 23;  // spawn a virus every N planet drops
+
+// Shield
+export const SHIELD_MAX_LAYERS = 3;      // total shield layers granted at once
+export const SHIELD_COMBO_THRESHOLD = 5; // combo count that triggers a shield grant

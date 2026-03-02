@@ -14,6 +14,8 @@ import {
   BLACK_HOLE_SPAWN_INTERVAL,
   VIRUS_RADIUS,
   VIRUS_SPAWN_INTERVAL,
+  SHIELD_MAX_LAYERS,
+  SHIELD_COMBO_THRESHOLD,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 
@@ -71,6 +73,7 @@ const INITIAL_STATE: GameState = {
   explosions: [],
   mergeSpawnIds: [],
   sickPlanetIds: [],
+  shieldLayers: 0,
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -96,6 +99,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const dropCountRef = useRef<number>(0);
   // Set of planet IDs currently infected by a virus
   const sickPlanetIdsRef = useRef<Set<string>>(new Set());
+  // Shield layer count (source of truth for physics calls)
+  const shieldLayersRef = useRef<number>(0);
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle([1, 2, 3, 4, 5, 6]);
@@ -224,12 +229,19 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             setState((s) => ({ ...s, showCombo: false }));
           }, 1200);
 
+          // Grant a fresh shield when combo first crosses the threshold
+          if (newCombo === SHIELD_COMBO_THRESHOLD && shieldLayersRef.current === 0) {
+            shieldLayersRef.current = SHIELD_MAX_LAYERS;
+            physicsRef.current?.setShieldActive(true);
+          }
+
           return {
             ...prev,
             score: newScore,
             highScore: newHighScore,
             combo: newCombo,
             showCombo: newCombo > 1,
+            shieldLayers: shieldLayersRef.current,
             planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
           };
         });
@@ -351,6 +363,15 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         sickPlanetIds: Array.from(sickPlanetIdsRef.current),
         viruses: prev.viruses.filter((v) => v.id !== virusId),
       }));
+    });
+
+    // ── Shield hit handler ───────────────────────────────────────────────
+    engine.onShieldHit(() => {
+      shieldLayersRef.current = Math.max(0, shieldLayersRef.current - 1);
+      if (shieldLayersRef.current === 0) {
+        engine.setShieldActive(false);
+      }
+      setState((prev) => ({ ...prev, shieldLayers: shieldLayersRef.current }));
     });
 
     physicsRef.current = engine;
@@ -624,6 +645,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pendingVirusSpawnsRef.current = [];
     dropCountRef.current = 0;
     sickPlanetIdsRef.current.clear();
+    shieldLayersRef.current = 0;
+    physicsRef.current?.setShieldActive(false);
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
 
     setState((prev) => {
@@ -645,6 +668,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         blackHoles: [],
         viruses: [],
         sickPlanetIds: [],
+        shieldLayers: 0,
       };
     });
 
