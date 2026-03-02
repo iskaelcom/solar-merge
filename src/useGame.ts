@@ -12,8 +12,10 @@ import {
   STAR_SPAWN_INTERVAL,
   BLACK_HOLE_RADIUS,
   BLACK_HOLE_SPAWN_INTERVAL,
+  VIRUS_RADIUS,
+  VIRUS_SPAWN_INTERVAL,
 } from './constants';
-import { GameState, RenderPlanet, RenderStar, RenderBlackHole, Explosion } from './types';
+import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
@@ -53,12 +55,14 @@ const INITIAL_STATE: GameState = {
   planets: [],
   stars: [],
   blackHoles: [],
+  viruses: [],
   score: 0,
   highScore: 0,
   currentPlanetId: 1,
   nextPlanetId: 2,
   currentIsStar: false,
   currentIsBlackHole: false,
+  currentIsVirus: false,
   pointerX: GAME_WIDTH / 2,
   isDropping: false,
   gameOver: false,
@@ -66,6 +70,7 @@ const INITIAL_STATE: GameState = {
   showCombo: false,
   explosions: [],
   mergeSpawnIds: [],
+  sickPlanetIds: [],
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -84,10 +89,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const isDroppingRef = useRef<boolean>(false);
   // Shuffle bag for levels 1-6 variety
   const bagRef = useRef<number[]>([]);
-  // Star / Black Hole power-up tracking
+  // Star / Black Hole / Virus power-up tracking
   const pendingStarSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
   const pendingBlackHoleSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
+  const pendingVirusSpawnsRef = useRef<Array<{ id: string; x: number; y: number }>>([]);
   const dropCountRef = useRef<number>(0);
+  // Set of planet IDs currently infected by a virus
+  const sickPlanetIdsRef = useRef<Set<string>>(new Set());
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle([1, 2, 3, 4, 5, 6]);
@@ -133,67 +141,99 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     const engine = new SolarPhysics(gameWidth, gameHeight);
 
     engine.onMerge(({ id1, id2, planetId, x, y }) => {
-      const newId = genId();
-      const nextPlanetId = planetId + 1;
-
       const planet = PLANETS[planetId - 1];
+      const newId = genId();
 
-      if (nextPlanetId <= PLANETS.length) {
-        const nextSize = PLANETS[nextPlanetId - 1].size;
-        // Ensure the new planet doesn't spawn too high or get stuck in walls
-        const spawnY = Math.max(y, nextSize + 10);
-        engine.addPlanet(newId, nextPlanetId, x, spawnY);
-        pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y: spawnY });
-        pendingMergeSpawnIdsRef.current.push(newId);
+      const isSickMerge =
+        sickPlanetIdsRef.current.has(id1) || sickPlanetIdsRef.current.has(id2);
+      sickPlanetIdsRef.current.delete(id1);
+      sickPlanetIdsRef.current.delete(id2);
 
-        // Shockwave — push all surrounding planets outward from the merge point
-        engine.applyMergeShockwave(x, y, planet.size, newId);
-      }
+      if (isSickMerge) {
+        // ── Sick merge: downgrade by 1 level ────────────────────────────
+        const downPlanetId = planetId - 1;
+        if (downPlanetId >= 1) {
+          const downSize = PLANETS[downPlanetId - 1].size;
+          const spawnY = Math.max(y, downSize + 10);
+          engine.addPlanet(newId, downPlanetId, x, spawnY);
+          pendingSpawnsRef.current.push({ id: newId, planetId: downPlanetId, x, y: spawnY });
+          pendingMergeSpawnIdsRef.current.push(newId);
+          sickPlanetIdsRef.current.add(newId); // sickness spreads to result
+          engine.applyMergeShockwave(x, y, planet.size, newId);
+        }
+        // level 1 sick + level 1 → both vanish (downPlanetId === 0, no spawn)
 
-      // Queue an explosion at the merge point
-      const newExplosion: Explosion = {
-        id: `exp_${Date.now()}_${Math.random()}`,
-        x,
-        y,
-        planetSize: planet.size,
-        color: planet.color,
-        scale: Math.max(0.8, planet.size / 30),
-      };
-      pendingExplosionsRef.current.push(newExplosion);
+        // Purple sick explosion
+        pendingExplosionsRef.current.push({
+          id: `exp_sick_${Date.now()}_${Math.random()}`,
+          x, y,
+          planetSize: planet.size,
+          color: '#AA00FF',
+          scale: Math.max(0.8, planet.size / 30),
+        });
 
-      // Score & combo
-      setState((prev) => {
-        const planet = PLANETS[planetId - 1];
-        const combo = prev.combo;
-        const earned = planet.score * combo;
-        const newCombo = combo + 1;
-        const newScore = prev.score + earned;
-        const newHighScore = Math.max(prev.highScore, newScore);
+        // Subtract score (no combo)
+        setState((prev) => {
+          const penalty = planet.score;
+          const newScore = Math.max(0, prev.score - penalty);
+          return {
+            ...prev,
+            score: newScore,
+            sickPlanetIds: Array.from(sickPlanetIdsRef.current),
+            planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
+          };
+        });
 
-        if (newHighScore > prev.highScore) {
-          storage.set(newHighScore);
+      } else {
+        // ── Normal merge: upgrade by 1 level ────────────────────────────
+        const nextPlanetId = planetId + 1;
+
+        if (nextPlanetId <= PLANETS.length) {
+          const nextSize = PLANETS[nextPlanetId - 1].size;
+          const spawnY = Math.max(y, nextSize + 10);
+          engine.addPlanet(newId, nextPlanetId, x, spawnY);
+          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y: spawnY });
+          pendingMergeSpawnIdsRef.current.push(newId);
+          engine.applyMergeShockwave(x, y, planet.size, newId);
         }
 
-        if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
-        comboTimerRef.current = setTimeout(() => {
-          setState((s) => ({ ...s, combo: 1, showCombo: false }));
-        }, COMBO_RESET_TIME);
+        pendingExplosionsRef.current.push({
+          id: `exp_${Date.now()}_${Math.random()}`,
+          x, y,
+          planetSize: planet.size,
+          color: planet.color,
+          scale: Math.max(0.8, planet.size / 30),
+        });
 
-        if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
-        comboTimerShowRef.current = setTimeout(() => {
-          setState((s) => ({ ...s, showCombo: false }));
-        }, 1200);
+        setState((prev) => {
+          const combo = prev.combo;
+          const earned = planet.score * combo;
+          const newCombo = combo + 1;
+          const newScore = prev.score + earned;
+          const newHighScore = Math.max(prev.highScore, newScore);
 
-        return {
-          ...prev,
-          score: newScore,
-          highScore: newHighScore,
-          combo: newCombo,
-          showCombo: newCombo > 1,
-          // Remove merged planets, merged-spawn added in game loop
-          planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
-        };
-      });
+          if (newHighScore > prev.highScore) storage.set(newHighScore);
+
+          if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+          comboTimerRef.current = setTimeout(() => {
+            setState((s) => ({ ...s, combo: 1, showCombo: false }));
+          }, COMBO_RESET_TIME);
+
+          if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+          comboTimerShowRef.current = setTimeout(() => {
+            setState((s) => ({ ...s, showCombo: false }));
+          }, 1200);
+
+          return {
+            ...prev,
+            score: newScore,
+            highScore: newHighScore,
+            combo: newCombo,
+            showCombo: newCombo > 1,
+            planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
+          };
+        });
+      }
     });
 
     // ── Star upgrade handler ─────────────────────────────────────────────
@@ -242,6 +282,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Black hole suck handler ──────────────────────────────────────────
     engine.onBlackHoleSuck(({ blackHoleId, planetId, planetTypeId, x, y }) => {
+      sickPlanetIdsRef.current.delete(planetId); // clean up if sick planet gets sucked
       const planet = PLANETS[planetTypeId - 1];
 
       // Pull surrounding planets inward — they should react, not stand still
@@ -262,6 +303,26 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         ...prev,
         planets: prev.planets.filter((p) => p.id !== planetId),
         blackHoles: prev.blackHoles.filter((bh) => bh.id !== blackHoleId),
+      }));
+    });
+
+    // ── Virus infect handler ─────────────────────────────────────────────
+    engine.onVirusInfect(({ virusId, planetId, planetTypeId, x, y }) => {
+      sickPlanetIdsRef.current.add(planetId);
+
+      const planet = PLANETS[planetTypeId - 1];
+      pendingExplosionsRef.current.push({
+        id: `exp_virus_${Date.now()}_${Math.random()}`,
+        x, y,
+        planetSize: planet.size,
+        color: '#76FF03', // neon green infection burst
+        scale: Math.max(0.6, planet.size / 40),
+      });
+
+      setState((prev) => ({
+        ...prev,
+        sickPlanetIds: Array.from(sickPlanetIdsRef.current),
+        viruses: prev.viruses.filter((v) => v.id !== virusId),
       }));
     });
 
@@ -305,20 +366,22 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         }
       }
 
-      // Collect pending spawns, explosions, merge spawn IDs, star/BH spawns
+      // Collect pending spawns, explosions, merge spawn IDs, star/BH/virus spawns
       const spawns = pendingSpawnsRef.current.splice(0);
       const newExplosions = pendingExplosionsRef.current.splice(0);
       const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
       const starSpawns = pendingStarSpawnsRef.current.splice(0);
       const bhSpawns = pendingBlackHoleSpawnsRef.current.splice(0);
+      const virusSpawns = pendingVirusSpawnsRef.current.splice(0);
 
       // Sync positions from physics (source of truth)
       const allStars = physicsRef.current.getAllStars();
       const allBlackHoles = physicsRef.current.getAllBlackHoles();
+      const allViruses = physicsRef.current.getAllViruses();
 
       // Skip React state updates if the physics world is stable and no new events happened.
       const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0
-        || starSpawns.length > 0 || bhSpawns.length > 0;
+        || starSpawns.length > 0 || bhSpawns.length > 0 || virusSpawns.length > 0;
       const isSceneActive = physicsRef.current.hasActiveBodies();
 
       if (hasEvents || isSceneActive || stateRef.current.gameOver) {
@@ -358,11 +421,19 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             y: bh.body.position.y,
           }));
 
+          // Sync viruses from physics
+          const updatedViruses: RenderVirus[] = allViruses.map((v) => ({
+            id: v.id,
+            x: v.body.position.x,
+            y: v.body.position.y,
+          }));
+
           return {
             ...prev,
             planets: updated,
             stars: updatedStars,
             blackHoles: updatedBlackHoles,
+            viruses: updatedViruses,
             explosions: [...prev.explosions, ...newExplosions],
             mergeSpawnIds: freshMergeIds.length > 0
               ? [...prev.mergeSpawnIds, ...freshMergeIds]
@@ -419,8 +490,23 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     const prev = stateRef.current;
 
+    // ── Drop a virus ───────────────────────────────────────────────────
+    if (prev.currentIsVirus) {
+      const clampedX = Math.max(VIRUS_RADIUS + 2, Math.min(gameWidth - VIRUS_RADIUS - 2, x));
+      const startY = VIRUS_RADIUS + 2;
+      const id = genId();
+      physicsRef.current.addVirus(id, clampedX, startY);
+      pendingVirusSpawnsRef.current.push({ id, x: clampedX, y: startY });
+
+      setState((s) => ({
+        ...s,
+        currentIsVirus: false,
+        pointerX: clampedX,
+        isDropping: true,
+      }));
+    }
     // ── Drop a star ────────────────────────────────────────────────────
-    if (prev.currentIsStar) {
+    else if (prev.currentIsStar) {
       const clampedX = Math.max(STAR_RADIUS + 2, Math.min(gameWidth - STAR_RADIUS - 2, x));
       const startY = STAR_RADIUS + 2;
       const id = genId();
@@ -466,16 +552,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         angle: 0,
       };
 
-      // Determine special injection: black hole every 10, star every 6 (BH takes priority)
-      // We increment and check this OUTSIDE setState to avoid double-triggers in Dev mode.
+      // Determine special injection. Priority: BH > Virus > Star.
+      // Increment OUTSIDE setState to avoid double-triggers in React Dev mode.
       dropCountRef.current += 1;
       const injectBlackHole = dropCountRef.current % BLACK_HOLE_SPAWN_INTERVAL === 0;
-      const injectStar = !injectBlackHole && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
+      const injectVirus = !injectBlackHole && dropCountRef.current % VIRUS_SPAWN_INTERVAL === 0;
+      const injectStar = !injectBlackHole && !injectVirus && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
 
       setState((s) => ({
         ...s,
         planets: [...s.planets, newPlanet],
         currentIsBlackHole: injectBlackHole,
+        currentIsVirus: injectVirus,
         currentIsStar: injectStar,
         currentPlanetId: s.nextPlanetId,
         nextPlanetId: getFromBag(s.nextPlanetId),
@@ -506,7 +594,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pendingMergeSpawnIdsRef.current = [];
     pendingStarSpawnsRef.current = [];
     pendingBlackHoleSpawnsRef.current = [];
+    pendingVirusSpawnsRef.current = [];
     dropCountRef.current = 0;
+    sickPlanetIdsRef.current.clear();
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
 
     setState((prev) => {
@@ -520,11 +610,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         nextPlanetId: next,
         currentIsStar: false,
         currentIsBlackHole: false,
+        currentIsVirus: false,
         pointerX: gameWidth / 2,
         explosions: [],
         mergeSpawnIds: [],
         stars: [],
         blackHoles: [],
+        viruses: [],
+        sickPlanetIds: [],
       };
     });
 

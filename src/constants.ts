@@ -155,3 +155,7 @@ export const STAR_SPAWN_INTERVAL = 19;   // spawn a star every N planet drops
 // Black Hole power-up
 export const BLACK_HOLE_RADIUS = 30;     // physics radius (px)
 export const BLACK_HOLE_SPAWN_INTERVAL = 29; // spawn a black hole every N planet drops
+
+// Virus Planet power-up
+export const VIRUS_RADIUS = 22;          // physics radius (px)
+export const VIRUS_SPAWN_INTERVAL = 10;  // spawn a virus every N planet drops

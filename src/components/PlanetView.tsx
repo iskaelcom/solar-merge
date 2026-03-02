@@ -9,6 +9,7 @@ interface Props {
   angle?: number;
   ghost?: boolean;
   isMergeSpawn?: boolean;
+  isSick?: boolean;
   style?: object;
 }
 
@@ -29,7 +30,7 @@ const PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
-export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, style }: Props) => {
+export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, style }: Props) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
@@ -87,6 +88,24 @@ export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false
           fadeDuration={0}
         />
       </Animated.View>
+
+      {/* Purple sick ring — centered on the planet body (not the rings for Saturn) */}
+      {isSick && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: diameter + 10,
+            height: diameter + 10,
+            left: leftExtra - 5,
+            top: -5,
+            borderRadius: (diameter + 10) / 2,
+            borderWidth: 3,
+            borderColor: '#CC00FF',
+            backgroundColor: 'rgba(170,0,255,0.08)',
+          }}
+        />
+      )}
     </View>
   );
 });

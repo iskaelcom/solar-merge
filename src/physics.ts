@@ -9,6 +9,7 @@ import {
   FRICTION_AIR,
   STAR_RADIUS,
   BLACK_HOLE_RADIUS,
+  VIRUS_RADIUS,
 } from './constants';
 
 export interface PhysicsPlanet {
@@ -51,22 +52,39 @@ export interface BlackHoleSuckEvent {
   y: number;
 }
 
+export interface VirusPhysicsBody {
+  id: string;
+  body: Matter.Body;
+}
+
+export interface VirusInfectEvent {
+  virusId: string;
+  planetId: string;   // physics id of the infected planet
+  planetTypeId: number;
+  x: number;
+  y: number;
+}
+
 type MergeCallback = (event: MergeEvent) => void;
 type StarUpgradeCallback = (event: StarUpgradeEvent) => void;
 type BlackHoleSuckCallback = (event: BlackHoleSuckEvent) => void;
+type VirusInfectCallback = (event: VirusInfectEvent) => void;
 
 export class SolarPhysics {
   engine: Matter.Engine;
   private planets: Map<string, PhysicsPlanet> = new Map();
   private stars: Map<string, StarPhysicsBody> = new Map();
   private blackHoles: Map<string, BlackHolePhysicsBody> = new Map();
+  private viruses: Map<string, VirusPhysicsBody> = new Map();
   private mergeCallbacks: MergeCallback[] = [];
   private starUpgradeCallbacks: StarUpgradeCallback[] = [];
   private blackHoleSuckCallbacks: BlackHoleSuckCallback[] = [];
+  private virusInfectCallbacks: VirusInfectCallback[] = [];
   private pendingMergeKeys: Set<string> = new Set();
   private pendingRemovalIds: Set<string> = new Set();
   private pendingStarRemovalIds: Set<string> = new Set();
   private pendingBlackHoleRemovalIds: Set<string> = new Set();
+  private pendingVirusRemovalIds: Set<string> = new Set();
   width: number;
   height: number;
 
@@ -159,6 +177,35 @@ export class SolarPhysics {
           return; // don't process as star or planet-planet
         }
 
+        // ── Virus-planet collision (infect & virus vanishes) ─────────────
+        const virA = this.getVirusByBodyId(bodyA.id);
+        const virB = this.getVirusByBodyId(bodyB.id);
+
+        if (virA || virB) {
+          const vir = virA || virB!;
+          const otherBody = virA ? bodyB : bodyA;
+          const planet = this.getByBodyId(otherBody.id);
+
+          if (
+            planet &&
+            !this.pendingVirusRemovalIds.has(vir.id) &&
+            !this.pendingRemovalIds.has(planet.id)
+          ) {
+            this.pendingVirusRemovalIds.add(vir.id);
+
+            const px = planet.body.position.x;
+            const py = planet.body.position.y;
+
+            setTimeout(() => {
+              this.removeVirus(vir.id);
+              this.virusInfectCallbacks.forEach((cb) =>
+                cb({ virusId: vir.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
+              );
+            }, 0);
+          }
+          return; // don't process as star or planet-planet
+        }
+
         // ── Star-planet collision ────────────────────────────────────────
         const starA = this.getStarByBodyId(bodyA.id);
         const starB = this.getStarByBodyId(bodyB.id);
@@ -222,6 +269,13 @@ export class SolarPhysics {
         }, 0);
       });
     });
+  }
+
+  private getVirusByBodyId(bodyId: number): VirusPhysicsBody | undefined {
+    for (const v of this.viruses.values()) {
+      if (v.body.id === bodyId) return v;
+    }
+    return undefined;
   }
 
   private getBlackHoleByBodyId(bodyId: number): BlackHolePhysicsBody | undefined {
@@ -305,6 +359,36 @@ export class SolarPhysics {
     this.blackHoleSuckCallbacks.push(cb);
   }
 
+  addVirus(id: string, x: number, y: number): void {
+    const body = Matter.Bodies.circle(x, y, VIRUS_RADIUS, {
+      restitution: 0.4,
+      friction: FRICTION,
+      frictionAir: FRICTION_AIR,
+      density: 0.002,
+      label: 'virus_' + id,
+      collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
+    });
+    this.viruses.set(id, { id, body });
+    Matter.Composite.add(this.engine.world, body);
+  }
+
+  removeVirus(id: string): void {
+    const v = this.viruses.get(id);
+    if (v) {
+      Matter.Composite.remove(this.engine.world, v.body);
+      this.viruses.delete(id);
+      this.pendingVirusRemovalIds.delete(id);
+    }
+  }
+
+  getAllViruses(): VirusPhysicsBody[] {
+    return Array.from(this.viruses.values());
+  }
+
+  onVirusInfect(cb: VirusInfectCallback): void {
+    this.virusInfectCallbacks.push(cb);
+  }
+
   /**
    * Inward gravitational suction: pull all nearby planets toward (x, y).
    * Opposite of applyMergeShockwave — velocity is directed INWARD.
@@ -383,7 +467,7 @@ export class SolarPhysics {
    * Useful to skip React renders when the scene is static.
    */
   hasActiveBodies(): boolean {
-    if (this.planets.size === 0 && this.stars.size === 0 && this.blackHoles.size === 0) return false;
+    if (this.planets.size === 0 && this.stars.size === 0 && this.blackHoles.size === 0 && this.viruses.size === 0) return false;
     for (const p of this.planets.values()) {
       if (!p.body.isSleeping) return true;
     }
@@ -392,6 +476,9 @@ export class SolarPhysics {
     }
     for (const bh of this.blackHoles.values()) {
       if (!bh.body.isSleeping) return true;
+    }
+    for (const v of this.viruses.values()) {
+      if (!v.body.isSleeping) return true;
     }
     return false;
   }
@@ -465,10 +552,12 @@ export class SolarPhysics {
     this.planets.clear();
     this.stars.clear();
     this.blackHoles.clear();
+    this.viruses.clear();
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
     this.pendingStarRemovalIds.clear();
     this.pendingBlackHoleRemovalIds.clear();
+    this.pendingVirusRemovalIds.clear();
     Matter.World.clear(this.engine.world, false);
     this.engine.gravity.y = GRAVITY;
     this.createWalls();
@@ -480,5 +569,6 @@ export class SolarPhysics {
     this.planets.clear();
     this.stars.clear();
     this.blackHoles.clear();
+    this.viruses.clear();
   }
 }

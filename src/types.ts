@@ -28,16 +28,24 @@ export interface RenderBlackHole {
   y: number;
 }
 
+export interface RenderVirus {
+  id: string;
+  x: number;
+  y: number;
+}
+
 export interface GameState {
   planets: RenderPlanet[];
   stars: RenderStar[];
   blackHoles: RenderBlackHole[];
+  viruses: RenderVirus[];
   score: number;
   highScore: number;
   currentPlanetId: number;     // planet to drop (ignored when holding a special)
   nextPlanetId: number;        // planet after current (or after the special)
   currentIsStar: boolean;      // true → user is holding a star to drop
   currentIsBlackHole: boolean; // true → user is holding a black hole to drop
+  currentIsVirus: boolean;     // true → user is holding a virus planet to drop
   pointerX: number;
   isDropping: boolean;
   gameOver: boolean;
@@ -45,4 +53,5 @@ export interface GameState {
   showCombo: boolean;
   explosions: Explosion[];
   mergeSpawnIds: string[]; // IDs of planets freshly spawned from a merge (for pop animation)
+  sickPlanetIds: string[]; // IDs of planets currently infected by a virus
 }
