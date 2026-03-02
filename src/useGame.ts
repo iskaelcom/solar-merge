@@ -238,46 +238,73 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Star upgrade handler ─────────────────────────────────────────────
     engine.onStarUpgrade(({ starId, planetId, planetTypeId, x, y }) => {
-      const newId = genId();
-      const nextPlanetTypeId = Math.min(planetTypeId + 1, PLANETS.length);
-
-      if (planetTypeId < PLANETS.length) {
-        const nextSize = PLANETS[nextPlanetTypeId - 1].size;
-        const spawnY = Math.max(y, nextSize + 10);
-        engine.addPlanet(newId, nextPlanetTypeId, x, spawnY);
-        pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y: spawnY });
-        pendingMergeSpawnIdsRef.current.push(newId);
-
-        const planet = PLANETS[planetTypeId - 1];
-        engine.applyMergeShockwave(x, spawnY, planet.size, newId);
-      }
-
-      // Gold explosion at the hit point
       const planet = PLANETS[planetTypeId - 1];
-      pendingExplosionsRef.current.push({
-        id: `exp_star_${Date.now()}_${Math.random()}`,
-        x,
-        y,
-        planetSize: planet.size,
-        color: '#FFD600',
-        scale: Math.max(0.8, planet.size / 30),
-      });
+      const isSick = sickPlanetIdsRef.current.has(planetId);
+      sickPlanetIdsRef.current.delete(planetId);
 
-      // Score + remove old planet & star from render state
-      setState((prev) => {
-        const earned = planet.score;
-        const newScore = prev.score + earned;
-        const newHighScore = Math.max(prev.highScore, newScore);
-        if (newHighScore > prev.highScore) storage.set(newHighScore);
+      if (isSick) {
+        // ── Healing: star cures the sick planet (same level, no score) ───
+        // Physics already removed the planet — re-add it at the same level
+        const healId = genId();
+        const spawnY = Math.max(y, planet.size + 10);
+        engine.addPlanet(healId, planetTypeId, x, spawnY);
+        pendingSpawnsRef.current.push({ id: healId, planetId: planetTypeId, x, y: spawnY });
+        pendingMergeSpawnIdsRef.current.push(healId);
 
-        return {
+        // Cyan healing burst
+        pendingExplosionsRef.current.push({
+          id: `exp_heal_${Date.now()}_${Math.random()}`,
+          x, y,
+          planetSize: planet.size,
+          color: '#00E5FF',
+          scale: Math.max(0.8, planet.size / 30),
+        });
+
+        setState((prev) => ({
           ...prev,
-          score: newScore,
-          highScore: newHighScore,
+          sickPlanetIds: Array.from(sickPlanetIdsRef.current),
           planets: prev.planets.filter((p) => p.id !== planetId),
           stars: prev.stars.filter((s) => s.id !== starId),
-        };
-      });
+        }));
+
+      } else {
+        // ── Normal star: level up + score ─────────────────────────────────
+        const newId = genId();
+        const nextPlanetTypeId = Math.min(planetTypeId + 1, PLANETS.length);
+
+        if (planetTypeId < PLANETS.length) {
+          const nextSize = PLANETS[nextPlanetTypeId - 1].size;
+          const spawnY = Math.max(y, nextSize + 10);
+          engine.addPlanet(newId, nextPlanetTypeId, x, spawnY);
+          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y: spawnY });
+          pendingMergeSpawnIdsRef.current.push(newId);
+          engine.applyMergeShockwave(x, spawnY, planet.size, newId);
+        }
+
+        // Gold explosion
+        pendingExplosionsRef.current.push({
+          id: `exp_star_${Date.now()}_${Math.random()}`,
+          x, y,
+          planetSize: planet.size,
+          color: '#FFD600',
+          scale: Math.max(0.8, planet.size / 30),
+        });
+
+        setState((prev) => {
+          const earned = planet.score;
+          const newScore = prev.score + earned;
+          const newHighScore = Math.max(prev.highScore, newScore);
+          if (newHighScore > prev.highScore) storage.set(newHighScore);
+
+          return {
+            ...prev,
+            score: newScore,
+            highScore: newHighScore,
+            planets: prev.planets.filter((p) => p.id !== planetId),
+            stars: prev.stars.filter((s) => s.id !== starId),
+          };
+        });
+      }
     });
 
     // ── Black hole suck handler ──────────────────────────────────────────
