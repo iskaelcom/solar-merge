@@ -158,4 +158,4 @@ export const BLACK_HOLE_SPAWN_INTERVAL = 29; // spawn a black hole every N plane
 
 // Virus Planet power-up
 export const VIRUS_RADIUS = 22;          // physics radius (px)
-export const VIRUS_SPAWN_INTERVAL = 10;  // spawn a virus every N planet drops
+export const VIRUS_SPAWN_INTERVAL = 23;  // spawn a virus every N planet drops
