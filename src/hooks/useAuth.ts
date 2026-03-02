@@ -27,10 +27,13 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // expo-auth-session throws if webClientId is undefined — use placeholder
+  // when not configured so the hook initialises without error.
+  // promptAsync() is guarded by isAuthConfigured so it won't fire.
   const [, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CLIENT_IDS.webClientId || undefined,
-    iosClientId: GOOGLE_CLIENT_IDS.iosClientId || undefined,
-    androidClientId: GOOGLE_CLIENT_IDS.androidClientId || undefined,
+    clientId:        GOOGLE_CLIENT_IDS.webClientId     || 'unconfigured',
+    iosClientId:     GOOGLE_CLIENT_IDS.iosClientId     || 'unconfigured',
+    androidClientId: GOOGLE_CLIENT_IDS.androidClientId || 'unconfigured',
   });
 
   // Watch Firebase auth state
