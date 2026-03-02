@@ -30,8 +30,8 @@ import { calculateChecksum } from '../useGame';
 //         // dropCount must be a positive integer
 //         && request.resource.data.dropCount is int
 //         && request.resource.data.dropCount > 0
-//         // score can only increase — never decrease
-//         && (!resource.exists() || request.resource.data.score > resource.data.score)
+//         // score can only increase — never decrease (resource==null = first-time write)
+//         && (resource == null || request.resource.data.score > resource.data.score)
 //         // score-per-drop ratio cap: generous upper bound for legitimate play
 //         // (avg max ~1500 per drop even with high combos + sun merges)
 //         && request.resource.data.score / request.resource.data.dropCount <= 5000
