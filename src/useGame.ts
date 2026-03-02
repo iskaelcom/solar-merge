@@ -533,6 +533,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
               checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
             };
           });
+          loopActiveRef.current = false;
           cancelAnimationFrame(rafRef.current);
           return;
         }
@@ -796,6 +797,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, []);
 
   const restart = useCallback(() => {
+    loopActiveRef.current = false;
     cancelAnimationFrame(rafRef.current);
     pendingSpawnsRef.current = [];
     pendingExplosionsRef.current = [];
