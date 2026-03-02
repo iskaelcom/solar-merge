@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import {
   GoogleAuthProvider,
   signInWithCredential,
+  signInWithPopup,
   onAuthStateChanged,
   signOut as fbSignOut,
   User,
@@ -19,17 +21,21 @@ const GOOGLE_CLIENT_IDS = {
   androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '',
 };
 
+// At least one platform client ID must be set (web, iOS, or Android)
 export const isAuthConfigured =
-  isFirebaseConfigured && Object.values(GOOGLE_CLIENT_IDS).every(Boolean);
+  isFirebaseConfigured &&
+  (Boolean(GOOGLE_CLIENT_IDS.webClientId) ||
+    Boolean(GOOGLE_CLIENT_IDS.iosClientId) ||
+    Boolean(GOOGLE_CLIENT_IDS.androidClientId));
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // expo-auth-session throws if webClientId is undefined — use placeholder
-  // when not configured so the hook initialises without error.
-  // promptAsync() is guarded by isAuthConfigured so it won't fire.
+  // expo-auth-session — only used on native (iOS / Android).
+  // On web we use Firebase's signInWithPopup which handles COOP correctly.
+  // Still initialised unconditionally to satisfy React's rules-of-hooks.
   const [, response, promptAsync] = Google.useAuthRequest({
     clientId:        GOOGLE_CLIENT_IDS.webClientId     || 'unconfigured',
     iosClientId:     GOOGLE_CLIENT_IDS.iosClientId     || 'unconfigured',
@@ -49,8 +55,9 @@ export function useAuth() {
     return unsub;
   }, []);
 
-  // Exchange Google token → Firebase credential
+  // Native only: exchange Google id_token → Firebase credential
   useEffect(() => {
+    if (Platform.OS === 'web') return; // web uses signInWithPopup
     if (response?.type === 'success') {
       const { id_token } = response.params;
       if (id_token && auth) {
@@ -72,7 +79,15 @@ export function useAuth() {
     }
     setError(null);
     try {
-      await promptAsync();
+      if (Platform.OS === 'web') {
+        // Web: Firebase popup handles auth natively — no COOP issues
+        if (!auth) return;
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      } else {
+        // Native: expo-auth-session OAuth flow
+        await promptAsync();
+      }
     } catch (e: any) {
       setError(e.message);
     }

@@ -37,10 +37,12 @@ export interface LeaderboardEntry {
 export function useLeaderboard(user: User | null) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!db) return;
     setLoading(true);
+    setFetchError(null);
 
     const q = query(
       collection(db, 'scores'),
@@ -59,7 +61,10 @@ export function useLeaderboard(user: User | null) {
         );
         setLoading(false);
       },
-      () => setLoading(false)
+      (err) => {
+        setLoading(false);
+        setFetchError(err.message);
+      }
     );
 
     return unsub;
@@ -91,5 +96,5 @@ export function useLeaderboard(user: User | null) {
         })()
       : null;
 
-  return { entries, loading, userRank, submitScore };
+  return { entries, loading, fetchError, userRank, submitScore };
 }

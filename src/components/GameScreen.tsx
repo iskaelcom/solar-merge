@@ -39,7 +39,7 @@ export function GameScreen() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
-  const { entries, loading: lbLoading, userRank, submitScore } = useLeaderboard(user);
+  const { entries, loading: lbLoading, fetchError: lbError, userRank, submitScore } = useLeaderboard(user);
 
   // Submit score to Firestore whenever the game ends
   React.useEffect(() => {
@@ -274,6 +274,7 @@ export function GameScreen() {
         authError={authError}
         entries={entries}
         lbLoading={lbLoading}
+        lbError={lbError}
         userRank={userRank}
         onSignIn={signIn}
         onSignOut={signOut}

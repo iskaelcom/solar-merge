@@ -23,6 +23,7 @@ interface Props {
   authError: string | null;
   entries: LeaderboardEntry[];
   lbLoading: boolean;
+  lbError: string | null;
   userRank: number | null;
   onSignIn: () => void;
   onSignOut: () => void;
@@ -36,6 +37,7 @@ export function LeaderboardModal({
   authError,
   entries,
   lbLoading,
+  lbError,
   userRank,
   onSignIn,
   onSignOut,
@@ -84,6 +86,10 @@ export function LeaderboardModal({
           {lbLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color="#FFD600" size="large" />
+            </View>
+          ) : lbError ? (
+            <View style={styles.center}>
+              <Text style={styles.emptyText}>⚠️ Firestore error:{'\n'}{lbError}</Text>
             </View>
           ) : entries.length === 0 ? (
             <View style={styles.center}>
