@@ -1,57 +1,64 @@
 /**
- * Custom Metro minifier — runs javascript-obfuscator on the production bundle.
- * Replaces Terser so identifier/string obfuscation applies across the whole bundle.
- * Only invoked by Metro when building in production mode (expo export).
+ * Custom Metro minifier:
+ *  - node_modules  → standard Terser minification (safe, no obfuscation)
+ *  - src/**        → javascript-obfuscator (hides score/checksum logic)
  */
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
-module.exports = async function obfuscate({ code, reserved = [] }) {
-  const result = JavaScriptObfuscator.obfuscate(code, {
-    // Compact output (strip whitespace)
-    compact: true,
+// Metro's built-in Terser minifier — used for node_modules
+let terserMinify;
+try {
+  terserMinify = require('metro-minify-terser');
+} catch {
+  // Fallback if package path differs across Metro versions
+  terserMinify = null;
+}
 
-    // Rename local identifiers to _0xXXXXXX hex strings
-    identifierNamesGenerator: 'hexadecimal',
+module.exports = async function obfuscate(options) {
+  const { code, map, filename = '', reserved = [] } = options;
 
-    // Don't touch top-level globals (require, exports, __DEV__, etc.)
-    renameGlobals: false,
+  // ── node_modules: delegate to Terser (obfuscating RN/React internals breaks them) ──
+  if (filename.includes('node_modules')) {
+    if (terserMinify) return terserMinify(options);
+    return { code, map: map || '' }; // last-resort: unminified but correct
+  }
 
-    // Reserved Metro/RN globals that must never be renamed
-    reservedNames: [
-      '__d', '__r', '__c', 'require', 'module', 'exports',
-      '__DEV__', '__BUNDLE_START_TIME__', '__METRO_GLOBAL_PREFIX__',
-      ...reserved,
-    ],
+  // ── Our source files: obfuscate ──────────────────────────────────────────────
+  try {
+    const result = JavaScriptObfuscator.obfuscate(code, {
+      compact: true,
+      target: 'browser-no-eval',
 
-    // Collect all string literals into an encoded array → strings can't be grepped
-    stringArray: true,
-    stringArrayEncoding: ['rc4'],   // rc4 is self-contained, no atob needed
-    stringArrayThreshold: 0.8,
-    rotateStringArray: true,
-    shuffleStringArray: true,
-    splitStrings: false,            // keep bundle size reasonable
+      // Rename local identifiers → _0xXXXXXX (hides 'score', 'checksum', 'dropCount' …)
+      identifierNamesGenerator: 'hexadecimal',
+      renameGlobals: false,
+      reservedNames: [
+        '^__d$', '^__r$', '^__c$', '^__m$',
+        '^require$', '^module$', '^exports$', '^global$',
+        '^__DEV__$', '^__BUNDLE_START_TIME__$',
+        ...reserved.map((r) => `^${r}$`),
+      ],
 
-    // Light control-flow obfuscation (safe, low overhead)
-    controlFlowFlattening: false,
+      // Move string literals into a shuffled array (can't be grepped in devtools)
+      stringArray: true,
+      stringArrayEncoding: ['none'], // no base64/rc4 to avoid extra helper-code issues
+      stringArrayThreshold: 0.8,
+      rotateStringArray: true,
+      shuffleStringArray: true,
+      splitStrings: false,
 
-    // Don't inject dead code (would bloat the bundle)
-    deadCodeInjection: false,
+      // Keep these off — they can corrupt Metro module wrappers
+      controlFlowFlattening: false,
+      deadCodeInjection: false,
+      selfDefending: false,
+      disableConsoleOutput: false,
 
-    // Self-defending can break eval-less environments like Hermes
-    selfDefending: false,
+      sourceMap: false,
+    });
 
-    // Keep console.* intact (helps debug prod crashes)
-    disableConsoleOutput: false,
-
-    // Target browser-no-eval: safe for both web and Hermes/JSC
-    target: 'browser-no-eval',
-
-    // Let Metro handle source maps
-    sourceMap: false,
-  });
-
-  return {
-    code: result.getObfuscatedCode(),
-    map: '',
-  };
+    return { code: result.getObfuscatedCode(), map: '' };
+  } catch {
+    // If a source file fails to obfuscate, return it unmodified rather than crash
+    return { code, map: '' };
+  }
 };
