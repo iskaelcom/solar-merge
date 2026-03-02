@@ -36,6 +36,9 @@ export function GameScreen() {
 
   const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef } = useGame(gameWidth, gameHeight);
 
+  const gameAreaRef = useRef<View>(null);
+  const layoutXRef = useRef(0);
+
   const [showTutorial, setShowTutorial] = useState(() => !isTutorialSeen());
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
@@ -78,24 +81,32 @@ export function GameScreen() {
   const handleTouchStart = (e: any) => {
     if (state.gameOver || state.isDropping || isDroppingRef.current) return;
     isPointerActive.current = true;
-    const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
+
+    // Stable screen coordinates
+    const pageX = e.nativeEvent.pageX || e.nativeEvent.clientX;
+    const x = pageX - layoutXRef.current;
+
     currentPointerX.current = x;
     pointerXAnim.setValue(clampPointerX(x));
-    setPointerX(x);
   };
 
   const handleTouchMove = (e: any) => {
     if (!isPointerActive.current || state.gameOver) return;
-    const x = e.nativeEvent.locationX ?? e.nativeEvent.clientX;
+
+    const pageX = e.nativeEvent.pageX || e.nativeEvent.clientX;
+    const x = pageX - layoutXRef.current;
+
     currentPointerX.current = x;
     pointerXAnim.setValue(clampPointerX(x));
-    setPointerX(x);
+    // NO setPointerX(x) here — avoids React re-render per frame
   };
 
-  // Web only: update guide visuals directly via Animated — zero React re-renders
   const handleMouseMove = (e: any) => {
     if (state.gameOver || isPointerActive.current) return;
-    const x = e.nativeEvent.locationX ?? e.nativeEvent.offsetX;
+
+    const clientX = e.nativeEvent.clientX || e.nativeEvent.pageX;
+    const x = clientX - layoutXRef.current;
+
     if (x == null || isNaN(x)) return;
     currentPointerX.current = x;
     pointerXAnim.setValue(clampPointerX(x));
@@ -104,6 +115,9 @@ export function GameScreen() {
   const handleTouchEnd = () => {
     if (!isPointerActive.current || state.gameOver || state.isDropping || isDroppingRef.current) return;
     isPointerActive.current = false;
+
+    // Final sync with state before drop
+    setPointerX(currentPointerX.current);
     dropPlanet(currentPointerX.current);
   };
 
@@ -176,13 +190,14 @@ export function GameScreen() {
 
         {/* Play area */}
         <View
+          ref={gameAreaRef}
           style={[styles.gameArea, { width: gameWidth, height: gameHeight }]}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
-          onResponderGrant={handleTouchStart}
-          onResponderMove={handleTouchMove}
-          onResponderRelease={handleTouchEnd}
-          {...(Platform.OS === 'web' ? { onMouseMove: handleMouseMove } : {})}
+          onLayout={(e) => {
+            // Measure layout offset once to allow stable pageX calculations
+            gameAreaRef.current?.measure((_x, _y, _w, _h, pageX) => {
+              if (pageX != null) layoutXRef.current = pageX;
+            });
+          }}
         >
           {/* Danger line */}
           <View style={[styles.dangerLine, { top: DANGER_HEIGHT }]} />
@@ -282,6 +297,18 @@ export function GameScreen() {
               onDone={() => removeExplosion(exp.id)}
             />
           ))}
+
+          {/* ── Event Interceptor Shield ────────────────────────── */}
+          {/* This layer sits on TOP of everything to capture touches without glitcing on children */}
+          <View
+            style={StyleSheet.absoluteFill}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={handleTouchStart}
+            onResponderMove={handleTouchMove}
+            onResponderRelease={handleTouchEnd}
+            {...(Platform.OS === 'web' ? { onMouseMove: handleMouseMove } : {})}
+          />
         </View>
       </View>
 
