@@ -25,6 +25,11 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 
 const WALL_THICKNESS = 6;
 
+const MemoizedPlanetView = React.memo(PlanetView);
+const MemoizedStarView = React.memo(StarView);
+const MemoizedBlackHoleView = React.memo(BlackHoleView);
+const MemoizedVirusPlanetView = React.memo(VirusPlanetView);
+
 // ── Outer shell: computes + debounces dimensions, remounts GameView on change ─
 export function GameScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -264,7 +269,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
           {/* All live planets */}
           {state.planets.map((p) => (
-            <PlanetView
+            <MemoizedPlanetView
               key={p.id}
               planetId={p.planetId}
               x={p.x}
@@ -277,17 +282,17 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
           {/* Star power-ups */}
           {state.stars.map((s) => (
-            <StarView key={s.id} x={s.x} y={s.y} />
+            <MemoizedStarView key={s.id} x={s.x} y={s.y} />
           ))}
 
           {/* Black holes */}
           {state.blackHoles.map((bh) => (
-            <BlackHoleView key={bh.id} x={bh.x} y={bh.y} />
+            <MemoizedBlackHoleView key={bh.id} x={bh.x} y={bh.y} />
           ))}
 
           {/* Virus planets */}
           {state.viruses.map((v) => (
-            <VirusPlanetView key={v.id} x={v.x} y={v.y} />
+            <MemoizedVirusPlanetView key={v.id} x={v.x} y={v.y} />
           ))}
 
           {/* Merge explosions */}

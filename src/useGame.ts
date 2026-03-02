@@ -494,11 +494,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, [gameWidth, gameHeight]);
 
   // ─── Game loop ────────────────────────────────────────────────────────────
+  const loopActiveRef = useRef(false);
+
   const startLoop = useCallback(() => {
+    if (loopActiveRef.current) return; // already running
+    loopActiveRef.current = true;
     lastTimeRef.current = performance.now();
 
     const loop = (time: number) => {
-      if (!physicsRef.current) return;
+      if (!physicsRef.current) {
+        loopActiveRef.current = false;
+        return;
+      }
 
       const delta = time - lastTimeRef.current;
       lastTimeRef.current = time;
@@ -615,6 +622,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIds.includes(id)),
           }));
         }, 900);
+      }
+
+      // Pause loop when scene is fully idle — restarts automatically on next drop
+      if (!hasEvents && !isSceneActive && !stateRef.current.gameOver) {
+        loopActiveRef.current = false;
+        return;
       }
 
       rafRef.current = requestAnimationFrame(loop);
@@ -764,13 +777,16 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       }));
     }
 
+    // Wake the RAF loop in case it was paused while the scene was idle
+    startLoop();
+
     setTimeout(() => {
       // Clear the combo banner when the player gets control back — banner
       // should only show during the settling phase, not while aiming.
       isDroppingRef.current = false;
       setState((s) => ({ ...s, isDropping: false, showCombo: false }));
     }, DROP_DELAY);
-  }, [gameWidth]);
+  }, [gameWidth, startLoop]);
 
   const removeExplosion = useCallback((id: string) => {
     setState((prev) => ({
