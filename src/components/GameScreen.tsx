@@ -45,7 +45,7 @@ export function GameScreen() {
   // Submit score to Firestore whenever the game ends
   React.useEffect(() => {
     if (state.gameOver && user) {
-      submitScore(state.score);
+      submitScore(state.score, state.checksum, state.dropCount);
     }
   }, [state.gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
 

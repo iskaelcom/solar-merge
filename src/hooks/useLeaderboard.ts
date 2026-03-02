@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db } from '../firebase';
+import { calculateChecksum } from '../useGame';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Firestore Security Rules — paste in Firebase Console → Firestore → Rules:
@@ -71,8 +72,16 @@ export function useLeaderboard(user: User | null) {
   }, []);
 
   const submitScore = useCallback(
-    async (score: number) => {
+    async (score: number, checksum: string, dropCount: number) => {
       if (!user || !db || score === 0) return;
+
+      // Verify checksum before submission
+      const expected = calculateChecksum(score, dropCount);
+      if (checksum !== expected) {
+        console.error('Invalid score checksum — submission blocked.');
+        return;
+      }
+
       const ref = doc(db, 'scores', user.uid);
       const snap = await getDoc(ref);
       if (!snap.exists() || (snap.data().score ?? 0) < score) {
@@ -91,9 +100,9 @@ export function useLeaderboard(user: User | null) {
   const userRank =
     user
       ? (() => {
-          const idx = entries.findIndex((e) => e.uid === user.uid);
-          return idx >= 0 ? idx + 1 : null;
-        })()
+        const idx = entries.findIndex((e) => e.uid === user.uid);
+        return idx >= 0 ? idx + 1 : null;
+      })()
       : null;
 
   return { entries, loading, fetchError, userRank, submitScore };

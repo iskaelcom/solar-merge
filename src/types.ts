@@ -41,6 +41,8 @@ export interface GameState {
   viruses: RenderVirus[];
   score: number;
   highScore: number;
+  checksum: string;
+  dropCount: number;
   currentPlanetId: number;     // planet to drop (ignored when holding a special)
   nextPlanetId: number;        // planet after current (or after the special)
   currentIsStar: boolean;      // true → user is holding a star to drop

@@ -26,23 +26,38 @@ const genId = () => `p_${++idCounter}`;
 
 const HIGH_SCORE_KEY = 'solar-merge-highscore';
 
+const SALT = 'sm-v2-secure';
+
+export const calculateChecksum = (score: number, dropCount: number): string => {
+  const str = `${score}:${dropCount}:${SALT}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+};
+
 const storage = {
-  get: (): number => {
+  get: (): { score: number; dropCount: number; checksum: string } => {
     try {
       const val = typeof localStorage !== 'undefined' ? localStorage.getItem(HIGH_SCORE_KEY) : null;
-      return val ? parseInt(val, 10) : 0;
-    } catch {
-      return 0;
-    }
+      if (!val) return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
+      const data = JSON.parse(val);
+      if (data.checksum === calculateChecksum(data.score, data.dropCount)) {
+        return data;
+      }
+    } catch { }
+    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
   },
-  set: (score: number) => {
+  set: (score: number, dropCount: number) => {
     try {
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(HIGH_SCORE_KEY, score.toString());
+        const checksum = calculateChecksum(score, dropCount);
+        localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify({ score, dropCount, checksum }));
       }
-    } catch {
-      // Ignore storage errors
-    }
+    } catch { }
   },
 };
 
@@ -62,6 +77,8 @@ const INITIAL_STATE: GameState = {
   viruses: [],
   score: 0,
   highScore: 0,
+  checksum: calculateChecksum(0, 0),
+  dropCount: 0,
   currentPlanetId: 1,
   nextPlanetId: 2,
   currentIsStar: false,
@@ -132,10 +149,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, [refillBag]);
 
   const [state, setState] = useState<GameState>(() => {
-    // Basic init, will be properly shuffled in useEffect or initial call
+    const saved = storage.get();
     return {
       ...INITIAL_STATE,
-      highScore: storage.get(),
+      highScore: saved.score,
+      checksum: calculateChecksum(0, 0),
       currentPlanetId: 1,
       nextPlanetId: 2,
       pointerX: gameWidth / 2,
@@ -189,6 +207,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           return {
             ...prev,
             score: newScore,
+            checksum: calculateChecksum(newScore, dropCountRef.current),
             sickPlanetIds: Array.from(sickPlanetIdsRef.current),
             planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
           };
@@ -222,7 +241,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           const newScore = prev.score + earned;
           const newHighScore = Math.max(prev.highScore, newScore);
 
-          if (newHighScore > prev.highScore) storage.set(newHighScore);
+          if (newHighScore > prev.highScore) {
+            storage.set(newHighScore, dropCountRef.current);
+          }
 
           if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
           comboTimerRef.current = setTimeout(() => {
@@ -249,6 +270,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             ...prev,
             score: newScore,
             highScore: newHighScore,
+            checksum: calculateChecksum(newScore, dropCountRef.current),
             combo: newCombo,
             showCombo: newCombo > 1,
             shieldLayers: shieldLayersRef.current,
@@ -316,12 +338,15 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           const earned = planet.score;
           const newScore = prev.score + earned;
           const newHighScore = Math.max(prev.highScore, newScore);
-          if (newHighScore > prev.highScore) storage.set(newHighScore);
+          if (newHighScore > prev.highScore) {
+            storage.set(newHighScore, dropCountRef.current);
+          }
 
           return {
             ...prev,
             score: newScore,
             highScore: newHighScore,
+            checksum: calculateChecksum(newScore, dropCountRef.current),
             planets: prev.planets.filter((p) => p.id !== planetId),
             stars: prev.stars.filter((s) => s.id !== starId),
           };
@@ -411,12 +436,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           setState((prev) => {
             const newHighScore = Math.max(prev.highScore, prev.score);
             if (newHighScore > prev.highScore) {
-              storage.set(newHighScore);
+              storage.set(newHighScore, dropCountRef.current);
             }
             return {
               ...prev,
               gameOver: true,
               highScore: newHighScore,
+              checksum: calculateChecksum(prev.score, dropCountRef.current),
             };
           });
           cancelAnimationFrame(rafRef.current);
@@ -571,12 +597,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       physicsRef.current.addStar(id, clampedX, startY);
       pendingStarSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
-      setState((s) => ({
-        ...s,
-        currentIsStar: false,
-        pointerX: clampedX,
-        isDropping: true,
-      }));
+      setState((s) => {
+        const dropCount = dropCountRef.current;
+        return {
+          ...s,
+          currentIsStar: false,
+          pointerX: clampedX,
+          isDropping: true,
+          dropCount,
+          checksum: calculateChecksum(s.score, dropCount),
+        };
+      });
     }
     // ── Drop a black hole ──────────────────────────────────────────────
     else if (prev.currentIsBlackHole) {
@@ -586,12 +617,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       physicsRef.current.addBlackHole(id, clampedX, startY);
       pendingBlackHoleSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
-      setState((s) => ({
-        ...s,
-        currentIsBlackHole: false,
-        pointerX: clampedX,
-        isDropping: true,
-      }));
+      setState((s) => {
+        const dropCount = dropCountRef.current;
+        return {
+          ...s,
+          currentIsBlackHole: false,
+          pointerX: clampedX,
+          isDropping: true,
+          dropCount,
+          checksum: calculateChecksum(s.score, dropCount),
+        };
+      });
     }
     // ── Drop a planet ──────────────────────────────────────────────────
     else {
@@ -631,6 +667,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const injectVirus = !injectBlackHole && dropCountRef.current % VIRUS_SPAWN_INTERVAL === 0;
       const injectStar = !injectBlackHole && !injectVirus && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
 
+      const dropCount = dropCountRef.current;
       setState((s) => ({
         ...s,
         planets: [...s.planets, newPlanet],
@@ -641,6 +678,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         nextPlanetId: getFromBag(s.nextPlanetId),
         pointerX: clampedX,
         isDropping: true,
+        dropCount,
+        checksum: calculateChecksum(s.score, dropCount),
       }));
     }
 
