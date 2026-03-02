@@ -518,7 +518,7 @@ export class SolarPhysics {
     // Scaling factor: larger planets create significantly more impact
     // We use a base multiplier that grows with planet size
     const intensity = Math.sqrt(mergedPlanetSize / 15); // normalized intensity factor
-    const maxKick = mergedPlanetSize * 0.25 * intensity;
+    const maxKick = mergedPlanetSize * 0.12 * intensity;
     const shockRadius = mergedPlanetSize * 5.5 * intensity;
 
     this.planets.forEach((p) => {
