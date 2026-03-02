@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   useWindowDimensions,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../useGame';
@@ -16,6 +17,7 @@ import { VirusPlanetView, VirusPlanetThumb } from './VirusPlanetView';
 import { GameOverModal } from './GameOverModal';
 import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
+import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 
 const WALL_THICKNESS = 6;
 
@@ -29,6 +31,8 @@ export function GameScreen() {
   const gameHeight = Math.max(350, screenH - reservedVertical);
 
   const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef } = useGame(gameWidth, gameHeight);
+
+  const [showTutorial, setShowTutorial] = useState(() => !isTutorialSeen());
 
   const isPointerActive = useRef(false);
   const currentPointerX = useRef(gameWidth / 2);
@@ -80,7 +84,7 @@ export function GameScreen() {
       {/* ── Stars background ─────────────────────────────────── */}
       <Stars />
 
-      {/* ── Row 1: BEST | SCORE ───────────────────────────────── */}
+      {/* ── Row 1: BEST | SCORE | ? ───────────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
         <View style={styles.bestBox}>
           <Text style={styles.bestLabel}>BEST</Text>
@@ -91,6 +95,10 @@ export function GameScreen() {
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{state.score.toLocaleString()}</Text>
         </View>
+
+        <TouchableOpacity style={styles.helpBtn} onPress={() => setShowTutorial(true)}>
+          <Text style={styles.helpText}>?</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Row 2: Next | Logo (fixed center) | After ────────── */}
@@ -245,6 +253,9 @@ export function GameScreen() {
       {state.gameOver && (
         <GameOverModal score={state.score} highScore={state.highScore} onRestart={restart} />
       )}
+
+      {/* ── Tutorial overlay ──────────────────────────────────── */}
+      <TutorialOverlay visible={showTutorial} onDone={() => setShowTutorial(false)} />
     </LinearGradient>
   );
 }
@@ -458,6 +469,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.95,
     shadowRadius: 6,
     elevation: 4,
+  },
+  helpBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   dropLine: {
     position: 'absolute',
