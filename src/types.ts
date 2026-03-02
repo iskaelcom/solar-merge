@@ -51,7 +51,7 @@ export interface GameState {
   pointerX: number;
   isDropping: boolean;
   gameOver: boolean;
-  combo: number;
+  comboDisplay: number; // UI-only; actual multiplier lives in a ref (not editable via DevTools)
   showCombo: boolean;
   explosions: Explosion[];
   mergeSpawnIds: string[]; // IDs of planets freshly spawned from a merge (for pop animation)

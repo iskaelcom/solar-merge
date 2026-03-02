@@ -160,7 +160,7 @@ export function GameScreen() {
         <View style={styles.subHeaderCenter} pointerEvents="none">
           {state.showCombo ? (
             <View style={styles.comboBox}>
-              <Text style={styles.comboText}>🔥 x{state.combo} COMBO!</Text>
+              <Text style={styles.comboText}>🔥 x{state.comboDisplay} COMBO!</Text>
             </View>
           ) : (
             <GameLogo width={110} />

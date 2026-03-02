@@ -87,7 +87,7 @@ const INITIAL_STATE: GameState = {
   pointerX: GAME_WIDTH / 2,
   isDropping: false,
   gameOver: false,
-  combo: 1,
+  comboDisplay: 1,
   showCombo: false,
   explosions: [],
   mergeSpawnIds: [],
@@ -101,6 +101,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const lastTimeRef = useRef<number>(0);
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const comboTimerShowRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Combo multiplier lives in a ref — invisible to React DevTools, cannot be tampered via state
+  const comboRef = useRef<number>(1);
   // Track merge-spawned planets that need to be added to render state
   const pendingSpawnsRef = useRef<Array<{ id: string; planetId: number; x: number; y: number }>>([]);
   // Track explosions triggered by merges
@@ -234,10 +236,35 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           scale: Math.max(0.8, planet.size / 30),
         });
 
+        // Read & increment the secure ref — not accessible via React DevTools
+        const combo = comboRef.current;
+        const newCombo = combo + 1;
+        comboRef.current = newCombo;
+
+        if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+        comboTimerRef.current = setTimeout(() => {
+          comboRef.current = 1;
+          setState((s) => ({ ...s, comboDisplay: 1, showCombo: false }));
+        }, COMBO_RESET_TIME);
+
+        if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+        comboTimerShowRef.current = setTimeout(() => {
+          setState((s) => ({ ...s, showCombo: false }));
+        }, 1200);
+
+        // Reset the "no-merge" drop counter on every merge
+        dropsSinceLastMergeRef.current = 0;
+
+        // Grant a fresh shield at each milestone: min, min+2, min+4
+        // (default: 5, 7, 9 — lowers if player struggles for 30 drops)
+        const min = currentThresholdMinRef.current;
+        if (newCombo === min || newCombo === min + 2 || newCombo === min + 4) {
+          shieldLayersRef.current = SHIELD_MAX_LAYERS;
+          physicsRef.current?.setShieldActive(true);
+        }
+
         setState((prev) => {
-          const combo = prev.combo;
           const earned = planet.score * combo;
-          const newCombo = combo + 1;
           const newScore = prev.score + earned;
           const newHighScore = Math.max(prev.highScore, newScore);
 
@@ -245,33 +272,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             storage.set(newHighScore, dropCountRef.current);
           }
 
-          if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
-          comboTimerRef.current = setTimeout(() => {
-            setState((s) => ({ ...s, combo: 1, showCombo: false }));
-          }, COMBO_RESET_TIME);
-
-          if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
-          comboTimerShowRef.current = setTimeout(() => {
-            setState((s) => ({ ...s, showCombo: false }));
-          }, 1200);
-
-          // Reset the "no-merge" drop counter on every merge
-          dropsSinceLastMergeRef.current = 0;
-
-          // Grant a fresh shield at each milestone: min, min+2, min+4
-          // (default: 5, 7, 9 — lowers if player struggles for 30 drops)
-          const min = currentThresholdMinRef.current;
-          if (newCombo === min || newCombo === min + 2 || newCombo === min + 4) {
-            shieldLayersRef.current = SHIELD_MAX_LAYERS;
-            physicsRef.current?.setShieldActive(true);
-          }
-
           return {
             ...prev,
             score: newScore,
             highScore: newHighScore,
             checksum: calculateChecksum(newScore, dropCountRef.current),
-            combo: newCombo,
+            comboDisplay: newCombo,
             showCombo: newCombo > 1,
             shieldLayers: shieldLayersRef.current,
             planets: prev.planets.filter((p) => p.id !== id1 && p.id !== id2),
@@ -713,6 +719,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     dropsSinceLastMergeRef.current = 0;
     physicsRef.current?.setShieldActive(false);
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+    comboRef.current = 1;
 
     setState((prev) => {
       refillBag();
