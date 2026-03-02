@@ -11,9 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../useGame';
 import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
-import { StarView, StarThumb } from './StarView';
-import { BlackHoleView, BlackHoleThumb } from './BlackHoleView';
-import { VirusPlanetView, VirusPlanetThumb } from './VirusPlanetView';
+import { StarView } from './StarView';
+import { BlackHoleView } from './BlackHoleView';
+import { VirusPlanetView } from './VirusPlanetView';
 import { GameOverModal } from './GameOverModal';
 import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
@@ -84,7 +84,7 @@ export function GameScreen() {
       {/* ── Stars background ─────────────────────────────────── */}
       <Stars />
 
-      {/* ── Row 1: BEST | SCORE | ? ───────────────────────────── */}
+      {/* ── Row 1: BEST | SCORE ───────────────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
         <View style={styles.bestBox}>
           <Text style={styles.bestLabel}>BEST</Text>
@@ -95,25 +95,15 @@ export function GameScreen() {
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{state.score.toLocaleString()}</Text>
         </View>
-
-        <TouchableOpacity style={styles.helpBtn} onPress={() => setShowTutorial(true)}>
-          <Text style={styles.helpText}>?</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* ── Row 2: Next | Logo (fixed center) | After ────────── */}
+      {/* ── Row 2: Help | Logo (fixed center) | After ────────── */}
       <View style={[styles.subHeader, { width: gameWidth + WALL_THICKNESS * 2 }]}>
-        {/* Left — fixed width so logo never shifts */}
-        <View style={styles.nextBox}>
-          <Text style={styles.nextLabel}>Next</Text>
-          {state.currentIsVirus
-            ? <VirusPlanetThumb size={36} />
-            : state.currentIsStar
-              ? <StarThumb size={36} />
-              : state.currentIsBlackHole
-                ? <BlackHoleThumb size={36} />
-                : <PlanetThumb planetId={state.currentPlanetId} size={36} />}
-        </View>
+        {/* Left — Help button (same fixed width as the old Next box) */}
+        <TouchableOpacity style={styles.helpBox} onPress={() => setShowTutorial(true)}>
+          <Text style={styles.helpIcon}>?</Text>
+          <Text style={styles.helpLabel}>Help</Text>
+        </TouchableOpacity>
 
         {/* Center logo — absolutely positioned so side boxes can't push it */}
         <View style={styles.subHeaderCenter} pointerEvents="none">
@@ -128,7 +118,7 @@ export function GameScreen() {
 
         {/* Right — same fixed width as left */}
         <View style={styles.nextBox}>
-          <Text style={styles.nextLabel}>After</Text>
+          <Text style={styles.nextLabel}>Next</Text>
           <PlanetThumb planetId={afterPlanetId} size={28} />
         </View>
       </View>
@@ -470,21 +460,30 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  helpBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  helpBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    width: 68,
+  },
+  helpIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  helpText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 16,
     fontWeight: '700',
-    lineHeight: 18,
+    textAlign: 'center',
+    lineHeight: 32,
+  },
+  helpLabel: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   dropLine: {
     position: 'absolute',
