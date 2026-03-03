@@ -143,6 +143,10 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const holdingSpecial = state.currentIsStar || state.currentIsBlackHole || state.currentIsVirus;
   const afterPlanetId = holdingSpecial ? state.currentPlanetId : state.nextPlanetId;
 
+  // Pre-compute Sets once per render — O(1) lookup per planet instead of O(n) .includes()
+  const mergeSpawnSet = new Set(state.mergeSpawnIds);
+  const sickPlanetSet = new Set(state.sickPlanetIds);
+
   return (
     <LinearGradient colors={['#0a0a2e', '#12124a', '#1a1a5e']} style={styles.root}>
       {/* ── Stars background ─────────────────────────────────── */}
@@ -275,8 +279,8 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
               x={p.x}
               y={p.y}
               angle={p.angle}
-              isMergeSpawn={state.mergeSpawnIds.includes(p.id)}
-              isSick={state.sickPlanetIds.includes(p.id)}
+              isMergeSpawn={mergeSpawnSet.has(p.id)}
+              isSick={sickPlanetSet.has(p.id)}
             />
           ))}
 

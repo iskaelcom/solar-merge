@@ -91,6 +91,11 @@ export class SolarPhysics {
   private bodyIdToStar: Map<number, StarPhysicsBody> = new Map();
   private bodyIdToBlackHole: Map<number, BlackHolePhysicsBody> = new Map();
   private bodyIdToVirus: Map<number, VirusPhysicsBody> = new Map();
+  // Cached arrays — rebuilt lazily only when collection changes (avoids Array.from() every frame)
+  private _planetsCache: PhysicsPlanet[] | null = null;
+  private _starsCache: StarPhysicsBody[] | null = null;
+  private _blackHolesCache: BlackHolePhysicsBody[] | null = null;
+  private _virusesCache: VirusPhysicsBody[] | null = null;
   private mergeCallbacks: MergeCallback[] = [];
   private starUpgradeCallbacks: StarUpgradeCallback[] = [];
   private blackHoleSuckCallbacks: BlackHoleSuckCallback[] = [];
@@ -339,6 +344,7 @@ export class SolarPhysics {
     const entry: StarPhysicsBody = { id, body };
     this.stars.set(id, entry);
     this.bodyIdToStar.set(body.id, entry);
+    this._starsCache = null;
     Matter.Composite.add(this.engine.world, body);
   }
 
@@ -348,12 +354,14 @@ export class SolarPhysics {
       Matter.Composite.remove(this.engine.world, s.body);
       this.stars.delete(id);
       this.bodyIdToStar.delete(s.body.id);
+      this._starsCache = null;
       this.pendingStarRemovalIds.delete(id);
     }
   }
 
   getAllStars(): StarPhysicsBody[] {
-    return Array.from(this.stars.values());
+    if (!this._starsCache) this._starsCache = Array.from(this.stars.values());
+    return this._starsCache;
   }
 
   onStarUpgrade(cb: StarUpgradeCallback): void {
@@ -372,6 +380,7 @@ export class SolarPhysics {
     const entry: BlackHolePhysicsBody = { id, body };
     this.blackHoles.set(id, entry);
     this.bodyIdToBlackHole.set(body.id, entry);
+    this._blackHolesCache = null;
     Matter.Composite.add(this.engine.world, body);
   }
 
@@ -381,12 +390,14 @@ export class SolarPhysics {
       Matter.Composite.remove(this.engine.world, bh.body);
       this.blackHoles.delete(id);
       this.bodyIdToBlackHole.delete(bh.body.id);
+      this._blackHolesCache = null;
       this.pendingBlackHoleRemovalIds.delete(id);
     }
   }
 
   getAllBlackHoles(): BlackHolePhysicsBody[] {
-    return Array.from(this.blackHoles.values());
+    if (!this._blackHolesCache) this._blackHolesCache = Array.from(this.blackHoles.values());
+    return this._blackHolesCache;
   }
 
   onBlackHoleSuck(cb: BlackHoleSuckCallback): void {
@@ -409,6 +420,7 @@ export class SolarPhysics {
     const entry: VirusPhysicsBody = { id, body };
     this.viruses.set(id, entry);
     this.bodyIdToVirus.set(body.id, entry);
+    this._virusesCache = null;
     Matter.Composite.add(this.engine.world, body);
   }
 
@@ -418,12 +430,14 @@ export class SolarPhysics {
       Matter.Composite.remove(this.engine.world, v.body);
       this.viruses.delete(id);
       this.bodyIdToVirus.delete(v.body.id);
+      this._virusesCache = null;
       this.pendingVirusRemovalIds.delete(id);
     }
   }
 
   getAllViruses(): VirusPhysicsBody[] {
-    return Array.from(this.viruses.values());
+    if (!this._virusesCache) this._virusesCache = Array.from(this.viruses.values());
+    return this._virusesCache;
   }
 
   onVirusInfect(cb: VirusInfectCallback): void {
@@ -485,6 +499,7 @@ export class SolarPhysics {
     const entry: PhysicsPlanet = { id, planetId, body };
     this.planets.set(id, entry);
     this.bodyIdToPlanet.set(body.id, entry);
+    this._planetsCache = null;
     Matter.Composite.add(this.engine.world, body);
     // Ensure the body is awake and starts falling immediately.
     // enableSleeping can cause a freshly-dropped planet to go to sleep on
@@ -499,6 +514,7 @@ export class SolarPhysics {
       Matter.Composite.remove(this.engine.world, p.body);
       this.planets.delete(id);
       this.bodyIdToPlanet.delete(p.body.id);
+      this._planetsCache = null;
       this.pendingRemovalIds.delete(id);
       this.shieldPassedPlanetIds.delete(id);
       this.shieldRecentlyHitIds.delete(id);
@@ -510,7 +526,8 @@ export class SolarPhysics {
   }
 
   getAllPlanets(): PhysicsPlanet[] {
-    return Array.from(this.planets.values());
+    if (!this._planetsCache) this._planetsCache = Array.from(this.planets.values());
+    return this._planetsCache;
   }
 
   /**
@@ -667,6 +684,10 @@ export class SolarPhysics {
     this.bodyIdToStar.clear();
     this.bodyIdToBlackHole.clear();
     this.bodyIdToVirus.clear();
+    this._planetsCache = null;
+    this._starsCache = null;
+    this._blackHolesCache = null;
+    this._virusesCache = null;
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
     this.pendingStarRemovalIds.clear();
@@ -693,6 +714,10 @@ export class SolarPhysics {
     this.bodyIdToStar.clear();
     this.bodyIdToBlackHole.clear();
     this.bodyIdToVirus.clear();
+    this._planetsCache = null;
+    this._starsCache = null;
+    this._blackHolesCache = null;
+    this._virusesCache = null;
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
     this.pendingStarRemovalIds.clear();

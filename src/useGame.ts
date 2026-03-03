@@ -574,8 +574,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         setState((prev) => {
           if (prev.gameOver) return prev;
 
+          const spawnIdSet = spawns.length > 0 ? new Set(spawns.map((s) => s.id)) : null;
           const updated: RenderPlanet[] = allPlanets
-            .filter((p) => !spawns.some((s) => s.id === p.id)) // exclude brand-new spawns (added below)
+            .filter((p) => spawnIdSet === null || !spawnIdSet.has(p.id)) // O(1) lookup
             .map((p) => {
               const pos = p.body.position;
               return {
@@ -636,10 +637,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
       // Clear merge spawn IDs after pop animation finishes (~900ms)
       if (freshMergeIds.length > 0) {
+        const freshMergeIdSet = new Set(freshMergeIds);
         setTimeout(() => {
           setState((prev) => ({
             ...prev,
-            mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIds.includes(id)),
+            mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIdSet.has(id)),
           }));
         }, 900);
       }
