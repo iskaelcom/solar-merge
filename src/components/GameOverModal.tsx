@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useInterstitial } from '../hooks/useInterstitial';
 
 interface Props {
   score: number;
@@ -21,6 +22,7 @@ interface Props {
 export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn, onShowLeaderboard }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const { showInterstitial } = useInterstitial(onRestart);
 
   useEffect(() => {
     Animated.parallel([
@@ -37,6 +39,10 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
       }),
     ]).start();
   }, []);
+
+  const handleRestart = () => {
+    showInterstitial();
+  };
 
   const isNewHigh = score >= highScore && score > 0;
 
@@ -78,7 +84,7 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
             >
               <Text style={[styles.rankText, userRank ? styles.rankTextTop : styles.rankTextOut]}>
                 {userRank
-                  ? `${['🥇','🥈','🥉'][userRank - 1] ?? '🏅'} Rank #${userRank} di Leaderboard!`
+                  ? `${['🥇', '🥈', '🥉'][userRank - 1] ?? '🏅'} Rank #${userRank} di Leaderboard!`
                   : '📊 Belum masuk Top 10'}
               </Text>
               {onShowLeaderboard && (
@@ -93,7 +99,7 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
 
           <TouchableOpacity
             style={styles.restartBtn}
-            onPress={onRestart}
+            onPress={handleRestart}
             activeOpacity={0.85}
           >
             <LinearGradient
