@@ -12,6 +12,7 @@ ios/
 
 # Build artifacts
 *.jks
+credentials.json
 *.p8
 *.p12
 *.key
