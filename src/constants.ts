@@ -140,7 +140,7 @@ export const DROP_DELAY = 650;
 export const MAX_SPAWN_LEVEL = 4;
 
 // Physics settings
-export const GRAVITY = 2;
+export const GRAVITY = 1.25;
 export const RESTITUTION = 0.22; // bounciness reduced slightly
 export const FRICTION = 0.6;     // increased friction for stability
 export const FRICTION_AIR = 0.01;

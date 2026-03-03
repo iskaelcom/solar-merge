@@ -4,158 +4,60 @@ import { Animated, Easing, View } from 'react-native';
 interface Props {
   x: number;
   y: number;
-  /** Radius of the planet that merged — drives explosion scale */
   planetSize: number;
-  /** Primary colour of the planet */
   color: string;
   scale: number;
   onDone: () => void;
 }
 
-const BASE_PARTICLES = 12;
-const NUM_SPARKLES = 8;
-const BASE_R = 16;
+const NUM_DEBRIS   = 6;
+const NUM_SPARKLES = 4;
+const BASE_R       = 16;
 
-export function ExplosionEffect({ x, y, planetSize, color, scale, onDone }: Props) {
+export function ExplosionEffect({ x, y, color, scale, onDone }: Props) {
   const s = scale;
-  const numDebris = Math.floor(BASE_PARTICLES * Math.sqrt(s));
 
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
-  // ── Pre-compute random particle data once ──────────────────────────────────
+  // Pre-compute particle data once per mount
   const debrisData = useRef(
-    Array.from({ length: numDebris }, (_, i) => ({
-      angle: (i / numDebris) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
-      dist: (32 + Math.random() * 28) * s,
-      size: 3 + Math.random() * 3,
-      // 3 colour variants: planet, white, warm gold
-      colorIdx: i % 3,
+    Array.from({ length: NUM_DEBRIS }, (_, i) => ({
+      angle: (i / NUM_DEBRIS) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+      dist:  (28 + Math.random() * 22) * s,
+      size:  3 + Math.random() * 2.5,
+      colorIdx: i % 3, // planet color / white / gold
     }))
   ).current;
 
   const sparkleData = useRef(
     Array.from({ length: NUM_SPARKLES }, (_, i) => ({
-      angle: (i / NUM_SPARKLES) * Math.PI * 2 + 0.2,
-      dist: (14 + Math.random() * 10) * s,
+      angle: (i / NUM_SPARKLES) * Math.PI * 2 + 0.3,
+      dist:  (12 + Math.random() * 8) * s,
     }))
   ).current;
 
-  // ── Animation values ───────────────────────────────────────────────────────
-  const flashScale = useRef(new Animated.Value(0.1)).current;
-  const flashOpacity = useRef(new Animated.Value(0)).current;
-
-  const glowScale = useRef(new Animated.Value(0.1)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
-
-  const ring1Scale = useRef(new Animated.Value(0.2)).current;
-  const ring1Opacity = useRef(new Animated.Value(0.9)).current;
-
-  const ring2Scale = useRef(new Animated.Value(0.2)).current;
-  const ring2Opacity = useRef(new Animated.Value(0.7)).current;
-
-  const debrisAnims = useRef(
-    Array.from({ length: numDebris }, () => ({
-      progress: new Animated.Value(0),
-      opacity: new Animated.Value(0),
-    }))
+  // ── 1 value per particle (instead of 2) ───────────────────────────────────
+  const flashProg   = useRef(new Animated.Value(0)).current; // 1 value
+  const ringProg    = useRef(new Animated.Value(0)).current; // 1 value
+  const debrisProgs = useRef(
+    Array.from({ length: NUM_DEBRIS },   () => new Animated.Value(0)) // 6 values
   ).current;
-
-  const sparkleAnims = useRef(
-    Array.from({ length: NUM_SPARKLES }, () => ({
-      progress: new Animated.Value(0),
-      opacity: new Animated.Value(0),
-    }))
+  const sparkleProgs = useRef(
+    Array.from({ length: NUM_SPARKLES }, () => new Animated.Value(0)) // 4 values
   ).current;
+  // Total: 12 Animated.Values  (was 28)
 
-  // ── Run animation on mount ─────────────────────────────────────────────────
   useEffect(() => {
     const easeOut = Easing.out(Easing.quad);
-
     Animated.parallel([
-      // White flash — fastest, sharpest
-      Animated.parallel([
-        Animated.timing(flashScale, {
-          toValue: 2.8 * s,
-          duration: 320,
-          easing: easeOut,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(flashOpacity, { toValue: 1, duration: 50, useNativeDriver: true }),
-          Animated.timing(flashOpacity, { toValue: 0, duration: 270, useNativeDriver: true }),
-        ]),
-      ]),
-
-      // Coloured glow — slightly slower
-      Animated.parallel([
-        Animated.timing(glowScale, {
-          toValue: 2.2 * s,
-          duration: 480,
-          easing: easeOut,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(glowOpacity, { toValue: 0.85, duration: 70, useNativeDriver: true }),
-          Animated.timing(glowOpacity, { toValue: 0, duration: 410, useNativeDriver: true }),
-        ]),
-      ]),
-
-      // Shockwave ring 1 (planet colour)
-      Animated.parallel([
-        Animated.timing(ring1Scale, {
-          toValue: 4.5 * s,
-          duration: 650,
-          easing: easeOut,
-          useNativeDriver: true,
-        }),
-        Animated.timing(ring1Opacity, { toValue: 0, duration: 650, useNativeDriver: true }),
-      ]),
-
-      // Shockwave ring 2 (white, delayed)
-      Animated.sequence([
-        Animated.delay(90),
-        Animated.parallel([
-          Animated.timing(ring2Scale, {
-            toValue: 3.5 * s,
-            duration: 560,
-            easing: easeOut,
-            useNativeDriver: true,
-          }),
-          Animated.timing(ring2Opacity, { toValue: 0, duration: 560, useNativeDriver: true }),
-        ]),
-      ]),
-
-      // Debris particles
-      ...debrisAnims.map((anim) =>
-        Animated.parallel([
-          Animated.timing(anim.progress, {
-            toValue: 1,
-            duration: 580 + Math.random() * 120,
-            easing: easeOut,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.timing(anim.opacity, { toValue: 1, duration: 60, useNativeDriver: true }),
-            Animated.timing(anim.opacity, { toValue: 0, duration: 520, useNativeDriver: true }),
-          ]),
-        ])
+      Animated.timing(flashProg,  { toValue: 1, duration: 220, easing: easeOut, useNativeDriver: true }),
+      Animated.timing(ringProg,   { toValue: 1, duration: 400, easing: easeOut, useNativeDriver: true }),
+      ...debrisProgs.map((p) =>
+        Animated.timing(p, { toValue: 1, duration: 380 + Math.random() * 80, easing: easeOut, useNativeDriver: true })
       ),
-
-      // Sparkles (fast, tiny)
-      ...sparkleAnims.map((anim) =>
-        Animated.parallel([
-          Animated.timing(anim.progress, {
-            toValue: 1,
-            duration: 300,
-            easing: easeOut,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.timing(anim.opacity, { toValue: 1, duration: 40, useNativeDriver: true }),
-            Animated.timing(anim.opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
-          ]),
-        ])
+      ...sparkleProgs.map((p) =>
+        Animated.timing(p, { toValue: 1, duration: 200, easing: easeOut, useNativeDriver: true })
       ),
     ]).start(() => onDoneRef.current());
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,74 +71,42 @@ export function ExplosionEffect({ x, y, planetSize, color, scale, onDone }: Prop
       style={{ position: 'absolute', left: x, top: y, width: 0, height: 0, overflow: 'visible' }}
       pointerEvents="none"
     >
-      {/* ── Coloured glow disk ──────────────────────────────────── */}
+      {/* White flash */}
       <Animated.View
         style={{
           position: 'absolute',
-          width: ringSide,
-          height: ringSide,
-          borderRadius: BASE_R,
-          backgroundColor: color,
-          left: -BASE_R,
-          top: -BASE_R,
-          opacity: glowOpacity,
-          transform: [{ scale: glowScale }],
-        }}
-      />
-
-      {/* ── White flash disk ────────────────────────────────────── */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          width: ringSide * 0.55,
-          height: ringSide * 0.55,
-          borderRadius: BASE_R * 0.55,
+          width: ringSide * 0.6,
+          height: ringSide * 0.6,
+          borderRadius: BASE_R * 0.6,
           backgroundColor: '#ffffff',
-          left: -BASE_R * 0.55,
-          top: -BASE_R * 0.55,
-          opacity: flashOpacity,
-          transform: [{ scale: flashScale }],
+          left: -BASE_R * 0.6,
+          top:  -BASE_R * 0.6,
+          opacity: flashProg.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] }),
+          transform: [{ scale: flashProg.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2.8 * s] }) }],
         }}
       />
 
-      {/* ── Shockwave ring 1 — planet colour ────────────────────── */}
+      {/* Colored ring */}
       <Animated.View
         style={{
           position: 'absolute',
           width: ringSide,
           height: ringSide,
           borderRadius: BASE_R,
-          borderWidth: 3,
+          borderWidth: 2.5,
           borderColor: color,
           backgroundColor: 'transparent',
           left: -BASE_R,
-          top: -BASE_R,
-          opacity: ring1Opacity,
-          transform: [{ scale: ring1Scale }],
+          top:  -BASE_R,
+          opacity: ringProg.interpolate({ inputRange: [0, 0.08, 1], outputRange: [0, 0.9, 0] }),
+          transform: [{ scale: ringProg.interpolate({ inputRange: [0, 1], outputRange: [0.3, 4.5 * s] }) }],
         }}
       />
 
-      {/* ── Shockwave ring 2 — white ─────────────────────────────── */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          width: ringSide,
-          height: ringSide,
-          borderRadius: BASE_R,
-          borderWidth: 1.5,
-          borderColor: '#ffffff',
-          backgroundColor: 'transparent',
-          left: -BASE_R,
-          top: -BASE_R,
-          opacity: ring2Opacity,
-          transform: [{ scale: ring2Scale }],
-        }}
-      />
-
-      {/* ── Debris particles ────────────────────────────────────── */}
-      {debrisAnims.map((anim, i) => {
+      {/* Debris particles */}
+      {debrisProgs.map((prog, i) => {
         const d = debrisData[i];
-        const pSize = Math.max(3, d.size * Math.min(s, 3));
+        const pSize = Math.max(3, d.size);
         return (
           <Animated.View
             key={i}
@@ -247,29 +117,19 @@ export function ExplosionEffect({ x, y, planetSize, color, scale, onDone }: Prop
               borderRadius: pSize / 2,
               backgroundColor: particleColors[d.colorIdx],
               left: -pSize / 2,
-              top: -pSize / 2,
-              opacity: anim.opacity,
+              top:  -pSize / 2,
+              opacity: prog.interpolate({ inputRange: [0, 0.1, 0.75, 1], outputRange: [0, 1, 0.7, 0] }),
               transform: [
-                {
-                  translateX: anim.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, d.dist * Math.cos(d.angle)],
-                  }),
-                },
-                {
-                  translateY: anim.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, d.dist * Math.sin(d.angle)],
-                  }),
-                },
+                { translateX: prog.interpolate({ inputRange: [0, 1], outputRange: [0, d.dist * Math.cos(d.angle)] }) },
+                { translateY: prog.interpolate({ inputRange: [0, 1], outputRange: [0, d.dist * Math.sin(d.angle)] }) },
               ],
             }}
           />
         );
       })}
 
-      {/* ── Sparkles ────────────────────────────────────────────── */}
-      {sparkleAnims.map((anim, i) => {
+      {/* Sparkles */}
+      {sparkleProgs.map((prog, i) => {
         const sd = sparkleData[i];
         return (
           <Animated.View
@@ -281,21 +141,11 @@ export function ExplosionEffect({ x, y, planetSize, color, scale, onDone }: Prop
               borderRadius: 2,
               backgroundColor: '#ffffff',
               left: -2,
-              top: -2,
-              opacity: anim.opacity,
+              top:  -2,
+              opacity: prog.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 1, 0] }),
               transform: [
-                {
-                  translateX: anim.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, sd.dist * Math.cos(sd.angle)],
-                  }),
-                },
-                {
-                  translateY: anim.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, sd.dist * Math.sin(sd.angle)],
-                  }),
-                },
+                { translateX: prog.interpolate({ inputRange: [0, 1], outputRange: [0, sd.dist * Math.cos(sd.angle)] }) },
+                { translateY: prog.interpolate({ inputRange: [0, 1], outputRange: [0, sd.dist * Math.sin(sd.angle)] }) },
               ],
             }}
           />
