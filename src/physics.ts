@@ -537,7 +537,7 @@ export class SolarPhysics {
   applyMergeShockwave(x: number, y: number, size: number, excludeId?: string) {
     const shockRadius = size * 6.5; // Increased range
     const intensity = Math.sqrt(size / 15);
-    const maxKick = size * 0.8 * intensity; // Increased force (from 0.25 to 0.8)
+    const maxKick = size * 3.8 * intensity; // Increased force (from 0.25 to 0.8)
 
     // Apply to all physical entities
     const collections = [this.planets, this.stars, this.blackHoles, this.viruses];

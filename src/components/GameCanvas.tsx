@@ -133,11 +133,21 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ state, width, height, on
                 const width = isSaturn ? planetData.size * 4 : planetData.size * 2;
                 const height = planetData.size * 2;
 
+                const isFresh = state.mergeSpawnIds.includes(p.id);
+                let scale = 1;
+                if (isFresh) {
+                    const elapsed = Date.now() - p.spawnTime;
+                    if (elapsed < 100) {
+                        // Pop effect: 1.0 -> 1.2 -> 1.0 over 100ms
+                        scale = 1.0 + 0.2 * Math.sin(Math.PI * (elapsed / 100));
+                    }
+                }
+
                 return (
                     <Group
                         key={p.id}
                         origin={vec(p.x, p.y)}
-                        transform={[{ rotate: p.angle }]}
+                        transform={[{ rotate: p.angle }, { scale }]}
                     >
                         <Image
                             image={img}

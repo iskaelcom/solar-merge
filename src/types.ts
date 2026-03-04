@@ -4,6 +4,7 @@ export interface RenderPlanet {
   x: number;
   y: number;
   angle: number;
+  spawnTime: number;
 }
 
 export interface Particle {

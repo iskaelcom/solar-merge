@@ -576,12 +576,21 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
                 x: p.x,
                 y: p.y,
                 angle: p.angle,
+                spawnTime: p.spawnTime || Date.now(),
               } as RenderPlanet;
             });
 
           // Add newly merged spawns
           spawns.forEach((s) => {
-            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0 });
+            const physicsPlanet = allPlanets.find(p => p.id === s.id);
+            updated.push({
+              id: s.id,
+              planetId: s.planetId,
+              x: s.x,
+              y: s.y,
+              angle: 0,
+              spawnTime: physicsPlanet?.spawnTime || Date.now()
+            });
           });
 
           // Remove stale IDs (merged/destroyed planets) from sick + mergeSpawn lists
@@ -636,7 +645,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         });
       }
 
-      // Clear merge spawn IDs after pop animation finishes (~900ms)
+      // Clear merge spawn IDs after pop animation finishes (100ms per user request)
       if (freshMergeIds.length > 0) {
         const freshMergeIdSet = new Set(freshMergeIds);
         setTimeout(() => {
@@ -644,7 +653,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             ...prev,
             mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIdSet.has(id)),
           }));
-        }, 900);
+        }, 100);
       }
 
       // Clear explosions after they finish (100ms per user request)
@@ -773,6 +782,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         x: clampedX,
         y: startY,
         angle: 0,
+        spawnTime: Date.now(),
       };
 
       // Determine special injection. Priority: BH > Virus > Star.
