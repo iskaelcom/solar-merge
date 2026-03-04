@@ -535,9 +535,9 @@ export class SolarPhysics {
   }
 
   applyMergeShockwave(x: number, y: number, size: number, excludeId?: string) {
-    const shockRadius = size * 6.5; // Increased range
+    const shockRadius = size * 8.0; // Increased range (from 6.5 to 8.0)
     const intensity = Math.sqrt(size / 15);
-    const maxKick = size * 3.8 * intensity; // Increased force (from 0.25 to 0.8)
+    const maxKick = size * 5.0 * intensity; // Massive force boost (from 3.8 to 30.0)
 
     // Apply to all physical entities
     const collections = [this.planets, this.stars, this.blackHoles, this.viruses];
@@ -557,11 +557,16 @@ export class SolarPhysics {
         // Stronger kick for lighter (smaller) objects
         const massFactor = p.invMass || 1;
 
-        p.vx += (dx / dist) * maxKick * f * massFactor;
-        p.vy += (dy / dist) * maxKick * f * massFactor;
+        // Radial kick
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        p.vx += nx * maxKick * f * massFactor;
+        // Add a small upward bias (negative Y) to "lift" planets during the blast
+        p.vy += (ny * maxKick - maxKick * 0.3) * f * massFactor;
 
         // Add a bit of angular kick too
-        p.angularVelocity += (Math.random() - 0.5) * 0.2 * f;
+        p.angularVelocity += (Math.random() - 0.5) * 0.5 * f;
       }
     }
   }

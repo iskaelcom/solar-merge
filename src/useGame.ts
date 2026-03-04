@@ -317,6 +317,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           particles: createExplosionParticles(x, y, '#00E5FF', 15),
         });
 
+        // Healing also creates a small physical burst
+        engine.applyMergeShockwave(x, y, planet.size * 0.5, healId);
+
         setState((prev) => ({
           ...prev,
           sickPlanetIds: Array.from(sickPlanetIdsRef.current),
