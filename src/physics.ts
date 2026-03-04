@@ -535,36 +535,57 @@ export class SolarPhysics {
   }
 
   applyMergeShockwave(x: number, y: number, size: number, excludeId?: string) {
-    const shockRadius = size * 5.5;
+    const shockRadius = size * 6.5; // Increased range
     const intensity = Math.sqrt(size / 15);
-    const maxKick = size * 0.25 * intensity;
+    const maxKick = size * 0.8 * intensity; // Increased force (from 0.25 to 0.8)
 
-    for (const p of this.planets.values()) {
-      if (p.id === excludeId) continue;
-      const dx = p.x - x;
-      const dy = p.y - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1 || dist > shockRadius) continue;
+    // Apply to all physical entities
+    const collections = [this.planets, this.stars, this.blackHoles, this.viruses];
 
-      const f = 1 - dist / shockRadius;
-      p.vx += (dx / dist) * maxKick * f;
-      p.vy += (dy / dist) * maxKick * f;
+    for (const collection of collections) {
+      for (const p of collection.values()) {
+        if (p.id === excludeId) continue;
+        const dx = p.x - x;
+        const dy = p.y - y;
+        const distSq = dx * dx + dy * dy;
+        const shockRadiusSq = shockRadius * shockRadius;
+
+        if (distSq < 1 || distSq > shockRadiusSq) continue;
+
+        const dist = Math.sqrt(distSq);
+        const f = 1 - dist / shockRadius;
+        // Stronger kick for lighter (smaller) objects
+        const massFactor = p.invMass || 1;
+
+        p.vx += (dx / dist) * maxKick * f * massFactor;
+        p.vy += (dy / dist) * maxKick * f * massFactor;
+
+        // Add a bit of angular kick too
+        p.angularVelocity += (Math.random() - 0.5) * 0.2 * f;
+      }
     }
   }
 
   applyBlackHoleSuction(x: number, y: number, size: number) {
-    const radius = size * 4.5;
-    const force = size * 0.3;
+    const radius = size * 6.0; // Increased range (from 4.5 to 6.0)
+    const force = size * 0.45; // Increased force (from 0.3 to 0.45)
 
-    for (const p of this.planets.values()) {
-      const dx = x - p.x;
-      const dy = y - p.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1 || dist > radius) continue;
+    const collections = [this.planets, this.stars, this.blackHoles, this.viruses];
 
-      const f = 1 - dist / radius;
-      p.vx += (dx / dist) * force * f;
-      p.vy += (dy / dist) * force * f;
+    for (const collection of collections) {
+      for (const p of collection.values()) {
+        const dx = x - p.x;
+        const dy = y - p.y;
+        const distSq = dx * dx + dy * dy;
+        const radiusSq = radius * radius;
+
+        if (distSq < 1 || distSq > radiusSq) continue;
+
+        const dist = Math.sqrt(distSq);
+        const f = 1 - dist / radius;
+        p.vx += (dx / dist) * force * f;
+        p.vy += (dy / dist) * force * f;
+      }
     }
   }
 

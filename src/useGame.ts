@@ -422,7 +422,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Flag the newly-spawned black hole so the game loop picks it up
       pendingBlackHoleSpawnsRef.current.push({ id: blackHoleId, x, y });
 
-      // Strong suction — neighbouring planets get pulled toward the collapse point
+      // Supernova explosion: outward blast followed by inward collapse
+      engine.applyMergeShockwave(x, y, sun.size * 2);
       engine.applyBlackHoleSuction(x, y, sun.size);
 
       // Supernova explosion — large, golden-orange
