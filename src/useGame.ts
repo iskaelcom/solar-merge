@@ -511,37 +511,34 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const highest = physicsRef.current.getHighestPoint();
 
       if (highest && highest.y < DANGER_HEIGHT && !isDroppingRef.current) {
-        // Only Game Over if the planet is NOT falling fast (vY > -0.5 and vY < 2)
-        if (Math.abs(highest.vy) < 1.0) {
-          setState((prev) => {
-            const newHighScore = Math.max(prev.highScore, scoreRef.current);
-            if (newHighScore > prev.highScore) {
-              storage.set(newHighScore, dropCountRef.current);
-            }
-            return {
-              ...prev,
-              gameOver: true,
-              highScore: newHighScore,
-              checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
-            };
-          });
-          loopActiveRef.current = false;
-          cancelAnimationFrame(rafRef.current);
+        setState((prev) => {
+          const newHighScore = Math.max(prev.highScore, scoreRef.current);
+          if (newHighScore > prev.highScore) {
+            storage.set(newHighScore, dropCountRef.current);
+          }
+          return {
+            ...prev,
+            gameOver: true,
+            highScore: newHighScore,
+            checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
+          };
+        });
+        loopActiveRef.current = false;
+        cancelAnimationFrame(rafRef.current);
 
-          // Immediately free all physics + pending queues so CPU/memory drops to zero
-          pendingSpawnsRef.current = [];
-          pendingExplosionsRef.current = [];
-          pendingMergeSpawnIdsRef.current = [];
-          pendingStarSpawnsRef.current = [];
-          pendingBlackHoleSpawnsRef.current = [];
-          pendingVirusSpawnsRef.current = [];
-          if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
-          if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
-          physicsRef.current?.destroy();
-          physicsRef.current = null;
+        // Immediately free all physics + pending queues so CPU/memory drops to zero
+        pendingSpawnsRef.current = [];
+        pendingExplosionsRef.current = [];
+        pendingMergeSpawnIdsRef.current = [];
+        pendingStarSpawnsRef.current = [];
+        pendingBlackHoleSpawnsRef.current = [];
+        pendingVirusSpawnsRef.current = [];
+        if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+        if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+        physicsRef.current?.destroy();
+        physicsRef.current = null;
 
-          return;
-        }
+        return;
       }
 
       // Collect pending spawns, explosions, merge spawn IDs, star/BH/virus spawns
