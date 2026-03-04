@@ -335,7 +335,7 @@ export class SolarPhysics {
       const totalInvMass = a.invMass + b.invMass;
 
       // Position correction
-      const percent = 0.4; // persistence
+      const percent = 0.8; // Increased from 0.4 for snappier separation
       const slop = 0.01;
       const correction = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
 
@@ -351,7 +351,8 @@ export class SolarPhysics {
 
       if (velAlongNormal > 0) return;
 
-      const e = Math.min(a.restitution, b.restitution);
+      // Use the maximum restitution for a "pop" effect
+      const e = Math.max(a.restitution, b.restitution);
       let j = -(1 + e) * velAlongNormal;
       j /= totalInvMass;
 
@@ -495,17 +496,17 @@ export class SolarPhysics {
       // Left Wall
       if (p.x - p.radius < 0) {
         p.x = p.radius;
-        p.vx = Math.abs(p.vx) * wallDamping;
+        p.vx = Math.abs(p.vx) * RESTITUTION;
       }
       // Right Wall
       if (p.x + p.radius > this.width) {
         p.x = this.width - p.radius;
-        p.vx = -Math.abs(p.vx) * wallDamping;
+        p.vx = -Math.abs(p.vx) * RESTITUTION;
       }
       // Floor
       if (p.y + p.radius > this.height) {
         p.y = this.height - p.radius;
-        p.vy = -Math.abs(p.vy) * wallDamping;
+        p.vy = -Math.abs(p.vy) * RESTITUTION;
         p.vx *= 0.95; // Ground friction
       }
     }

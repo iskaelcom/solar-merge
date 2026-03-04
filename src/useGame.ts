@@ -329,7 +329,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const newId = genId();
         const nextPlanetTypeId = planetTypeId + 1;
 
-        if (planetTypeId < PLANETS.length) {
+        if (nextPlanetTypeId <= PLANETS.length) { // Changed from planetTypeId < PLANETS.length
           engine.addPlanet(newId, nextPlanetTypeId, x, y);
           pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y });
           pendingMergeSpawnIdsRef.current.push(newId);
