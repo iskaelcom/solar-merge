@@ -106,6 +106,11 @@ export class SolarPhysics {
   private pendingStarRemovalIds: Set<string> = new Set();
   private pendingBlackHoleRemovalIds: Set<string> = new Set();
   private pendingVirusRemovalIds: Set<string> = new Set();
+  // Deferred operations: replaces setTimeout(0) — flushed at end of each step()
+  private deferredOps: Array<() => void> = [];
+  // Max speed cap to prevent runaway bodies after merges/shockwaves
+  private static readonly MAX_SPEED = 28;
+  private static readonly MAX_SPEED_SQ = 28 * 28;
   // Shield
   private shieldActive: boolean = false;
   private shieldPassedPlanetIds: Set<string> = new Set();
@@ -195,13 +200,13 @@ export class SolarPhysics {
             const px = planet.body.position.x;
             const py = planet.body.position.y;
 
-            setTimeout(() => {
+            this.defer(() => {
               this.removeBlackHole(bh.id);
               if (this.planets.has(planet.id)) this.removePlanet(planet.id);
               this.blackHoleSuckCallbacks.forEach((cb) =>
                 cb({ blackHoleId: bh.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
               );
-            }, 0);
+            });
           }
           return; // don't process as star or planet-planet
         }
@@ -225,12 +230,12 @@ export class SolarPhysics {
             const px = planet.body.position.x;
             const py = planet.body.position.y;
 
-            setTimeout(() => {
+            this.defer(() => {
               this.removeVirus(vir.id);
               this.virusInfectCallbacks.forEach((cb) =>
                 cb({ virusId: vir.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
               );
-            }, 0);
+            });
           }
           return; // don't process as star or planet-planet
         }
@@ -255,14 +260,14 @@ export class SolarPhysics {
             const px = planet.body.position.x;
             const py = planet.body.position.y;
 
-            setTimeout(() => {
+            this.defer(() => {
               this.removeStar(star.id);
               if (this.planets.has(planet.id)) this.removePlanet(planet.id);
 
               this.starUpgradeCallbacks.forEach((cb) =>
                 cb({ starId: star.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
               );
-            }, 0);
+            });
           }
           return; // don't process as planet-planet merge
         }
@@ -286,7 +291,7 @@ export class SolarPhysics {
 
         // ── Two Suns merged → collapse into a Black Hole ─────────────────
         if (pA.planetId >= PLANETS.length) {
-          setTimeout(() => {
+          this.defer(() => {
             if (this.planets.has(pA.id)) this.removePlanet(pA.id);
             if (this.planets.has(pB.id)) this.removePlanet(pB.id);
 
@@ -297,12 +302,12 @@ export class SolarPhysics {
               cb({ id1: pA.id, id2: pB.id, blackHoleId: bhId, x: midX, y: midY })
             );
             this.pendingMergeKeys.delete(key);
-          }, 0);
+          });
           return;
         }
 
-        // Defer to next tick so we don't mutate during collision processing
-        setTimeout(() => {
+        // Defer to end of step() so we don't mutate during collision processing
+        this.defer(() => {
           if (this.planets.has(pA.id)) this.removePlanet(pA.id);
           if (this.planets.has(pB.id)) this.removePlanet(pB.id);
 
@@ -311,9 +316,21 @@ export class SolarPhysics {
           );
 
           this.pendingMergeKeys.delete(key);
-        }, 0);
+        });
       });
     });
+  }
+
+  /** Queue an operation to run after the current physics step (replaces setTimeout 0). */
+  private defer(fn: () => void): void {
+    this.deferredOps.push(fn);
+  }
+
+  /** Execute all queued deferred operations and clear the queue. */
+  private flushDeferred(): void {
+    if (this.deferredOps.length === 0) return;
+    const ops = this.deferredOps.splice(0);
+    for (const fn of ops) fn();
   }
 
   private getVirusByBodyId(bodyId: number): VirusPhysicsBody | undefined {
@@ -453,6 +470,8 @@ export class SolarPhysics {
     const intensity = Math.sqrt(suckedPlanetSize / 15);
     const maxKick = suckedPlanetSize * 0.2 * intensity;
     const suckRadius = suckedPlanetSize * 4.5 * intensity;
+    // Pre-compute squared radius — avoids sqrt for the early-out check
+    const suckRadiusSq = suckRadius * suckRadius;
 
     this.planets.forEach((p) => {
       if (this.pendingRemovalIds.has(p.id)) return;
@@ -460,23 +479,25 @@ export class SolarPhysics {
       // Vector FROM planet TOWARD the black hole center — inward pull
       const dx = x - p.body.position.x;
       const dy = y - p.body.position.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1 || dist > suckRadius) return;
+      const distSq = dx * dx + dy * dy;
+      // Cheap squared comparison before the expensive sqrt
+      if (distSq < 1 || distSq > suckRadiusSq) return;
 
+      const dist = Math.sqrt(distSq);
       const falloff = 1 - dist / suckRadius;
       const kick = maxKick * falloff;
       const nx = dx / dist;
       const ny = dy / dist;
 
-      Matter.Body.setVelocity(p.body, {
-        x: p.body.velocity.x + nx * kick,
-        y: p.body.velocity.y + ny * kick,
-      });
-
       // Wake sleeping bodies so they respond to the pull
       if ((p.body as any).isSleeping) {
         (p.body as any).isSleeping = false;
       }
+
+      Matter.Body.setVelocity(p.body, {
+        x: p.body.velocity.x + nx * kick,
+        y: p.body.velocity.y + ny * kick,
+      });
     });
   }
 
@@ -583,31 +604,40 @@ export class SolarPhysics {
    * excludeId = the newly-spawned planet (shouldn't push itself).
    */
   applyMergeShockwave(x: number, y: number, mergedPlanetSize: number, excludeId?: string): void {
-    // Scaling factor: larger planets create significantly more impact
-    // We use a base multiplier that grows with planet size
-    const intensity = Math.sqrt(mergedPlanetSize / 15); // normalized intensity factor
+    const intensity = Math.sqrt(mergedPlanetSize / 15);
     const maxKick = mergedPlanetSize * 0.12 * intensity;
     const shockRadius = mergedPlanetSize * 5.5 * intensity;
+    // Pre-compute squared radius — avoids sqrt for the early-out check
+    const shockRadiusSq = shockRadius * shockRadius;
 
     this.planets.forEach((p) => {
       if (p.id === excludeId) return;
       if (this.pendingRemovalIds.has(p.id)) return;
+      // Skip sleeping bodies — they're not moving, kick is wasted
+      if ((p.body as any).isSleeping) return;
 
       const dx = p.body.position.x - x;
       const dy = p.body.position.y - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1 || dist > shockRadius) return;
+      const distSq = dx * dx + dy * dy;
+      // Cheap squared comparison before the expensive sqrt
+      if (distSq < 1 || distSq > shockRadiusSq) return;
 
+      const dist = Math.sqrt(distSq);
       const falloff = 1 - dist / shockRadius;
       const kick = maxKick * falloff;
-
       const nx = dx / dist;
       const ny = dy / dist;
 
-      Matter.Body.setVelocity(p.body, {
-        x: p.body.velocity.x + nx * kick,
-        y: p.body.velocity.y + ny * kick * 0.8, // slightly less vertical kick to keep them in flow
-      });
+      const newVx = p.body.velocity.x + nx * kick;
+      const newVy = p.body.velocity.y + ny * kick * 0.8;
+      // Clamp to MAX_SPEED so merges never launch planets at ridiculous speeds
+      const speedSq = newVx * newVx + newVy * newVy;
+      if (speedSq > SolarPhysics.MAX_SPEED_SQ) {
+        const scale = SolarPhysics.MAX_SPEED / Math.sqrt(speedSq);
+        Matter.Body.setVelocity(p.body, { x: newVx * scale, y: newVy * scale });
+      } else {
+        Matter.Body.setVelocity(p.body, { x: newVx, y: newVy });
+      }
     });
   }
 
@@ -671,6 +701,8 @@ export class SolarPhysics {
 
   step(delta: number): void {
     Matter.Engine.update(this.engine, Math.min(delta, 33));
+    // Flush merges/removals queued during collision events — same frame, no macrotask
+    this.flushDeferred();
     this.checkShield();
   }
 
@@ -693,6 +725,7 @@ export class SolarPhysics {
     this.pendingStarRemovalIds.clear();
     this.pendingBlackHoleRemovalIds.clear();
     this.pendingVirusRemovalIds.clear();
+    this.deferredOps = [];
     this.shieldActive = false;
     this.shieldPassedPlanetIds.clear();
     this.shieldRecentlyHitIds.clear();
@@ -723,6 +756,7 @@ export class SolarPhysics {
     this.pendingStarRemovalIds.clear();
     this.pendingBlackHoleRemovalIds.clear();
     this.pendingVirusRemovalIds.clear();
+    this.deferredOps = [];
     this.mergeCallbacks = [];
     this.starUpgradeCallbacks = [];
     this.blackHoleSuckCallbacks = [];
