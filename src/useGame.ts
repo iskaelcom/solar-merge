@@ -200,12 +200,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // ── Sick merge: downgrade by 1 level ────────────────────────────
         const downPlanetId = planetId - 1;
         if (downPlanetId >= 1) {
-          const downSize = PLANETS[downPlanetId - 1].size;
-          const spawnY = Math.max(y, downSize + 10);
-          engine.addPlanet(newId, downPlanetId, x, spawnY);
-          pendingSpawnsRef.current.push({ id: newId, planetId: downPlanetId, x, y: spawnY });
+          engine.addPlanet(newId, downPlanetId, x, y);
+          pendingSpawnsRef.current.push({ id: newId, planetId: downPlanetId, x, y });
           pendingMergeSpawnIdsRef.current.push(newId);
-          sickPlanetIdsRef.current.add(newId); // sickness spreads to result
           engine.applyMergeShockwave(x, y, planet.size, newId);
         }
         // level 1 sick + level 1 → both vanish (downPlanetId === 0, no spawn)
@@ -236,10 +233,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextPlanetId = planetId + 1;
 
         if (nextPlanetId <= PLANETS.length) {
-          const nextSize = PLANETS[nextPlanetId - 1].size;
-          const spawnY = Math.max(y, nextSize + 10);
-          engine.addPlanet(newId, nextPlanetId, x, spawnY);
-          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y: spawnY });
+          engine.addPlanet(newId, nextPlanetId, x, y);
+          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y });
           pendingMergeSpawnIdsRef.current.push(newId);
           engine.applyMergeShockwave(x, y, planet.size, newId);
         }
@@ -311,9 +306,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // ── Healing: star cures the sick planet (same level, no score) ───
         // Physics already removed the planet — re-add it at the same level
         const healId = genId();
-        const spawnY = Math.max(y, planet.size + 10);
-        engine.addPlanet(healId, planetTypeId, x, spawnY);
-        pendingSpawnsRef.current.push({ id: healId, planetId: planetTypeId, x, y: spawnY });
+        engine.addPlanet(healId, planetTypeId, x, y);
+        pendingSpawnsRef.current.push({ id: healId, planetId: planetTypeId, x, y });
         pendingMergeSpawnIdsRef.current.push(healId);
 
         // Cyan healing burst
@@ -336,12 +330,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextPlanetTypeId = Math.min(planetTypeId + 1, PLANETS.length);
 
         if (planetTypeId < PLANETS.length) {
-          const nextSize = PLANETS[nextPlanetTypeId - 1].size;
-          const spawnY = Math.max(y, nextSize + 10);
-          engine.addPlanet(newId, nextPlanetTypeId, x, spawnY);
-          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y: spawnY });
+          engine.addPlanet(newId, nextPlanetTypeId, x, y);
+          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y });
           pendingMergeSpawnIdsRef.current.push(newId);
-          engine.applyMergeShockwave(x, spawnY, planet.size, newId);
+          engine.applyMergeShockwave(x, y, planet.size, newId);
         }
 
         // ── Star + Sun: gravitational collapse — suck surrounding objects ──
@@ -371,7 +363,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             score: newScore,
             highScore: newHighScore,
             checksum: calculateChecksum(newScore, dropCountRef.current),
-            planets: prev.planets.filter((p) => p.id !== planetId),
+            planets: isSunHit ? prev.planets : prev.planets.filter((p) => p.id !== planetId),
             stars: prev.stars.filter((s) => s.id !== starId),
           };
         });

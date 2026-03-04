@@ -436,7 +436,10 @@ export class SolarPhysics {
       const other = isStar(a.id) ? b : a;
       if (isPlanet(other)) {
         if (!this.pendingRemovalIds.has(other.id)) {
-          this.pendingRemovalIds.add(other.id);
+          // Only remove the planet if it's NOT the final level (Sun)
+          if (other.planetId < PLANETS.length) {
+            this.pendingRemovalIds.add(other.id);
+          }
           this.pendingRemovalIds.add(s.id);
           this.starUpgradeCallbacks.forEach(cb => cb({
             starId: s.id,
