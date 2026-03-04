@@ -323,8 +323,8 @@ export class SolarPhysics {
 
     if (distSq < minDist * minDist) {
       const dist = Math.sqrt(distSq) || 0.1;
-      // If perfectly aligned vertically, add a tiny horizontal push
-      const nx = dx === 0 ? (Math.random() > 0.5 ? 0.01 : -0.01) : dx / dist;
+      // If perfectly aligned vertically, add a stronger horizontal push to force sliding
+      const nx = dx === 0 ? (Math.random() > 0.5 ? 0.05 : -0.05) : dx / dist;
       const ny = dy / dist;
 
       // Special interactions
