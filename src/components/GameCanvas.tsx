@@ -122,6 +122,33 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ state, width, height, on
             {/* Danger Line */}
             <Rect x={0} y={DANGER_HEIGHT} width={width} height={2} color="rgba(255, 0, 0, 0.3)" />
 
+            {/* Shield View */}
+            {state.shieldLayers > 0 && (
+                <Group>
+                    <Rect
+                        x={0}
+                        y={DANGER_HEIGHT - 2}
+                        width={width}
+                        height={4}
+                        color={state.shieldLayers === 3 ? "#00E5FF" : state.shieldLayers === 2 ? "#00B0FF" : "#2979FF"}
+                    />
+                    {/* Glowing highlight */}
+                    <Rect
+                        x={0}
+                        y={DANGER_HEIGHT - 8}
+                        width={width}
+                        height={16}
+                        opacity={0.3}
+                    >
+                        <RadialGradient
+                            c={vec(width / 2, DANGER_HEIGHT)}
+                            r={width}
+                            colors={[state.shieldLayers === 3 ? "#00E5FF" : "#2979FF", "transparent"]}
+                        />
+                    </Rect>
+                </Group>
+            )}
+
             {/* Planets */}
             {state.planets.map((p) => {
                 const isSick = sickSet.has(p.id);

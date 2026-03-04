@@ -613,6 +613,7 @@ export class SolarPhysics {
     let minY = this.height + 1;
     let vy = 0;
     let id = "";
+    let spawnTime = 0;
     if (this.planets.size === 0) return null;
     for (const p of this.planets.values()) {
       const top = p.y - p.radius;
@@ -620,9 +621,10 @@ export class SolarPhysics {
         minY = top;
         vy = p.vy;
         id = p.id;
+        spawnTime = p.spawnTime;
       }
     }
-    return { y: minY, vy, id };
+    return { y: minY, vy, id, spawnTime };
   }
 
   hasActiveBodies() {
