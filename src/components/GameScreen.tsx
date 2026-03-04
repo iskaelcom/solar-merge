@@ -35,7 +35,8 @@ export function GameScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
 
   const topPad = Platform.OS === 'ios' ? 50 : 30;
-  const reservedVertical = topPad + 42 + 56 + 36 + 12; // header + logoRow + evoBar + bottomPad
+  const bannerH = Platform.OS === 'android' ? 60 : 0; // AdMob anchored adaptive banner
+  const reservedVertical = topPad + 42 + 56 + 36 + 12 + bannerH; // header + logoRow + evoBar + bottomPad + banner
   const rawW = Math.min(screenW - WALL_THICKNESS * 2, 400);
   const rawH = Math.max(350, Math.min(
     Math.round(rawW * GAME_HEIGHT / GAME_WIDTH), // enforce natural aspect ratio
