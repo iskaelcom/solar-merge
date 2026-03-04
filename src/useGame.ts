@@ -375,8 +375,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       sickPlanetIdsRef.current.delete(planetId); // clean up if sick planet gets sucked
       const planet = PLANETS[planetTypeId - 1];
 
-      // Pull surrounding planets inward — they should react, not stand still
-      engine.applyBlackHoleSuction(x, y, planet.size);
+      // Pull ALL surrounding planets inward
+      engine.applyBlackHoleSuction(x, y, planet.size, true);
 
       // Dark implosion explosion at the planet's position
       pendingExplosionsRef.current.push({
@@ -422,9 +422,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Flag the newly-spawned black hole so the game loop picks it up
       pendingBlackHoleSpawnsRef.current.push({ id: blackHoleId, x, y });
 
-      // Supernova explosion: outward blast followed by inward collapse
+      // Supernova explosion: outward blast followed by intense global collapse
       engine.applyMergeShockwave(x, y, sun.size * 2);
-      engine.applyBlackHoleSuction(x, y, sun.size);
+      engine.applyBlackHoleSuction(x, y, sun.size, true);
 
       // Supernova explosion — large, golden-orange
       pendingExplosionsRef.current.push({

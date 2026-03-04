@@ -566,9 +566,9 @@ export class SolarPhysics {
     }
   }
 
-  applyBlackHoleSuction(x: number, y: number, size: number) {
-    const radius = size * 6.0; // Increased range (from 4.5 to 6.0)
-    const force = size * 0.45; // Increased force (from 0.3 to 0.45)
+  applyBlackHoleSuction(x: number, y: number, size: number, isGlobal?: boolean) {
+    const radius = isGlobal ? 2000 : size * 6.0; // Global covers the logical board area
+    const force = size * 0.75; // Increased force (from 0.45 to 0.75)
 
     const collections = [this.planets, this.stars, this.blackHoles, this.viruses];
 
