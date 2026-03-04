@@ -119,7 +119,7 @@ export class SolarPhysics {
     this.planets.set(id, {
       id,
       planetId,
-      x: x + (Math.random() - 0.5) * 0.1, // Jitter
+      x: x + (Math.random() - 0.5) * 3.5, // Increased Jitter to prevent perfect center stacks
       y,
       vx: 0,
       vy: 1,
@@ -323,8 +323,11 @@ export class SolarPhysics {
 
     if (distSq < minDist * minDist) {
       const dist = Math.sqrt(distSq) || 0.1;
-      // If perfectly aligned vertically, add a stronger horizontal push to force sliding
-      const nx = dx === 0 ? (Math.random() > 0.5 ? 0.05 : -0.05) : dx / dist;
+      // If perfectly aligned vertically (or very close), add a forced horizontal push to ensure imbalance
+      let nx = dx / dist;
+      if (Math.abs(dx) < 0.5) {
+        nx = Math.random() > 0.5 ? 0.15 : -0.15;
+      }
       const ny = dy / dist;
 
       // Special interactions
