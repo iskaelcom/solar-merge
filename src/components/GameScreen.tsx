@@ -189,20 +189,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
       <View
         style={[
           styles.gameWrapper,
-          { width: gameWidth + WALL_THICKNESS * 2 },
+          { width: gameWidth + WALL_THICKNESS * 2, height: gameHeight + WALL_THICKNESS },
         ]}
       >
-        {/* Left wall */}
-        <View style={[styles.wall, styles.leftWall, { height: gameHeight + WALL_THICKNESS }]} />
-        {/* Right wall */}
-        <View style={[styles.wall, styles.rightWall, { height: gameHeight + WALL_THICKNESS }]} />
-        {/* Floor */}
-        <View style={[styles.floor, { width: gameWidth + WALL_THICKNESS * 2 }]} />
-
         {/* Play area */}
         <View
           ref={gameAreaRef}
-          style={[styles.gameArea, { width: gameWidth, height: gameHeight }]}
+          style={[styles.gameArea, { width: gameWidth, height: gameHeight, top: 0, left: WALL_THICKNESS }]}
           onLayout={() => {
             gameAreaRef.current?.measure((_x, _y, _w, _h, pageX) => {
               if (pageX != null) layoutXRef.current = pageX;
@@ -212,6 +205,8 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
           {/* Skia Game Canvas */}
           <GameCanvas
             state={state}
+            width={gameWidth}
+            height={gameHeight}
             onPointerMove={setPointerX}
             onPointerUp={dropPlanet}
           />
@@ -227,6 +222,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             {...(Platform.OS === 'web' ? { onMouseMove: handleMouseMove } : {})}
           />
         </View>
+
+        {/* Left wall */}
+        <View style={[styles.wall, styles.leftWall, { height: gameHeight }]} />
+        {/* Right wall */}
+        <View style={[styles.wall, styles.rightWall, { height: gameHeight }]} />
+        {/* Floor */}
+        <View style={[styles.floor, { width: gameWidth + WALL_THICKNESS * 2, bottom: 0 }]} />
       </View>
 
       {/* ── Planet evolution guide ────────────────────────────── */}
@@ -448,8 +450,7 @@ const styles = StyleSheet.create({
   gameArea: {
     backgroundColor: 'rgba(5,5,30,0.7)',
     overflow: 'hidden',
-    position: 'relative',
-    marginHorizontal: WALL_THICKNESS,
+    position: 'absolute',
   },
   dangerLine: {
     position: 'absolute',

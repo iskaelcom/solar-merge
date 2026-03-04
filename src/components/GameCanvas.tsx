@@ -25,6 +25,8 @@ import { GameState } from '../types';
 
 interface GameCanvasProps {
     state: GameState;
+    width: number;
+    height: number;
     onPointerMove: (x: number) => void;
     onPointerUp: (x: number) => void;
 }
@@ -57,7 +59,7 @@ const SICK_PLANET_IMAGES_MAP: Record<number, any> = {
     10: require('../../assets/planets/sun-sick.png'),
 };
 
-export const GameCanvas: React.FC<GameCanvasProps> = ({ state, onPointerMove, onPointerUp }) => {
+export const GameCanvas: React.FC<GameCanvasProps> = ({ state, width, height, onPointerMove, onPointerUp }) => {
     // Planets
     const p1 = useImage(PLANET_IMAGES_MAP[1]);
     const p2 = useImage(PLANET_IMAGES_MAP[2]);
@@ -113,12 +115,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ state, onPointerMove, on
     }, []);
 
     return (
-        <Canvas style={{ width: GAME_WIDTH, height: GAME_HEIGHT }} onTouch={touchHandler}>
+        <Canvas style={{ width: width, height: height }} onTouch={touchHandler}>
             {/* Background */}
-            <Rect x={0} y={0} width={GAME_WIDTH} height={GAME_HEIGHT} color="#0d0221" />
+            <Rect x={0} y={0} width={width} height={height} color="#0d0221" />
 
             {/* Danger Line */}
-            <Rect x={0} y={DANGER_HEIGHT} width={GAME_WIDTH} height={2} color="rgba(255, 0, 0, 0.3)" />
+            <Rect x={0} y={DANGER_HEIGHT} width={width} height={2} color="rgba(255, 0, 0, 0.3)" />
 
             {/* Planets */}
             {state.planets.map((p) => {
@@ -153,7 +155,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ state, onPointerMove, on
 
             {/* Stars */}
             {state.stars.map((s) => (
-                <Group key={s.id} origin={vec(s.x, s.y)} transform={[{ rotate: s.angle }, { translateX: s.x }, { translateY: s.y }]}>
+                <Group key={s.id} transform={[{ translateX: s.x }, { translateY: s.y }, { rotate: s.angle }]}>
                     <Path path={starPath} color="#FFD600" style="fill" />
                     <Path path={starPath} color="#FFFDE7" style="stroke" strokeWidth={1.5} />
                 </Group>
@@ -223,9 +225,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ state, onPointerMove, on
             )}
 
             {/* Explosions */}
-            {state.explosions.map((e) => (
-                <Group key={e.id} opacity={0.8}>
-                    <Circle cx={e.x} cy={e.y} r={e.planetSize * e.scale} color={e.color} />
+            {state.explosions.map((exp) => (
+                <Group key={exp.id}>
+                    {exp.particles.map((p, i) => (
+                        <Circle
+                            key={`${exp.id}_${i}`}
+                            cx={p.x}
+                            cy={p.y}
+                            r={p.size}
+                            color={p.color}
+                        />
+                    ))}
                 </Group>
             ))}
         </Canvas>

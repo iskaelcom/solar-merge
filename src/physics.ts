@@ -26,6 +26,7 @@ export interface PhysicsBody {
   mass: number;
   invMass: number;
   label?: string;
+  spawnTime: number;
 }
 
 export interface PhysicsPlanet extends PhysicsBody {
@@ -118,10 +119,10 @@ export class SolarPhysics {
     this.planets.set(id, {
       id,
       planetId,
-      x,
+      x: x + (Math.random() - 0.5) * 0.1, // Jitter
       y,
       vx: 0,
-      vy: 1, // Start with a small downward velocity
+      vy: 1,
       angle: 0,
       angularVelocity: 0,
       radius,
@@ -131,6 +132,7 @@ export class SolarPhysics {
       mass,
       invMass: 1 / mass,
       label: id,
+      spawnTime: Date.now(),
     });
   }
 
@@ -139,7 +141,7 @@ export class SolarPhysics {
     const mass = radius * radius * Math.PI * 0.001;
     this.stars.set(id, {
       id,
-      x,
+      x: x + (Math.random() - 0.5) * 0.1,
       y,
       vx: 0,
       vy: 1,
@@ -152,6 +154,7 @@ export class SolarPhysics {
       mass,
       invMass: 1 / mass,
       label: 'star_' + id,
+      spawnTime: Date.now(),
     });
   }
 
@@ -160,7 +163,7 @@ export class SolarPhysics {
     const mass = radius * radius * Math.PI * 0.004;
     this.blackHoles.set(id, {
       id,
-      x,
+      x: x + (Math.random() - 0.5) * 0.1,
       y,
       vx: 0,
       vy: 1,
@@ -173,6 +176,7 @@ export class SolarPhysics {
       mass,
       invMass: 1 / mass,
       label: 'bh_' + id,
+      spawnTime: Date.now(),
     });
   }
 
@@ -181,7 +185,7 @@ export class SolarPhysics {
     const mass = radius * radius * Math.PI * 0.002;
     this.viruses.set(id, {
       id,
-      x,
+      x: x + (Math.random() - 0.5) * 0.1,
       y,
       vx: 0,
       vy: 1,
@@ -194,6 +198,7 @@ export class SolarPhysics {
       mass,
       invMass: 1 / mass,
       label: 'virus_' + id,
+      spawnTime: Date.now(),
     });
   }
 
@@ -244,6 +249,16 @@ export class SolarPhysics {
       this.constrainToWorld();
     }
 
+    // Process pending removals
+    for (const id of this.pendingRemovalIds) {
+      this.removePlanet(id);
+      this.removeStar(id);
+      this.removeBlackHole(id);
+      this.removeVirus(id);
+    }
+    this.pendingRemovalIds.clear();
+    this.pendingMergeKeys.clear();
+
     if (this.shieldActive) {
       this.checkShield();
     }
@@ -258,15 +273,18 @@ export class SolarPhysics {
   }
 
   private integrate(dt: number) {
+    const now = Date.now();
     for (const p of this.planets.values()) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.angle += p.angularVelocity * dt;
+      if (now - p.spawnTime > 100) p.angularVelocity = 0;
     }
     for (const s of this.stars.values()) {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.angle += s.angularVelocity * dt;
+      if (now - s.spawnTime > 100) s.angularVelocity = 0;
     }
     for (const bh of this.blackHoles.values()) {
       bh.x += bh.vx * dt;
@@ -302,8 +320,9 @@ export class SolarPhysics {
     const minDist = a.radius + b.radius;
 
     if (distSq < minDist * minDist) {
-      const dist = Math.sqrt(distSq) || 0.001;
-      const nx = dx / dist;
+      const dist = Math.sqrt(distSq) || 0.1;
+      // If perfectly aligned vertically, add a tiny horizontal push
+      const nx = dx === 0 ? (Math.random() > 0.5 ? 0.01 : -0.01) : dx / dist;
       const ny = dy / dist;
 
       // Special interactions
@@ -379,6 +398,7 @@ export class SolarPhysics {
       if (isPlanet(other)) {
         if (!this.pendingRemovalIds.has(other.id)) {
           this.pendingRemovalIds.add(other.id);
+          this.pendingRemovalIds.add(bh.id);
           this.blackHoleSuckCallbacks.forEach(cb => cb({
             blackHoleId: bh.id,
             planetId: other.id,
@@ -396,9 +416,8 @@ export class SolarPhysics {
       const v = isVirus(a.id) ? (a as VirusPhysicsBody) : (b as VirusPhysicsBody);
       const other = isVirus(a.id) ? b : a;
       if (isPlanet(other)) {
-        if (!this.pendingRemovalIds.has(other.id)) {
-          // Virus itself doesn't need pendingRemovalIds here technically 
-          // but we want to trigger infect once
+        if (!this.pendingRemovalIds.has(other.id) && !this.pendingRemovalIds.has(v.id)) {
+          this.pendingRemovalIds.add(v.id);
           this.virusInfectCallbacks.forEach(cb => cb({
             virusId: v.id,
             planetId: other.id,
@@ -418,6 +437,7 @@ export class SolarPhysics {
       if (isPlanet(other)) {
         if (!this.pendingRemovalIds.has(other.id)) {
           this.pendingRemovalIds.add(other.id);
+          this.pendingRemovalIds.add(s.id);
           this.starUpgradeCallbacks.forEach(cb => cb({
             starId: s.id,
             planetId: other.id,

@@ -6,13 +6,20 @@ export interface RenderPlanet {
   angle: number;
 }
 
+export interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+}
+
 export interface Explosion {
   id: string;
   x: number;
   y: number;
-  planetSize: number; // radius of the merged planet
-  color: string;
-  scale: number;
+  particles: Particle[];
 }
 
 export interface RenderStar {

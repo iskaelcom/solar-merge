@@ -19,7 +19,7 @@ import {
   SHIELD_THRESHOLD_MIN,
   SHIELD_THRESHOLD_ADAPT_DROPS,
 } from './constants';
-import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
+import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion, Particle } from './types';
 
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
@@ -68,6 +68,21 @@ const shuffle = (array: number[]) => {
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;
+};
+
+const createExplosionParticles = (x: number, y: number, color: string, count = 10): Particle[] => {
+  return Array.from({ length: count }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 3;
+    return {
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: Math.random() * 5 + 3,
+      color,
+    };
+  });
 };
 
 const INITIAL_STATE: GameState = {
@@ -199,9 +214,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         pendingExplosionsRef.current.push({
           id: `exp_sick_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
-          color: '#AA00FF',
-          scale: Math.max(0.8, planet.size / 30),
+          particles: createExplosionParticles(x, y, '#AA00FF', 12),
         });
 
         // Subtract score (no combo) — write through ref first
@@ -234,9 +247,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         pendingExplosionsRef.current.push({
           id: `exp_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
-          color: planet.color,
-          scale: Math.max(0.8, planet.size / 30),
+          particles: createExplosionParticles(x, y, planet.color, 12),
         });
 
         // Read & increment the secure ref — not accessible via React DevTools
@@ -309,9 +320,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         pendingExplosionsRef.current.push({
           id: `exp_heal_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
-          color: '#00E5FF',
-          scale: Math.max(0.8, planet.size / 30),
+          particles: createExplosionParticles(x, y, '#00E5FF', 15),
         });
 
         setState((prev) => ({
@@ -345,9 +354,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         pendingExplosionsRef.current.push({
           id: `exp_star_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
-          color: isSunHit ? '#FF6600' : '#FFD600',
-          scale: isSunHit ? Math.max(2.0, planet.size / 15) : Math.max(0.8, planet.size / 30),
+          particles: createExplosionParticles(x, y, isSunHit ? '#FF6600' : '#FFD600', 15),
         });
 
         setState((prev) => {
@@ -382,11 +389,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Dark implosion explosion at the planet's position
       pendingExplosionsRef.current.push({
         id: `exp_bh_${Date.now()}_${Math.random()}`,
-        x,
-        y,
-        planetSize: planet.size,
-        color: '#6a00cc',  // dark purple vortex
-        scale: Math.max(0.6, planet.size / 40),
+        x, y,
+        particles: createExplosionParticles(x, y, '#6a00cc', 15),
       });
 
       // Remove planet & black hole from render state (no score — black hole is a utility)
@@ -405,9 +409,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       pendingExplosionsRef.current.push({
         id: `exp_virus_${Date.now()}_${Math.random()}`,
         x, y,
-        planetSize: planet.size,
-        color: '#76FF03', // neon green infection burst
-        scale: Math.max(0.6, planet.size / 40),
+        particles: createExplosionParticles(x, y, '#76FF03', 15),
       });
 
       setState((prev) => ({
@@ -434,11 +436,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Supernova explosion — large, golden-orange
       pendingExplosionsRef.current.push({
         id: `exp_sunbh_${Date.now()}_${Math.random()}`,
-        x,
-        y,
-        planetSize: sun.size,
-        color: '#FF6600',
-        scale: Math.max(2.0, sun.size / 15),
+        x, y,
+        particles: createExplosionParticles(x, y, '#FF6600', 25),
       });
 
       // Combo accounting (same logic as a normal merge)
@@ -619,6 +618,16 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             y: v.y,
           }));
 
+          // Update existing particles motion
+          const updatedExplosions = prev.explosions.map((exp) => ({
+            ...exp,
+            particles: exp.particles.map((p) => ({
+              ...p,
+              x: p.x + p.vx,
+              y: p.y + p.vy,
+            })),
+          }));
+
           return {
             ...prev,
             planets: updated,
@@ -626,7 +635,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             blackHoles: updatedBlackHoles,
             viruses: updatedViruses,
             sickPlanetIds: cleanSickIds,
-            explosions: [...prev.explosions, ...newExplosions],
+            explosions: [...updatedExplosions, ...newExplosions],
             mergeSpawnIds: freshMergeIds.length > 0
               ? [...cleanMergeSpawnIds, ...freshMergeIds]
               : cleanMergeSpawnIds,
@@ -643,6 +652,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIdSet.has(id)),
           }));
         }, 900);
+      }
+
+      // Clear explosions after they finish (100ms per user request)
+      if (newExplosions.length > 0) {
+        newExplosions.forEach(exp => {
+          setTimeout(() => {
+            setState(prev => ({
+              ...prev,
+              explosions: prev.explosions.filter(e => e.id !== exp.id)
+            }));
+          }, 100);
+        });
       }
 
       // Pause loop when scene is fully idle — restarts automatically on next drop
