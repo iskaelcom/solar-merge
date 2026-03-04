@@ -277,17 +277,26 @@ export class SolarPhysics {
     for (const p of this.planets.values()) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.angle += p.angularVelocity * dt;
-      // Heavy angular damping to kill rotation almost instantly
-      p.angularVelocity *= 0.85;
-      if (now - p.spawnTime > 50) p.angularVelocity = 0;
+
+      const isNew = (now - p.spawnTime) < 50;
+      if (isNew) {
+        p.angle += p.angularVelocity * dt;
+        p.angularVelocity *= 0.85; // Heavy damping
+      } else {
+        p.angularVelocity = 0;
+      }
     }
     for (const s of this.stars.values()) {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
-      s.angle += s.angularVelocity * dt;
-      s.angularVelocity *= 0.85;
-      if (now - s.spawnTime > 50) s.angularVelocity = 0;
+
+      const isNew = (now - s.spawnTime) < 50;
+      if (isNew) {
+        s.angle += s.angularVelocity * dt;
+        s.angularVelocity *= 0.85;
+      } else {
+        s.angularVelocity = 0;
+      }
     }
     for (const bh of this.blackHoles.values()) {
       bh.x += bh.vx * dt;
@@ -387,9 +396,8 @@ export class SolarPhysics {
         b.vx += jt * tx * b.invMass;
         b.vy += jt * ty * b.invMass;
 
-        // Tiny angular reaction to prevent infinite spinning
-        a.angularVelocity += jt * 0.002;
-        b.angularVelocity -= jt * 0.002;
+        // Frictional force is applied to velocity, but we NO LONGER apply angular reaction.
+        // This prevents planets from "rolling" or spinning wildly when stacked.
       }
     }
   }
