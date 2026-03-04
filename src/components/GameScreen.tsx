@@ -22,6 +22,7 @@ import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 import { LeaderboardModal } from './LeaderboardModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import { preloadInterstitial, showInterstitialAd } from '../utils/InterstitialAdManager';
 
 const WALL_THICKNESS = 6;
 
@@ -66,13 +67,21 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
   const { entries, loading: lbLoading, fetchError: lbError, userRank, submitScore } = useLeaderboard(user);
 
-  // Submit score to Firestore whenever the game ends.
+  // Preload interstitial ad when game starts
+  useEffect(() => {
+    preloadInterstitial();
+  }, []);
+
+  // Submit score + show interstitial ad whenever the game ends.
   // Use refs (not state) so DevTools tampering of state.score has zero effect.
   useEffect(() => {
-    if (state.gameOver && user) {
-      const realScore = scoreRef.current;
-      const realDropCount = dropCountRef.current;
-      submitScore(realScore, calculateChecksum(realScore, realDropCount), realDropCount);
+    if (state.gameOver) {
+      if (user) {
+        const realScore = scoreRef.current;
+        const realDropCount = dropCountRef.current;
+        submitScore(realScore, calculateChecksum(realScore, realDropCount), realDropCount);
+      }
+      showInterstitialAd();
     }
   }, [state.gameOver]); // eslint-disable-line react-hooks/exhaustive-deps
 
