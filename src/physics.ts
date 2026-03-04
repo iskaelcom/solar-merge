@@ -412,11 +412,11 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.001,
-      inertia: Infinity,
-      inverseInertia: 0,
       label: 'star_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
+    // Dampen rotation 8× so stars spin slowly instead of flipping wildly
+    Matter.Body.setInertia(body, body.inertia * 8);
     const entry: StarPhysicsBody = { id, body };
     this.stars.set(id, entry);
     this.bodyIdToStar.set(body.id, entry);
@@ -450,11 +450,10 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.004, // slightly denser → sinks through other bodies
-      inertia: Infinity,
-      inverseInertia: 0,
       label: 'bh_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
+    Matter.Body.setInertia(body, body.inertia * 8);
     const entry: BlackHolePhysicsBody = { id, body };
     this.blackHoles.set(id, entry);
     this.bodyIdToBlackHole.set(body.id, entry);
@@ -492,11 +491,10 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.002,
-      inertia: Infinity,
-      inverseInertia: 0,
       label: 'virus_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
+    Matter.Body.setInertia(body, body.inertia * 8);
     const entry: VirusPhysicsBody = { id, body };
     this.viruses.set(id, entry);
     this.bodyIdToVirus.set(body.id, entry);
@@ -572,14 +570,14 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.002,
-      inertia: Infinity,
-      inverseInertia: 0,
       label: id,
       collisionFilter: {
         category: 0x0001,
         mask: 0x0001 | 0x0002,
       },
     });
+    // Dampen rotation 8× — planets still spin naturally but won't flip wildly on collision
+    Matter.Body.setInertia(body, body.inertia * 8);
 
     const entry: PhysicsPlanet = { id, planetId, body };
     this.planets.set(id, entry);
