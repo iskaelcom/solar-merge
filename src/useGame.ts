@@ -142,6 +142,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   // Adaptive threshold: starts at 5, drops to min 3 after 30 drops with no merge
   const currentThresholdMinRef = useRef<number>(SHIELD_THRESHOLD_DEFAULT);
   const dropsSinceLastMergeRef = useRef<number>(0);
+  const lastDroppedIdRef = useRef<string | null>(null);
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle(Array.from({ length: MAX_SPAWN_LEVEL }, (_, i) => i + 1));
@@ -513,35 +514,42 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Game over check
       const highest = physicsRef.current.getHighestPoint();
 
-      if (highest && highest.y < DANGER_HEIGHT && !isDroppingRef.current) {
-        setState((prev) => {
-          const newHighScore = Math.max(prev.highScore, scoreRef.current);
-          if (newHighScore > prev.highScore) {
-            storage.set(newHighScore, dropCountRef.current);
-          }
-          return {
-            ...prev,
-            gameOver: true,
-            highScore: newHighScore,
-            checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
-          };
-        });
-        loopActiveRef.current = false;
-        cancelAnimationFrame(rafRef.current);
+      if (highest && highest.y < DANGER_HEIGHT) {
+        // Condition 1: Some OTHER planet was pushed up past the line -> Instant Game Over
+        const isNotLastDropped = highest.id !== lastDroppedIdRef.current;
+        // Condition 2: The just-dropped planet stayed above the line after its 650ms grace period -> Game Over
+        const isStuckDropped = !isDroppingRef.current && highest.id === lastDroppedIdRef.current;
 
-        // Immediately free all physics + pending queues so CPU/memory drops to zero
-        pendingSpawnsRef.current = [];
-        pendingExplosionsRef.current = [];
-        pendingMergeSpawnIdsRef.current = [];
-        pendingStarSpawnsRef.current = [];
-        pendingBlackHoleSpawnsRef.current = [];
-        pendingVirusSpawnsRef.current = [];
-        if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
-        if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
-        physicsRef.current?.destroy();
-        physicsRef.current = null;
+        if (isNotLastDropped || isStuckDropped) {
+          setState((prev) => {
+            const newHighScore = Math.max(prev.highScore, scoreRef.current);
+            if (newHighScore > prev.highScore) {
+              storage.set(newHighScore, dropCountRef.current);
+            }
+            return {
+              ...prev,
+              gameOver: true,
+              highScore: newHighScore,
+              checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
+            };
+          });
+          loopActiveRef.current = false;
+          cancelAnimationFrame(rafRef.current);
 
-        return;
+          // ... cleanup
+          pendingSpawnsRef.current = [];
+          pendingExplosionsRef.current = [];
+          pendingMergeSpawnIdsRef.current = [];
+          pendingStarSpawnsRef.current = [];
+          pendingBlackHoleSpawnsRef.current = [];
+          pendingVirusSpawnsRef.current = [];
+          if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+          if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+          physicsRef.current?.destroy();
+          physicsRef.current = null;
+
+          return;
+        }
       }
 
       // Collect pending spawns, explosions, merge spawn IDs, star/BH/virus spawns
@@ -717,6 +725,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const clampedX = Math.max(VIRUS_RADIUS + 2, Math.min(gameWidth - VIRUS_RADIUS - 2, x));
       const startY = VIRUS_RADIUS + 2;
       const id = genId();
+      lastDroppedIdRef.current = id;
       physicsRef.current.addVirus(id, clampedX, startY);
       pendingVirusSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
@@ -732,6 +741,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const clampedX = Math.max(STAR_RADIUS + 2, Math.min(gameWidth - STAR_RADIUS - 2, x));
       const startY = STAR_RADIUS + 2;
       const id = genId();
+      lastDroppedIdRef.current = id;
       physicsRef.current.addStar(id, clampedX, startY);
       pendingStarSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
@@ -752,6 +762,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const clampedX = Math.max(BLACK_HOLE_RADIUS + 2, Math.min(gameWidth - BLACK_HOLE_RADIUS - 2, x));
       const startY = BLACK_HOLE_RADIUS + 2;
       const id = genId();
+      lastDroppedIdRef.current = id;
       physicsRef.current.addBlackHole(id, clampedX, startY);
       pendingBlackHoleSpawnsRef.current.push({ id, x: clampedX, y: startY });
 
@@ -774,6 +785,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const startY = planet.size + 2;
 
       const id = genId();
+      lastDroppedIdRef.current = id;
       physicsRef.current.addPlanet(id, prev.currentPlanetId, clampedX, startY);
 
       const newPlanet: RenderPlanet = {

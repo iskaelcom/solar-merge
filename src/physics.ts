@@ -612,15 +612,17 @@ export class SolarPhysics {
   getHighestPoint() {
     let minY = this.height + 1;
     let vy = 0;
+    let id = "";
     if (this.planets.size === 0) return null;
     for (const p of this.planets.values()) {
       const top = p.y - p.radius;
       if (top < minY) {
         minY = top;
         vy = p.vy;
+        id = p.id;
       }
     }
-    return { y: minY, vy };
+    return { y: minY, vy, id };
   }
 
   hasActiveBodies() {
