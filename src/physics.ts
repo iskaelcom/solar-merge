@@ -314,6 +314,8 @@ export class SolarPhysics {
   }
 
   private checkAndResolvePair(a: PhysicsBody, b: PhysicsBody) {
+    if (this.pendingRemovalIds.has(a.id) || this.pendingRemovalIds.has(b.id)) return;
+
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const distSq = dx * dx + dy * dy;

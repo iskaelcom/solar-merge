@@ -327,7 +327,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       } else {
         // ── Normal star: level up + score ─────────────────────────────────
         const newId = genId();
-        const nextPlanetTypeId = Math.min(planetTypeId + 1, PLANETS.length);
+        const nextPlanetTypeId = planetTypeId + 1;
 
         if (planetTypeId < PLANETS.length) {
           engine.addPlanet(newId, nextPlanetTypeId, x, y);
