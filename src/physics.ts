@@ -278,13 +278,16 @@ export class SolarPhysics {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.angle += p.angularVelocity * dt;
-      if (now - p.spawnTime > 100) p.angularVelocity = 0;
+      // Heavy angular damping to kill rotation almost instantly
+      p.angularVelocity *= 0.85;
+      if (now - p.spawnTime > 50) p.angularVelocity = 0;
     }
     for (const s of this.stars.values()) {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.angle += s.angularVelocity * dt;
-      if (now - s.spawnTime > 100) s.angularVelocity = 0;
+      s.angularVelocity *= 0.85;
+      if (now - s.spawnTime > 50) s.angularVelocity = 0;
     }
     for (const bh of this.blackHoles.values()) {
       bh.x += bh.vx * dt;
@@ -384,9 +387,9 @@ export class SolarPhysics {
         b.vx += jt * tx * b.invMass;
         b.vy += jt * ty * b.invMass;
 
-        // Simple angular reaction
-        a.angularVelocity += jt * 0.01;
-        b.angularVelocity -= jt * 0.01;
+        // Tiny angular reaction to prevent infinite spinning
+        a.angularVelocity += jt * 0.002;
+        b.angularVelocity -= jt * 0.002;
       }
     }
   }
@@ -565,8 +568,7 @@ export class SolarPhysics {
         // Add a small upward bias (negative Y) to "lift" planets during the blast
         p.vy += (ny * maxKick - maxKick * 0.3) * f * massFactor;
 
-        // Add a bit of angular kick too
-        p.angularVelocity += (Math.random() - 0.5) * 0.5 * f;
+        // NO angular kick for planets anymore to keep them stable
       }
     }
   }
