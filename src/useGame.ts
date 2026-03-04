@@ -172,7 +172,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     const engine = new SolarPhysics(gameWidth, gameHeight);
 
-    engine.onMerge(({ id1, id2, planetId, x, y }) => {
+    engine.onMerge(({ id1, id2, planetId, x, y, vx, vy }) => {
       const planet = PLANETS[planetId - 1];
       const newId = genId();
 
@@ -187,7 +187,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         if (downPlanetId >= 1) {
           const downSize = PLANETS[downPlanetId - 1].size;
           const spawnY = Math.max(y, downSize + 10);
-          engine.addPlanet(newId, downPlanetId, x, spawnY);
+          engine.addPlanet(newId, downPlanetId, x, spawnY, vx, vy);
           pendingSpawnsRef.current.push({ id: newId, planetId: downPlanetId, x, y: spawnY });
           pendingMergeSpawnIdsRef.current.push(newId);
           sickPlanetIdsRef.current.add(newId); // sickness spreads to result
@@ -225,7 +225,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         if (nextPlanetId <= PLANETS.length) {
           const nextSize = PLANETS[nextPlanetId - 1].size;
           const spawnY = Math.max(y, nextSize + 10);
-          engine.addPlanet(newId, nextPlanetId, x, spawnY);
+          engine.addPlanet(newId, nextPlanetId, x, spawnY, vx, vy);
           pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y: spawnY });
           pendingMergeSpawnIdsRef.current.push(newId);
           engine.applyMergeShockwave(x, y, planet.size, newId);

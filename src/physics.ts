@@ -19,6 +19,54 @@ export interface PhysicsPlanet {
   body: Matter.Body;
 }
 
+/**
+ * Uniform spatial grid for broadphase radius queries.
+ * Build once per query call (O(n)), then query is O(k) where k = planets in range.
+ * Pays off when query radius covers only a fraction of the world.
+ */
+class SpatialGrid {
+  private cells: Map<number, PhysicsPlanet[]> = new Map();
+  private cols: number;
+  readonly cellSize: number;
+
+  constructor(cellSize: number, worldWidth: number) {
+    this.cellSize = cellSize;
+    this.cols = Math.ceil(worldWidth / cellSize) + 1;
+  }
+
+  build(planets: Iterable<PhysicsPlanet>): void {
+    this.cells.clear();
+    for (const p of planets) {
+      const col = Math.floor(p.body.position.x / this.cellSize);
+      const row = Math.floor(p.body.position.y / this.cellSize);
+      const key = row * this.cols + col;
+      let cell = this.cells.get(key);
+      if (!cell) { cell = []; this.cells.set(key, cell); }
+      cell.push(p);
+    }
+  }
+
+  query(cx: number, cy: number, radius: number, cb: (p: PhysicsPlanet) => void): void {
+    const cs = this.cellSize;
+    const minCol = Math.floor((cx - radius) / cs);
+    const maxCol = Math.floor((cx + radius) / cs);
+    const minRow = Math.floor((cy - radius) / cs);
+    const maxRow = Math.floor((cy + radius) / cs);
+    const rSq = radius * radius;
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        const cell = this.cells.get(row * this.cols + col);
+        if (!cell) continue;
+        for (const p of cell) {
+          const dx = p.body.position.x - cx;
+          const dy = p.body.position.y - cy;
+          if (dx * dx + dy * dy <= rSq) cb(p);
+        }
+      }
+    }
+  }
+}
+
 export interface StarPhysicsBody {
   id: string;
   body: Matter.Body;
@@ -30,6 +78,8 @@ export interface MergeEvent {
   planetId: number; // planet type that merged
   x: number;
   y: number;
+  vx: number; // averaged velocity of the two merged bodies
+  vy: number;
 }
 
 export interface StarUpgradeEvent {
@@ -111,6 +161,8 @@ export class SolarPhysics {
   // Max speed cap to prevent runaway bodies after merges/shockwaves
   private static readonly MAX_SPEED = 28;
   private static readonly MAX_SPEED_SQ = 28 * 28;
+  // Spatial grid for broadphase radius queries in shockwave/suction (cell = 120px)
+  private spatialGrid: SpatialGrid;
   // Shield
   private shieldActive: boolean = false;
   private shieldPassedPlanetIds: Set<string> = new Set();
@@ -122,6 +174,8 @@ export class SolarPhysics {
   constructor(width: number = GAME_WIDTH, height: number = GAME_HEIGHT) {
     this.width = width;
     this.height = height;
+
+    this.spatialGrid = new SpatialGrid(120, width);
 
     this.engine = Matter.Engine.create({
       gravity: { x: 0, y: GRAVITY },
@@ -288,6 +342,9 @@ export class SolarPhysics {
 
         const midX = (bodyA.position.x + bodyB.position.x) / 2;
         const midY = (bodyA.position.y + bodyB.position.y) / 2;
+        // Capture averaged velocity NOW (bodies still alive) for inheritance by spawn
+        const vAvgX = (bodyA.velocity.x + bodyB.velocity.x) / 2;
+        const vAvgY = (bodyA.velocity.y + bodyB.velocity.y) / 2;
 
         // ── Two Suns merged → collapse into a Black Hole ─────────────────
         if (pA.planetId >= PLANETS.length) {
@@ -312,7 +369,7 @@ export class SolarPhysics {
           if (this.planets.has(pB.id)) this.removePlanet(pB.id);
 
           this.mergeCallbacks.forEach((cb) =>
-            cb({ id1: pA.id, id2: pB.id, planetId: pA.planetId, x: midX, y: midY })
+            cb({ id1: pA.id, id2: pB.id, planetId: pA.planetId, x: midX, y: midY, vx: vAvgX, vy: vAvgY })
           );
 
           this.pendingMergeKeys.delete(key);
@@ -355,6 +412,8 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.001,
+      inertia: Infinity,
+      inverseInertia: 0,
       label: 'star_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
@@ -391,6 +450,8 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.004, // slightly denser → sinks through other bodies
+      inertia: Infinity,
+      inverseInertia: 0,
       label: 'bh_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
@@ -431,6 +492,8 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.002,
+      inertia: Infinity,
+      inverseInertia: 0,
       label: 'virus_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
@@ -470,18 +533,17 @@ export class SolarPhysics {
     const intensity = Math.sqrt(suckedPlanetSize / 15);
     const maxKick = suckedPlanetSize * 0.2 * intensity;
     const suckRadius = suckedPlanetSize * 4.5 * intensity;
-    // Pre-compute squared radius — avoids sqrt for the early-out check
-    const suckRadiusSq = suckRadius * suckRadius;
 
-    this.planets.forEach((p) => {
+    // Build spatial grid then query only cells that overlap the suck radius
+    this.spatialGrid.build(this.planets.values());
+    this.spatialGrid.query(x, y, suckRadius, (p) => {
       if (this.pendingRemovalIds.has(p.id)) return;
 
       // Vector FROM planet TOWARD the black hole center — inward pull
       const dx = x - p.body.position.x;
       const dy = y - p.body.position.y;
       const distSq = dx * dx + dy * dy;
-      // Cheap squared comparison before the expensive sqrt
-      if (distSq < 1 || distSq > suckRadiusSq) return;
+      if (distSq < 1) return;
 
       const dist = Math.sqrt(distSq);
       const falloff = 1 - dist / suckRadius;
@@ -501,7 +563,7 @@ export class SolarPhysics {
     });
   }
 
-  addPlanet(id: string, planetId: number, x: number, y: number): void {
+  addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 1): void {
     const planet = PLANETS[planetId - 1];
     const radius = planet.size * planet.hitboxRatio;
 
@@ -510,6 +572,8 @@ export class SolarPhysics {
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
       density: 0.002,
+      inertia: Infinity,
+      inverseInertia: 0,
       label: id,
       collisionFilter: {
         category: 0x0001,
@@ -525,7 +589,7 @@ export class SolarPhysics {
     // Ensure the body is awake and starts falling immediately.
     // enableSleeping can cause a freshly-dropped planet to go to sleep on
     // contact with an existing body, making it appear stuck at the top.
-    Matter.Body.setVelocity(body, { x: 0, y: 1 });
+    Matter.Body.setVelocity(body, { x: vx, y: vy });
     if ((body as any).isSleeping) (body as any).isSleeping = false;
   }
 
@@ -607,10 +671,10 @@ export class SolarPhysics {
     const intensity = Math.sqrt(mergedPlanetSize / 15);
     const maxKick = mergedPlanetSize * 0.12 * intensity;
     const shockRadius = mergedPlanetSize * 5.5 * intensity;
-    // Pre-compute squared radius — avoids sqrt for the early-out check
-    const shockRadiusSq = shockRadius * shockRadius;
 
-    this.planets.forEach((p) => {
+    // Build spatial grid then query only cells that overlap the shock radius
+    this.spatialGrid.build(this.planets.values());
+    this.spatialGrid.query(x, y, shockRadius, (p) => {
       if (p.id === excludeId) return;
       if (this.pendingRemovalIds.has(p.id)) return;
       // Skip sleeping bodies — they're not moving, kick is wasted
@@ -619,8 +683,7 @@ export class SolarPhysics {
       const dx = p.body.position.x - x;
       const dy = p.body.position.y - y;
       const distSq = dx * dx + dy * dy;
-      // Cheap squared comparison before the expensive sqrt
-      if (distSq < 1 || distSq > shockRadiusSq) return;
+      if (distSq < 1) return;
 
       const dist = Math.sqrt(distSq);
       const falloff = 1 - dist / shockRadius;
