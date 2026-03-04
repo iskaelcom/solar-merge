@@ -239,7 +239,7 @@ export class SolarPhysics {
 
   step(delta: number): void {
     const dt = Math.min(delta, 33) / 1000;
-    const subSteps = 8;
+    const subSteps = 4; // Reduced from 8 to lower CPU/thermal load
     const sdt = dt / subSteps;
 
     for (let s = 0; s < subSteps; s++) {
@@ -638,7 +638,13 @@ export class SolarPhysics {
   }
 
   hasActiveBodies() {
-    return this.planets.size > 0 || this.stars.size > 0 || this.blackHoles.size > 0 || this.viruses.size > 0;
+    // Only consider bodies active if they are moving significantly
+    const threshold = 0.1;
+    for (const p of this.planets.values()) if (Math.abs(p.vx) > threshold || Math.abs(p.vy) > threshold) return true;
+    for (const s of this.stars.values()) if (Math.abs(s.vx) > threshold || Math.abs(s.vy) > threshold) return true;
+    for (const bh of this.blackHoles.values()) if (Math.abs(bh.vx) > threshold || Math.abs(bh.vy) > threshold) return true;
+    for (const v of this.viruses.values()) if (Math.abs(v.vx) > threshold || Math.abs(v.vy) > threshold) return true;
+    return false;
   }
 
   reset() {
