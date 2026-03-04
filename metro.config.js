@@ -7,4 +7,7 @@ config.resolver.extraNodeModules = {
   ...config.resolver.extraNodeModules,
 };
 
+// Allow wasm files for Skia Web
+config.resolver.assetExts.push('wasm');
+
 module.exports = config;

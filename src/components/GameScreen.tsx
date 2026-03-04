@@ -11,24 +11,17 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame, calculateChecksum } from '../useGame';
 import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT } from '../constants';
-import { PlanetView, PlanetThumb } from './PlanetView';
-import { StarView } from './StarView';
-import { BlackHoleView } from './BlackHoleView';
-import { VirusPlanetView } from './VirusPlanetView';
+import { GameCanvas } from './GameCanvas';
 import { GameOverModal } from './GameOverModal';
-import { GameLogo } from './GameLogo';
-import { ExplosionEffect } from './ExplosionEffect';
-import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 import { LeaderboardModal } from './LeaderboardModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 
 const WALL_THICKNESS = 6;
 
-const MemoizedPlanetView = React.memo(PlanetView);
-const MemoizedStarView = React.memo(StarView);
-const MemoizedBlackHoleView = React.memo(BlackHoleView);
-const MemoizedVirusPlanetView = React.memo(VirusPlanetView);
+import { PlanetThumb } from './PlanetView';
+import { GameLogo } from './GameLogo';
+import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 
 // ── Outer shell: computes + debounces dimensions, remounts GameView on change ─
 export function GameScreen() {
@@ -216,101 +209,12 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             });
           }}
         >
-          {/* Danger line */}
-          <View style={[styles.dangerLine, { top: DANGER_HEIGHT }]} />
-          <Text style={[styles.dangerLabel, { top: DANGER_HEIGHT - 16 }]}>
-            ⚠️ Danger zone
-          </Text>
-
-          {/* Shield bars */}
-          {state.shieldLayers > 0 && (
-            <>
-              <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 2, backgroundColor: '#FF3D00', shadowColor: '#FF3D00' }]} />
-              {state.shieldLayers >= 2 && (
-                <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 8, backgroundColor: '#FFD600', shadowColor: '#FFD600' }]} />
-              )}
-              {state.shieldLayers >= 3 && (
-                <View pointerEvents="none" style={[styles.shieldBar, { top: DANGER_HEIGHT + 14, backgroundColor: '#00E5FF', shadowColor: '#00E5FF' }]} />
-              )}
-            </>
-          )}
-
-          {/* Drop guide line */}
-          {!state.isDropping && (
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.dropLine,
-                {
-                  left: Animated.subtract(pointerXAnim, 1),
-                  top: previewY * 2,
-                  height: gameHeight - previewY * 2,
-                },
-              ]}
-            />
-          )}
-
-          {/* Ghost / preview */}
-          {!state.isDropping && (
-            <Animated.View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                left: Animated.subtract(pointerXAnim, previewRadius),
-                top: previewY - previewRadius,
-              }}
-            >
-              {state.currentIsVirus
-                ? <VirusPlanetView x={previewRadius} y={previewRadius} ghost />
-                : state.currentIsBlackHole
-                  ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
-                  : state.currentIsStar
-                    ? <StarView x={previewRadius} y={previewRadius} ghost />
-                    : <PlanetView planetId={state.currentPlanetId} x={previewRadius} y={previewRadius} ghost />
-              }
-            </Animated.View>
-          )}
-
-          {/* All live planets */}
-          {state.planets.map((p) => (
-            <MemoizedPlanetView
-              key={p.id}
-              planetId={p.planetId}
-              x={p.x}
-              y={p.y}
-              angle={p.angle}
-              isMergeSpawn={mergeSpawnSet.has(p.id)}
-              isSick={sickPlanetSet.has(p.id)}
-            />
-          ))}
-
-          {/* Star power-ups */}
-          {state.stars.map((s) => (
-            <MemoizedStarView key={s.id} x={s.x} y={s.y} />
-          ))}
-
-          {/* Black holes */}
-          {state.blackHoles.map((bh) => (
-            <MemoizedBlackHoleView key={bh.id} x={bh.x} y={bh.y} />
-          ))}
-
-          {/* Virus planets */}
-          {state.viruses.map((v) => (
-            <MemoizedVirusPlanetView key={v.id} x={v.x} y={v.y} />
-          ))}
-
-          {/* Merge explosions */}
-          {state.explosions.map((exp) => (
-            <ExplosionEffect
-              key={exp.id}
-              x={exp.x}
-              y={exp.y}
-              planetSize={exp.planetSize}
-              color={exp.color}
-              scale={exp.scale}
-              onDone={() => removeExplosion(exp.id)}
-            />
-          ))}
+          {/* Skia Game Canvas */}
+          <GameCanvas
+            state={state}
+            onPointerMove={setPointerX}
+            onPointerUp={dropPlanet}
+          />
 
           {/* Event interceptor — captures all pointer events */}
           <View

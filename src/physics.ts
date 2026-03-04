@@ -1,4 +1,3 @@
-import Matter from 'matter-js';
 import {
   PLANETS,
   GAME_WIDTH,
@@ -6,43 +5,51 @@ import {
   GRAVITY,
   RESTITUTION,
   FRICTION,
-  FRICTION_AIR,
   STAR_RADIUS,
   BLACK_HOLE_RADIUS,
   VIRUS_RADIUS,
   DANGER_HEIGHT,
 } from './constants';
 
-export interface PhysicsPlanet {
+export interface PhysicsBody {
   id: string;
-  planetId: number;
-  body: Matter.Body;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  angularVelocity: number;
+  radius: number;
+  isStatic: boolean;
+  restitution: number;
+  friction: number;
+  mass: number;
+  invMass: number;
+  label?: string;
 }
 
-export interface StarPhysicsBody {
-  id: string;
-  body: Matter.Body;
+export interface PhysicsPlanet extends PhysicsBody {
+  planetId: number;
 }
+
+export interface StarPhysicsBody extends PhysicsBody { }
+export interface BlackHolePhysicsBody extends PhysicsBody { }
+export interface VirusPhysicsBody extends PhysicsBody { }
 
 export interface MergeEvent {
   id1: string;
   id2: string;
-  planetId: number; // planet type that merged
+  planetId: number;
   x: number;
   y: number;
 }
 
 export interface StarUpgradeEvent {
   starId: string;
-  planetId: string;   // physics id of the planet that got upgraded
+  planetId: string;
   planetTypeId: number;
   x: number;
   y: number;
-}
-
-export interface BlackHolePhysicsBody {
-  id: string;
-  body: Matter.Body;
 }
 
 export interface BlackHoleSuckEvent {
@@ -53,23 +60,18 @@ export interface BlackHoleSuckEvent {
   y: number;
 }
 
-export interface VirusPhysicsBody {
-  id: string;
-  body: Matter.Body;
-}
-
 export interface VirusInfectEvent {
   virusId: string;
-  planetId: string;   // physics id of the infected planet
+  planetId: string;
   planetTypeId: number;
   x: number;
   y: number;
 }
 
 export interface SunMergeEvent {
-  id1: string;        // physics id of first sun
-  id2: string;        // physics id of second sun
-  blackHoleId: string; // physics id of the spawned black hole
+  id1: string;
+  id2: string;
+  blackHoleId: string;
   x: number;
   y: number;
 }
@@ -81,539 +83,463 @@ type VirusInfectCallback = (event: VirusInfectEvent) => void;
 type SunMergeCallback = (event: SunMergeEvent) => void;
 
 export class SolarPhysics {
-  engine: Matter.Engine;
   private planets: Map<string, PhysicsPlanet> = new Map();
   private stars: Map<string, StarPhysicsBody> = new Map();
   private blackHoles: Map<string, BlackHolePhysicsBody> = new Map();
   private viruses: Map<string, VirusPhysicsBody> = new Map();
-  // Reverse maps: Matter body.id → entity — O(1) lookup instead of O(n) scan
-  private bodyIdToPlanet: Map<number, PhysicsPlanet> = new Map();
-  private bodyIdToStar: Map<number, StarPhysicsBody> = new Map();
-  private bodyIdToBlackHole: Map<number, BlackHolePhysicsBody> = new Map();
-  private bodyIdToVirus: Map<number, VirusPhysicsBody> = new Map();
-  // Cached arrays — rebuilt lazily only when collection changes (avoids Array.from() every frame)
-  private _planetsCache: PhysicsPlanet[] | null = null;
-  private _starsCache: StarPhysicsBody[] | null = null;
-  private _blackHolesCache: BlackHolePhysicsBody[] | null = null;
-  private _virusesCache: VirusPhysicsBody[] | null = null;
+
   private mergeCallbacks: MergeCallback[] = [];
   private starUpgradeCallbacks: StarUpgradeCallback[] = [];
   private blackHoleSuckCallbacks: BlackHoleSuckCallback[] = [];
   private virusInfectCallbacks: VirusInfectCallback[] = [];
   private sunMergeCallbacks: SunMergeCallback[] = [];
+
   private pendingMergeKeys: Set<string> = new Set();
   private pendingRemovalIds: Set<string> = new Set();
-  private pendingStarRemovalIds: Set<string> = new Set();
-  private pendingBlackHoleRemovalIds: Set<string> = new Set();
-  private pendingVirusRemovalIds: Set<string> = new Set();
-  // Shield
+
   private shieldActive: boolean = false;
   private shieldPassedPlanetIds: Set<string> = new Set();
   private shieldRecentlyHitIds: Set<string> = new Set();
   private shieldHitCallbacks: Array<() => void> = [];
+
   width: number;
   height: number;
 
   constructor(width: number = GAME_WIDTH, height: number = GAME_HEIGHT) {
     this.width = width;
     this.height = height;
-
-    this.engine = Matter.Engine.create({
-      gravity: { x: 0, y: GRAVITY },
-      enableSleeping: true,
-      positionIterations: 4,    // default 6 — reduced for lower CPU
-      velocityIterations: 3,    // default 4 — reduced for lower CPU
-      constraintIterations: 1,  // default 2 — no constraints in this game
-    });
-
-    this.createWalls();
-    this.setupCollisionHandler();
-  }
-
-  private createWalls() {
-    const thickness = 60;
-    const opts: Matter.IBodyDefinition = {
-      isStatic: true,
-      restitution: 0.2,
-      friction: 1,
-      frictionStatic: 1,
-      label: 'wall',
-    };
-
-    const walls = [
-      // Floor
-      Matter.Bodies.rectangle(
-        this.width / 2,
-        this.height + thickness / 2,
-        this.width + thickness * 2,
-        thickness,
-        { ...opts, label: 'floor' }
-      ),
-      // Left wall
-      Matter.Bodies.rectangle(
-        -thickness / 2,
-        this.height / 2,
-        thickness,
-        this.height * 3,
-        opts
-      ),
-      // Right wall
-      Matter.Bodies.rectangle(
-        this.width + thickness / 2,
-        this.height / 2,
-        thickness,
-        this.height * 3,
-        opts
-      ),
-    ];
-
-    Matter.Composite.add(this.engine.world, walls);
-  }
-
-  private setupCollisionHandler() {
-    Matter.Events.on(this.engine, 'collisionStart', (event) => {
-      event.pairs.forEach((pair) => {
-        const { bodyA, bodyB } = pair;
-
-        // ── Black hole-planet collision (suck/destroy) ───────────────────
-        const bhA = this.getBlackHoleByBodyId(bodyA.id);
-        const bhB = this.getBlackHoleByBodyId(bodyB.id);
-
-        if (bhA || bhB) {
-          const bh = bhA || bhB!;
-          const otherBody = bhA ? bodyB : bodyA;
-          const planet = this.getByBodyId(otherBody.id);
-
-          if (
-            planet &&
-            !this.pendingBlackHoleRemovalIds.has(bh.id) &&
-            !this.pendingRemovalIds.has(planet.id)
-          ) {
-            this.pendingBlackHoleRemovalIds.add(bh.id);
-            this.pendingRemovalIds.add(planet.id);
-
-            const px = planet.body.position.x;
-            const py = planet.body.position.y;
-
-            setTimeout(() => {
-              this.removeBlackHole(bh.id);
-              if (this.planets.has(planet.id)) this.removePlanet(planet.id);
-              this.blackHoleSuckCallbacks.forEach((cb) =>
-                cb({ blackHoleId: bh.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
-              );
-            }, 0);
-          }
-          return; // don't process as star or planet-planet
-        }
-
-        // ── Virus-planet collision (infect & virus vanishes) ─────────────
-        const virA = this.getVirusByBodyId(bodyA.id);
-        const virB = this.getVirusByBodyId(bodyB.id);
-
-        if (virA || virB) {
-          const vir = virA || virB!;
-          const otherBody = virA ? bodyB : bodyA;
-          const planet = this.getByBodyId(otherBody.id);
-
-          if (
-            planet &&
-            !this.pendingVirusRemovalIds.has(vir.id) &&
-            !this.pendingRemovalIds.has(planet.id)
-          ) {
-            this.pendingVirusRemovalIds.add(vir.id);
-
-            const px = planet.body.position.x;
-            const py = planet.body.position.y;
-
-            setTimeout(() => {
-              this.removeVirus(vir.id);
-              this.virusInfectCallbacks.forEach((cb) =>
-                cb({ virusId: vir.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
-              );
-            }, 0);
-          }
-          return; // don't process as star or planet-planet
-        }
-
-        // ── Star-planet collision ────────────────────────────────────────
-        const starA = this.getStarByBodyId(bodyA.id);
-        const starB = this.getStarByBodyId(bodyB.id);
-
-        if (starA || starB) {
-          const star = starA || starB!;
-          const otherBody = starA ? bodyB : bodyA;
-          const planet = this.getByBodyId(otherBody.id);
-
-          if (
-            planet &&
-            !this.pendingStarRemovalIds.has(star.id) &&
-            !this.pendingRemovalIds.has(planet.id)
-          ) {
-            this.pendingStarRemovalIds.add(star.id);
-            this.pendingRemovalIds.add(planet.id);
-
-            const px = planet.body.position.x;
-            const py = planet.body.position.y;
-
-            setTimeout(() => {
-              this.removeStar(star.id);
-              if (this.planets.has(planet.id)) this.removePlanet(planet.id);
-
-              this.starUpgradeCallbacks.forEach((cb) =>
-                cb({ starId: star.id, planetId: planet.id, planetTypeId: planet.planetId, x: px, y: py })
-              );
-            }, 0);
-          }
-          return; // don't process as planet-planet merge
-        }
-
-        // ── Planet-planet merge ──────────────────────────────────────────
-        const pA = this.getByBodyId(bodyA.id);
-        const pB = this.getByBodyId(bodyB.id);
-
-        if (!pA || !pB) return;
-        if (pA.planetId !== pB.planetId) return;
-        if (this.pendingRemovalIds.has(pA.id) || this.pendingRemovalIds.has(pB.id)) return;
-
-        const key = [pA.id, pB.id].sort().join('|');
-        if (this.pendingMergeKeys.has(key)) return;
-        this.pendingMergeKeys.add(key);
-        this.pendingRemovalIds.add(pA.id);
-        this.pendingRemovalIds.add(pB.id);
-
-        const midX = (bodyA.position.x + bodyB.position.x) / 2;
-        const midY = (bodyA.position.y + bodyB.position.y) / 2;
-
-        // ── Two Suns merged → collapse into a Black Hole ─────────────────
-        if (pA.planetId >= PLANETS.length) {
-          setTimeout(() => {
-            if (this.planets.has(pA.id)) this.removePlanet(pA.id);
-            if (this.planets.has(pB.id)) this.removePlanet(pB.id);
-
-            const bhId = `sun_bh_${Date.now()}`;
-            this.addBlackHole(bhId, midX, midY);
-
-            this.sunMergeCallbacks.forEach((cb) =>
-              cb({ id1: pA.id, id2: pB.id, blackHoleId: bhId, x: midX, y: midY })
-            );
-            this.pendingMergeKeys.delete(key);
-          }, 0);
-          return;
-        }
-
-        // Defer to next tick so we don't mutate during collision processing
-        setTimeout(() => {
-          if (this.planets.has(pA.id)) this.removePlanet(pA.id);
-          if (this.planets.has(pB.id)) this.removePlanet(pB.id);
-
-          this.mergeCallbacks.forEach((cb) =>
-            cb({ id1: pA.id, id2: pB.id, planetId: pA.planetId, x: midX, y: midY })
-          );
-
-          this.pendingMergeKeys.delete(key);
-        }, 0);
-      });
-    });
-  }
-
-  private getVirusByBodyId(bodyId: number): VirusPhysicsBody | undefined {
-    return this.bodyIdToVirus.get(bodyId);
-  }
-
-  private getBlackHoleByBodyId(bodyId: number): BlackHolePhysicsBody | undefined {
-    return this.bodyIdToBlackHole.get(bodyId);
-  }
-
-  private getStarByBodyId(bodyId: number): StarPhysicsBody | undefined {
-    return this.bodyIdToStar.get(bodyId);
-  }
-
-  private getByBodyId(bodyId: number): PhysicsPlanet | undefined {
-    return this.bodyIdToPlanet.get(bodyId);
-  }
-
-  addStar(id: string, x: number, y: number): void {
-    const body = Matter.Bodies.circle(x, y, STAR_RADIUS, {
-      restitution: 0.5,
-      friction: FRICTION,
-      frictionAir: FRICTION_AIR,
-      density: 0.001,
-      label: 'star_' + id,
-      collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
-    });
-    const entry: StarPhysicsBody = { id, body };
-    this.stars.set(id, entry);
-    this.bodyIdToStar.set(body.id, entry);
-    this._starsCache = null;
-    Matter.Composite.add(this.engine.world, body);
-  }
-
-  removeStar(id: string): void {
-    const s = this.stars.get(id);
-    if (s) {
-      Matter.Composite.remove(this.engine.world, s.body);
-      this.stars.delete(id);
-      this.bodyIdToStar.delete(s.body.id);
-      this._starsCache = null;
-      this.pendingStarRemovalIds.delete(id);
-    }
-  }
-
-  getAllStars(): StarPhysicsBody[] {
-    if (!this._starsCache) this._starsCache = Array.from(this.stars.values());
-    return this._starsCache;
-  }
-
-  onStarUpgrade(cb: StarUpgradeCallback): void {
-    this.starUpgradeCallbacks.push(cb);
-  }
-
-  addBlackHole(id: string, x: number, y: number): void {
-    const body = Matter.Bodies.circle(x, y, BLACK_HOLE_RADIUS, {
-      restitution: 0.3,
-      friction: FRICTION,
-      frictionAir: FRICTION_AIR,
-      density: 0.004, // slightly denser → sinks through other bodies
-      label: 'bh_' + id,
-      collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
-    });
-    const entry: BlackHolePhysicsBody = { id, body };
-    this.blackHoles.set(id, entry);
-    this.bodyIdToBlackHole.set(body.id, entry);
-    this._blackHolesCache = null;
-    Matter.Composite.add(this.engine.world, body);
-  }
-
-  removeBlackHole(id: string): void {
-    const bh = this.blackHoles.get(id);
-    if (bh) {
-      Matter.Composite.remove(this.engine.world, bh.body);
-      this.blackHoles.delete(id);
-      this.bodyIdToBlackHole.delete(bh.body.id);
-      this._blackHolesCache = null;
-      this.pendingBlackHoleRemovalIds.delete(id);
-    }
-  }
-
-  getAllBlackHoles(): BlackHolePhysicsBody[] {
-    if (!this._blackHolesCache) this._blackHolesCache = Array.from(this.blackHoles.values());
-    return this._blackHolesCache;
-  }
-
-  onBlackHoleSuck(cb: BlackHoleSuckCallback): void {
-    this.blackHoleSuckCallbacks.push(cb);
-  }
-
-  onSunMerge(cb: SunMergeCallback): void {
-    this.sunMergeCallbacks.push(cb);
-  }
-
-  addVirus(id: string, x: number, y: number): void {
-    const body = Matter.Bodies.circle(x, y, VIRUS_RADIUS, {
-      restitution: 0.4,
-      friction: FRICTION,
-      frictionAir: FRICTION_AIR,
-      density: 0.002,
-      label: 'virus_' + id,
-      collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
-    });
-    const entry: VirusPhysicsBody = { id, body };
-    this.viruses.set(id, entry);
-    this.bodyIdToVirus.set(body.id, entry);
-    this._virusesCache = null;
-    Matter.Composite.add(this.engine.world, body);
-  }
-
-  removeVirus(id: string): void {
-    const v = this.viruses.get(id);
-    if (v) {
-      Matter.Composite.remove(this.engine.world, v.body);
-      this.viruses.delete(id);
-      this.bodyIdToVirus.delete(v.body.id);
-      this._virusesCache = null;
-      this.pendingVirusRemovalIds.delete(id);
-    }
-  }
-
-  getAllViruses(): VirusPhysicsBody[] {
-    if (!this._virusesCache) this._virusesCache = Array.from(this.viruses.values());
-    return this._virusesCache;
-  }
-
-  onVirusInfect(cb: VirusInfectCallback): void {
-    this.virusInfectCallbacks.push(cb);
-  }
-
-  /**
-   * Inward gravitational suction: pull all nearby planets toward (x, y).
-   * Opposite of applyMergeShockwave — velocity is directed INWARD.
-   * Called when a black hole absorbs a planet so surrounding bodies react.
-   */
-  applyBlackHoleSuction(x: number, y: number, suckedPlanetSize: number): void {
-    const intensity = Math.sqrt(suckedPlanetSize / 15);
-    const maxKick = suckedPlanetSize * 0.2 * intensity;
-    const suckRadius = suckedPlanetSize * 4.5 * intensity;
-
-    this.planets.forEach((p) => {
-      if (this.pendingRemovalIds.has(p.id)) return;
-
-      // Vector FROM planet TOWARD the black hole center — inward pull
-      const dx = x - p.body.position.x;
-      const dy = y - p.body.position.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1 || dist > suckRadius) return;
-
-      const falloff = 1 - dist / suckRadius;
-      const kick = maxKick * falloff;
-      const nx = dx / dist;
-      const ny = dy / dist;
-
-      Matter.Body.setVelocity(p.body, {
-        x: p.body.velocity.x + nx * kick,
-        y: p.body.velocity.y + ny * kick,
-      });
-
-      // Wake sleeping bodies so they respond to the pull
-      if ((p.body as any).isSleeping) {
-        (p.body as any).isSleeping = false;
-      }
-    });
   }
 
   addPlanet(id: string, planetId: number, x: number, y: number): void {
     const planet = PLANETS[planetId - 1];
     const radius = planet.size * planet.hitboxRatio;
+    const mass = radius * radius * Math.PI * 0.002;
 
-    const body = Matter.Bodies.circle(x, y, radius, {
+    this.planets.set(id, {
+      id,
+      planetId,
+      x,
+      y,
+      vx: 0,
+      vy: 1, // Start with a small downward velocity
+      angle: 0,
+      angularVelocity: 0,
+      radius,
+      isStatic: false,
       restitution: RESTITUTION,
       friction: FRICTION,
-      frictionAir: FRICTION_AIR,
-      density: 0.002,
+      mass,
+      invMass: 1 / mass,
       label: id,
-      collisionFilter: {
-        category: 0x0001,
-        mask: 0x0001 | 0x0002,
-      },
     });
+  }
 
-    const entry: PhysicsPlanet = { id, planetId, body };
-    this.planets.set(id, entry);
-    this.bodyIdToPlanet.set(body.id, entry);
-    this._planetsCache = null;
-    Matter.Composite.add(this.engine.world, body);
-    // Ensure the body is awake and starts falling immediately.
-    // enableSleeping can cause a freshly-dropped planet to go to sleep on
-    // contact with an existing body, making it appear stuck at the top.
-    Matter.Body.setVelocity(body, { x: 0, y: 1 });
-    if ((body as any).isSleeping) (body as any).isSleeping = false;
+  addStar(id: string, x: number, y: number): void {
+    const radius = STAR_RADIUS;
+    const mass = radius * radius * Math.PI * 0.001;
+    this.stars.set(id, {
+      id,
+      x,
+      y,
+      vx: 0,
+      vy: 1,
+      angle: 0,
+      angularVelocity: 0,
+      radius,
+      isStatic: false,
+      restitution: 0.5,
+      friction: FRICTION,
+      mass,
+      invMass: 1 / mass,
+      label: 'star_' + id,
+    });
+  }
+
+  addBlackHole(id: string, x: number, y: number): void {
+    const radius = BLACK_HOLE_RADIUS;
+    const mass = radius * radius * Math.PI * 0.004;
+    this.blackHoles.set(id, {
+      id,
+      x,
+      y,
+      vx: 0,
+      vy: 1,
+      angle: 0,
+      angularVelocity: 0,
+      radius,
+      isStatic: false,
+      restitution: 0.3,
+      friction: FRICTION,
+      mass,
+      invMass: 1 / mass,
+      label: 'bh_' + id,
+    });
+  }
+
+  addVirus(id: string, x: number, y: number): void {
+    const radius = VIRUS_RADIUS;
+    const mass = radius * radius * Math.PI * 0.002;
+    this.viruses.set(id, {
+      id,
+      x,
+      y,
+      vx: 0,
+      vy: 1,
+      angle: 0,
+      angularVelocity: 0,
+      radius,
+      isStatic: false,
+      restitution: 0.4,
+      friction: FRICTION,
+      mass,
+      invMass: 1 / mass,
+      label: 'virus_' + id,
+    });
   }
 
   removePlanet(id: string): void {
-    const p = this.planets.get(id);
-    if (p) {
-      Matter.Composite.remove(this.engine.world, p.body);
-      this.planets.delete(id);
-      this.bodyIdToPlanet.delete(p.body.id);
-      this._planetsCache = null;
-      this.pendingRemovalIds.delete(id);
-      this.shieldPassedPlanetIds.delete(id);
-      this.shieldRecentlyHitIds.delete(id);
-    }
+    this.planets.delete(id);
+    this.pendingRemovalIds.delete(id);
+    this.shieldPassedPlanetIds.delete(id);
+    this.shieldRecentlyHitIds.delete(id);
   }
 
-  getPlanet(id: string): PhysicsPlanet | undefined {
-    return this.planets.get(id);
+  removeStar(id: string): void {
+    this.stars.delete(id);
+  }
+
+  removeBlackHole(id: string): void {
+    this.blackHoles.delete(id);
+  }
+
+  removeVirus(id: string): void {
+    this.viruses.delete(id);
   }
 
   getAllPlanets(): PhysicsPlanet[] {
-    if (!this._planetsCache) this._planetsCache = Array.from(this.planets.values());
-    return this._planetsCache;
+    return Array.from(this.planets.values());
   }
 
-  /**
-   * Returns true if any planet is NOT sleeping.
-   * Useful to skip React renders when the scene is static.
-   */
-  hasActiveBodies(): boolean {
-    if (this.planets.size === 0 && this.stars.size === 0 && this.blackHoles.size === 0 && this.viruses.size === 0) return false;
+  getAllStars(): StarPhysicsBody[] {
+    return Array.from(this.stars.values());
+  }
+
+  getAllBlackHoles(): BlackHolePhysicsBody[] {
+    return Array.from(this.blackHoles.values());
+  }
+
+  getAllViruses(): VirusPhysicsBody[] {
+    return Array.from(this.viruses.values());
+  }
+
+  step(delta: number): void {
+    const dt = Math.min(delta, 33) / 1000;
+    const subSteps = 8;
+    const sdt = dt / subSteps;
+
+    for (let s = 0; s < subSteps; s++) {
+      this.applyGravity(sdt);
+      this.integrate(sdt);
+      this.resolveCollisions();
+      this.constrainToWorld();
+    }
+
+    if (this.shieldActive) {
+      this.checkShield();
+    }
+  }
+
+  private applyGravity(dt: number) {
+    const g = GRAVITY * 600; // Adjusted for pseudo physics scaling
+    for (const p of this.planets.values()) p.vy += g * dt;
+    for (const s of this.stars.values()) s.vy += g * dt;
+    for (const bh of this.blackHoles.values()) bh.vy += g * dt;
+    for (const v of this.viruses.values()) v.vy += g * dt;
+  }
+
+  private integrate(dt: number) {
     for (const p of this.planets.values()) {
-      if (!p.body.isSleeping) return true;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.angle += p.angularVelocity * dt;
     }
     for (const s of this.stars.values()) {
-      if (!s.body.isSleeping) return true;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.angle += s.angularVelocity * dt;
     }
     for (const bh of this.blackHoles.values()) {
-      if (!bh.body.isSleeping) return true;
+      bh.x += bh.vx * dt;
+      bh.y += bh.vy * dt;
     }
     for (const v of this.viruses.values()) {
-      if (!v.body.isSleeping) return true;
+      v.x += v.vx * dt;
+      v.y += v.vy * dt;
     }
-    return false;
   }
 
-  /** 
-   * Returns the minimum Y value (top edge) of all settled planets 
-   * Only considers planets that are not falling fast (settled/overflowing).
-   */
-  getHighestPoint(): { y: number; vy: number } | null {
-    let minY = this.height + 1;
-    let velocityAtMinY = 0;
+  private resolveCollisions() {
+    const all = [
+      ...Array.from(this.planets.values()),
+      ...Array.from(this.stars.values()),
+      ...Array.from(this.blackHoles.values()),
+      ...Array.from(this.viruses.values()),
+    ];
 
-    if (this.planets.size === 0) return null;
-
-    this.planets.forEach((p) => {
-      const planet = PLANETS[p.planetId - 1];
-      const topY = p.body.position.y - planet.size;
-      if (topY < minY) {
-        minY = topY;
-        velocityAtMinY = p.body.velocity.y;
+    for (let i = 0; i < all.length; i++) {
+      const a = all[i];
+      for (let j = i + 1; j < all.length; j++) {
+        const b = all[j];
+        this.checkAndResolvePair(a, b);
       }
-    });
-
-    return { y: minY, vy: velocityAtMinY };
+    }
   }
 
-  onMerge(cb: MergeCallback): void {
-    this.mergeCallbacks.push(cb);
-  }
+  private checkAndResolvePair(a: PhysicsBody, b: PhysicsBody) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distSq = dx * dx + dy * dy;
+    const minDist = a.radius + b.radius;
 
-  /**
-   * Radial shockwave: push all nearby planets away from (x, y).
-   * Kick velocity scales with mergedPlanetSize and falls off with distance.
-   * excludeId = the newly-spawned planet (shouldn't push itself).
-   */
-  applyMergeShockwave(x: number, y: number, mergedPlanetSize: number, excludeId?: string): void {
-    // Scaling factor: larger planets create significantly more impact
-    // We use a base multiplier that grows with planet size
-    const intensity = Math.sqrt(mergedPlanetSize / 15); // normalized intensity factor
-    const maxKick = mergedPlanetSize * 0.12 * intensity;
-    const shockRadius = mergedPlanetSize * 5.5 * intensity;
-
-    this.planets.forEach((p) => {
-      if (p.id === excludeId) return;
-      if (this.pendingRemovalIds.has(p.id)) return;
-
-      const dx = p.body.position.x - x;
-      const dy = p.body.position.y - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 1 || dist > shockRadius) return;
-
-      const falloff = 1 - dist / shockRadius;
-      const kick = maxKick * falloff;
-
+    if (distSq < minDist * minDist) {
+      const dist = Math.sqrt(distSq) || 0.001;
       const nx = dx / dist;
       const ny = dy / dist;
 
-      Matter.Body.setVelocity(p.body, {
-        x: p.body.velocity.x + nx * kick,
-        y: p.body.velocity.y + ny * kick * 0.8, // slightly less vertical kick to keep them in flow
-      });
-    });
+      // Special interactions
+      if (this.handleSpecialInteraction(a, b, nx, ny)) return;
+
+      // Standard elastic collision
+      const overlap = minDist - dist;
+      const totalInvMass = a.invMass + b.invMass;
+
+      // Position correction
+      const percent = 0.4; // persistence
+      const slop = 0.01;
+      const correction = (Math.max(overlap - slop, 0) / totalInvMass) * percent;
+
+      a.x -= nx * correction * a.invMass;
+      a.y -= ny * correction * a.invMass;
+      b.x += nx * correction * b.invMass;
+      b.y += ny * correction * b.invMass;
+
+      // Velocity resolution
+      const rvx = b.vx - a.vx;
+      const rvy = b.vy - a.vy;
+      const velAlongNormal = rvx * nx + rvy * ny;
+
+      if (velAlongNormal > 0) return;
+
+      const e = Math.min(a.restitution, b.restitution);
+      let j = -(1 + e) * velAlongNormal;
+      j /= totalInvMass;
+
+      const impulseX = j * nx;
+      const impulseY = j * ny;
+
+      a.vx -= impulseX * a.invMass;
+      a.vy -= impulseY * a.invMass;
+      b.vx += impulseX * b.invMass;
+      b.vy += impulseY * b.invMass;
+
+      // Friction
+      const tangentX = rvx - (velAlongNormal * nx);
+      const tangentY = rvy - (velAlongNormal * ny);
+      const tl = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
+      if (tl > 0.001) {
+        const tx = tangentX / tl;
+        const ty = tangentY / tl;
+        const mu = Math.sqrt(a.friction * b.friction);
+        let jt = -(rvx * tx + rvy * ty);
+        jt /= totalInvMass;
+        jt = Math.max(-j * mu, Math.min(j * mu, jt));
+
+        a.vx -= jt * tx * a.invMass;
+        a.vy -= jt * ty * a.invMass;
+        b.vx += jt * tx * b.invMass;
+        b.vy += jt * ty * b.invMass;
+
+        // Simple angular reaction
+        a.angularVelocity += jt * 0.01;
+        b.angularVelocity -= jt * 0.01;
+      }
+    }
   }
 
-  // ── Shield ──────────────────────────────────────────────────────────────
+  private handleSpecialInteraction(a: PhysicsBody, b: PhysicsBody, nx: number, ny: number): boolean {
+    const isPlanet = (body: PhysicsBody): body is PhysicsPlanet => 'planetId' in body;
+    const isStar = (id: string) => this.stars.has(id);
+    const isBlackHole = (id: string) => this.blackHoles.has(id);
+    const isVirus = (id: string) => this.viruses.has(id);
 
-  setShieldActive(active: boolean): void {
+    // ── Black Hole ─────────────────────────────────
+    if (isBlackHole(a.id) || isBlackHole(b.id)) {
+      const bh = isBlackHole(a.id) ? (a as BlackHolePhysicsBody) : (b as BlackHolePhysicsBody);
+      const other = isBlackHole(a.id) ? b : a;
+      if (isPlanet(other)) {
+        if (!this.pendingRemovalIds.has(other.id)) {
+          this.pendingRemovalIds.add(other.id);
+          this.blackHoleSuckCallbacks.forEach(cb => cb({
+            blackHoleId: bh.id,
+            planetId: other.id,
+            planetTypeId: other.planetId,
+            x: other.x,
+            y: other.y
+          }));
+        }
+        return true;
+      }
+    }
+
+    // ── Virus ──────────────────────────────────────
+    if (isVirus(a.id) || isVirus(b.id)) {
+      const v = isVirus(a.id) ? (a as VirusPhysicsBody) : (b as VirusPhysicsBody);
+      const other = isVirus(a.id) ? b : a;
+      if (isPlanet(other)) {
+        if (!this.pendingRemovalIds.has(other.id)) {
+          // Virus itself doesn't need pendingRemovalIds here technically 
+          // but we want to trigger infect once
+          this.virusInfectCallbacks.forEach(cb => cb({
+            virusId: v.id,
+            planetId: other.id,
+            planetTypeId: other.planetId,
+            x: other.x,
+            y: other.y
+          }));
+        }
+        return true;
+      }
+    }
+
+    // ── Star ───────────────────────────────────────
+    if (isStar(a.id) || isStar(b.id)) {
+      const s = isStar(a.id) ? (a as StarPhysicsBody) : (b as StarPhysicsBody);
+      const other = isStar(a.id) ? b : a;
+      if (isPlanet(other)) {
+        if (!this.pendingRemovalIds.has(other.id)) {
+          this.pendingRemovalIds.add(other.id);
+          this.starUpgradeCallbacks.forEach(cb => cb({
+            starId: s.id,
+            planetId: other.id,
+            planetTypeId: other.planetId,
+            x: other.x,
+            y: other.y
+          }));
+        }
+        return true;
+      }
+    }
+
+    // ── Planet Merge ───────────────────────────────
+    if (isPlanet(a) && isPlanet(b)) {
+      if (a.planetId === b.planetId) {
+        if (this.pendingRemovalIds.has(a.id) || this.pendingRemovalIds.has(b.id)) return true;
+
+        const key = [a.id, b.id].sort().join('|');
+        if (this.pendingMergeKeys.has(key)) return true;
+        this.pendingMergeKeys.add(key);
+        this.pendingRemovalIds.add(a.id);
+        this.pendingRemovalIds.add(b.id);
+
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+
+        if (a.planetId >= PLANETS.length) {
+          const bhId = `sun_bh_${Date.now()}`;
+          this.sunMergeCallbacks.forEach(cb => cb({ id1: a.id, id2: b.id, blackHoleId: bhId, x: midX, y: midY }));
+        } else {
+          this.mergeCallbacks.forEach(cb => cb({ id1: a.id, id2: b.id, planetId: a.planetId, x: midX, y: midY }));
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private constrainToWorld() {
+    const wallDamping = 0.3;
+    const all = [
+      ...Array.from(this.planets.values()),
+      ...Array.from(this.stars.values()),
+      ...Array.from(this.blackHoles.values()),
+      ...Array.from(this.viruses.values()),
+    ];
+
+    for (const p of all) {
+      // Left Wall
+      if (p.x - p.radius < 0) {
+        p.x = p.radius;
+        p.vx = Math.abs(p.vx) * wallDamping;
+      }
+      // Right Wall
+      if (p.x + p.radius > this.width) {
+        p.x = this.width - p.radius;
+        p.vx = -Math.abs(p.vx) * wallDamping;
+      }
+      // Floor
+      if (p.y + p.radius > this.height) {
+        p.y = this.height - p.radius;
+        p.vy = -Math.abs(p.vy) * wallDamping;
+        p.vx *= 0.95; // Ground friction
+      }
+    }
+  }
+
+  private checkShield() {
+    for (const p of this.planets.values()) {
+      if (p.y > DANGER_HEIGHT + 40) {
+        this.shieldPassedPlanetIds.add(p.id);
+      }
+
+      if (this.shieldPassedPlanetIds.has(p.id) && !this.shieldRecentlyHitIds.has(p.id)) {
+        if (p.y - p.radius < DANGER_HEIGHT && p.vy < -0.5) {
+          this.shieldRecentlyHitIds.add(p.id);
+          setTimeout(() => this.shieldRecentlyHitIds.delete(p.id), 600);
+
+          p.vy = Math.abs(p.vy) * 0.5;
+          p.y = DANGER_HEIGHT + p.radius + 2;
+          this.shieldHitCallbacks.forEach(cb => cb());
+        }
+      }
+    }
+  }
+
+  applyMergeShockwave(x: number, y: number, size: number, excludeId?: string) {
+    const shockRadius = size * 5.5;
+    const intensity = Math.sqrt(size / 15);
+    const maxKick = size * 0.25 * intensity;
+
+    for (const p of this.planets.values()) {
+      if (p.id === excludeId) continue;
+      const dx = p.x - x;
+      const dy = p.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1 || dist > shockRadius) continue;
+
+      const f = 1 - dist / shockRadius;
+      p.vx += (dx / dist) * maxKick * f;
+      p.vy += (dy / dist) * maxKick * f;
+    }
+  }
+
+  applyBlackHoleSuction(x: number, y: number, size: number) {
+    const radius = size * 4.5;
+    const force = size * 0.3;
+
+    for (const p of this.planets.values()) {
+      const dx = x - p.x;
+      const dy = y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1 || dist > radius) continue;
+
+      const f = 1 - dist / radius;
+      p.vx += (dx / dist) * force * f;
+      p.vy += (dy / dist) * force * f;
+    }
+  }
+
+  setShieldActive(active: boolean) {
     this.shieldActive = active;
     if (!active) {
       this.shieldPassedPlanetIds.clear();
@@ -621,108 +547,42 @@ export class SolarPhysics {
     }
   }
 
-  onShieldHit(cb: () => void): void {
-    this.shieldHitCallbacks.push(cb);
-  }
+  onMerge(cb: MergeCallback) { this.mergeCallbacks.push(cb); }
+  onStarUpgrade(cb: StarUpgradeCallback) { this.starUpgradeCallbacks.push(cb); }
+  onBlackHoleSuck(cb: BlackHoleSuckCallback) { this.blackHoleSuckCallbacks.push(cb); }
+  onVirusInfect(cb: VirusInfectCallback) { this.virusInfectCallbacks.push(cb); }
+  onSunMerge(cb: SunMergeCallback) { this.sunMergeCallbacks.push(cb); }
+  onShieldHit(cb: () => void) { this.shieldHitCallbacks.push(cb); }
 
-  /**
-   * Called each physics step. Deflects upward-moving planets at the danger
-   * line when the shield is active, then fires the hit callbacks.
-   */
-  private checkShield(): void {
-    if (!this.shieldActive) return;
-
-    this.planets.forEach((pb) => {
-      const body = pb.body;
-      const planet = PLANETS[pb.planetId - 1];
-      const radius = planet.size;
-
-      // Mark planets that have settled into the game area (below the shield line)
-      if (body.position.y > DANGER_HEIGHT + 40) {
-        this.shieldPassedPlanetIds.add(pb.id);
+  getHighestPoint() {
+    let minY = this.height + 1;
+    let vy = 0;
+    if (this.planets.size === 0) return null;
+    for (const p of this.planets.values()) {
+      const top = p.y - p.radius;
+      if (top < minY) {
+        minY = top;
+        vy = p.vy;
       }
-
-      if (!this.shieldPassedPlanetIds.has(pb.id)) return;
-      if (this.pendingRemovalIds.has(pb.id)) return;
-      if (this.shieldRecentlyHitIds.has(pb.id)) return;
-
-      // Planet top edge crossing the danger line while moving upward
-      if (body.position.y - radius < DANGER_HEIGHT && body.velocity.y < -0.5) {
-        // Debounce: ignore this planet for 600 ms after a hit
-        this.shieldRecentlyHitIds.add(pb.id);
-        setTimeout(() => this.shieldRecentlyHitIds.delete(pb.id), 600);
-
-        // Bounce the planet back downward
-        Matter.Body.setVelocity(body, {
-          x: body.velocity.x * 0.7,
-          y: Math.abs(body.velocity.y) * 0.5,
-        });
-
-        // Clamp position just inside the shield
-        Matter.Body.setPosition(body, {
-          x: body.position.x,
-          y: DANGER_HEIGHT + radius + 2,
-        });
-
-        this.shieldHitCallbacks.forEach((cb) => cb());
-      }
-    });
+    }
+    return { y: minY, vy };
   }
 
-  step(delta: number): void {
-    Matter.Engine.update(this.engine, Math.min(delta, 33));
-    this.checkShield();
+  hasActiveBodies() {
+    return this.planets.size > 0 || this.stars.size > 0 || this.blackHoles.size > 0 || this.viruses.size > 0;
   }
 
-  reset(): void {
-    Matter.Engine.clear(this.engine);
+  reset() {
     this.planets.clear();
     this.stars.clear();
     this.blackHoles.clear();
     this.viruses.clear();
-    this.bodyIdToPlanet.clear();
-    this.bodyIdToStar.clear();
-    this.bodyIdToBlackHole.clear();
-    this.bodyIdToVirus.clear();
-    this._planetsCache = null;
-    this._starsCache = null;
-    this._blackHolesCache = null;
-    this._virusesCache = null;
     this.pendingMergeKeys.clear();
     this.pendingRemovalIds.clear();
-    this.pendingStarRemovalIds.clear();
-    this.pendingBlackHoleRemovalIds.clear();
-    this.pendingVirusRemovalIds.clear();
-    this.shieldActive = false;
-    this.shieldPassedPlanetIds.clear();
-    this.shieldRecentlyHitIds.clear();
-    this.shieldHitCallbacks = [];
-    Matter.World.clear(this.engine.world, false);
-    this.engine.gravity.y = GRAVITY;
-    this.createWalls();
-    this.setupCollisionHandler();
   }
 
-  destroy(): void {
-    Matter.World.clear(this.engine.world, false);
-    Matter.Engine.clear(this.engine);
-    this.planets.clear();
-    this.stars.clear();
-    this.blackHoles.clear();
-    this.viruses.clear();
-    this.bodyIdToPlanet.clear();
-    this.bodyIdToStar.clear();
-    this.bodyIdToBlackHole.clear();
-    this.bodyIdToVirus.clear();
-    this._planetsCache = null;
-    this._starsCache = null;
-    this._blackHolesCache = null;
-    this._virusesCache = null;
-    this.pendingMergeKeys.clear();
-    this.pendingRemovalIds.clear();
-    this.pendingStarRemovalIds.clear();
-    this.pendingBlackHoleRemovalIds.clear();
-    this.pendingVirusRemovalIds.clear();
+  destroy() {
+    this.reset();
     this.mergeCallbacks = [];
     this.starUpgradeCallbacks = [];
     this.blackHoleSuckCallbacks = [];

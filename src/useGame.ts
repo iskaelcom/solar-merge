@@ -578,13 +578,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           const updated: RenderPlanet[] = allPlanets
             .filter((p) => spawnIdSet === null || !spawnIdSet.has(p.id)) // O(1) lookup
             .map((p) => {
-              const pos = p.body.position;
               return {
                 id: p.id,
                 planetId: p.planetId,
-                x: pos.x,
-                y: pos.y,
-                angle: p.body.angle,
+                x: p.x,
+                y: p.y,
+                angle: p.angle,
               } as RenderPlanet;
             });
 
@@ -601,23 +600,23 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           // Sync stars from physics
           const updatedStars: RenderStar[] = allStars.map((s) => ({
             id: s.id,
-            x: s.body.position.x,
-            y: s.body.position.y,
-            angle: s.body.angle,
+            x: s.x,
+            y: s.y,
+            angle: s.angle,
           }));
 
           // Sync black holes from physics
           const updatedBlackHoles: RenderBlackHole[] = allBlackHoles.map((bh) => ({
             id: bh.id,
-            x: bh.body.position.x,
-            y: bh.body.position.y,
+            x: bh.x,
+            y: bh.y,
           }));
 
           // Sync viruses from physics
           const updatedViruses: RenderVirus[] = allViruses.map((v) => ({
             id: v.id,
-            x: v.body.position.x,
-            y: v.body.position.y,
+            x: v.x,
+            y: v.y,
           }));
 
           return {

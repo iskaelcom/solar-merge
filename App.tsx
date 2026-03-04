@@ -1,45 +1,20 @@
-// Polyfill globals required by matter-js in React Native / Hermes environment
-if (typeof (global as any).window === 'undefined') {
-  (global as any).window = global;
-}
-if (typeof (global as any).document === 'undefined') {
-  (global as any).document = {
-    createElement: () => ({ getContext: () => null, style: {} }),
-    createElementNS: () => ({ style: {} }),
-    addEventListener: () => { },
-    removeEventListener: () => { },
-  };
-}
-
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { GameScreen } from './src/components/GameScreen';
-import { initAdMob } from './src/utils/AdMobManager';
-import { AdMobBanner } from './src/components/AdMobBanner';
+import React from 'react';
+import { Platform } from 'react-native';
+import { WithSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 
 export default function App() {
-  useEffect(() => {
-    initAdMob();
-  }, []);
+  if (Platform.OS === 'web') {
+    return (
+      <WithSkiaWeb
+        getComponent={() => import('./src/AppMain')}
+        opts={{
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.39.1/bin/full/${file}`,
+        }}
+        fallback={<div style={{ flex: 1, backgroundColor: '#0a0a2e' }} />}
+      />
+    );
+  }
 
-  return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.gameContainer}>
-        <GameScreen />
-      </View>
-      <AdMobBanner />
-    </View>
-  );
+  const AppMainComp = require('./src/AppMain').default;
+  return <AppMainComp />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a2e',
-  },
-  gameContainer: {
-    flex: 1,
-  },
-});
