@@ -122,30 +122,34 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ state, width, height, on
             {/* Danger Line */}
             <Rect x={0} y={DANGER_HEIGHT} width={width} height={2} color="rgba(255, 0, 0, 0.3)" />
 
-            {/* Shield View */}
+            {/* Shield View - Stacking 3 distinct layers */}
             {state.shieldLayers > 0 && (
                 <Group>
-                    <Rect
-                        x={0}
-                        y={DANGER_HEIGHT - 2}
-                        width={width}
-                        height={4}
-                        color={state.shieldLayers === 3 ? "#00E5FF" : state.shieldLayers === 2 ? "#00B0FF" : "#2979FF"}
-                    />
-                    {/* Glowing highlight */}
-                    <Rect
-                        x={0}
-                        y={DANGER_HEIGHT - 8}
-                        width={width}
-                        height={16}
-                        opacity={0.3}
-                    >
-                        <RadialGradient
-                            c={vec(width / 2, DANGER_HEIGHT)}
-                            r={width}
-                            colors={[state.shieldLayers === 3 ? "#00E5FF" : "#2979FF", "transparent"]}
-                        />
-                    </Rect>
+                    {Array.from({ length: state.shieldLayers }).map((_, i) => (
+                        <Group key={`shield-layer-${i}`}>
+                            <Rect
+                                x={0}
+                                y={DANGER_HEIGHT - 2 - (i * 5)} // Stacked upwards
+                                width={width}
+                                height={3}
+                                color={i === 2 ? "#00E5FF" : i === 1 ? "#00B0FF" : "#2979FF"}
+                            />
+                            {/* Individual layer glow */}
+                            <Rect
+                                x={0}
+                                y={DANGER_HEIGHT - 6 - (i * 5)}
+                                width={width}
+                                height={10}
+                                opacity={0.2}
+                            >
+                                <RadialGradient
+                                    c={vec(width / 2, DANGER_HEIGHT - (i * 5))}
+                                    r={width / 2}
+                                    colors={[i === 2 ? "#00E5FF" : "#2979FF", "transparent"]}
+                                />
+                            </Rect>
+                        </Group>
+                    ))}
                 </Group>
             )}
 
