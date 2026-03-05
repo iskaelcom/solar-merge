@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { SolarPhysics } from './physics';
+import { playSound } from './utils/SoundManager';
 import {
   PLANETS,
   GAME_WIDTH,
@@ -173,6 +174,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     const engine = new SolarPhysics(gameWidth, gameHeight);
 
     engine.onMerge(({ id1, id2, planetId, x, y, vx, vy }) => {
+      playSound('merge');
       const planet = PLANETS[planetId - 1];
       const newId = genId();
 
@@ -687,6 +689,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const dropPlanet = useCallback((x: number) => {
     if (isDroppingRef.current || stateRef.current.gameOver || !physicsRef.current) return;
     isDroppingRef.current = true;
+    playSound('drop');
 
     const prev = stateRef.current;
 

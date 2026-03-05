@@ -16,6 +16,7 @@ import { Platform, View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GameScreen } from './src/components/GameScreen';
 import { initAdMob } from './src/utils/AdMobManager';
+import { initSounds } from './src/utils/SoundManager';
 import { AdMobBanner } from './src/components/AdMobBanner';
 import { PrivacyPolicyScreen } from './src/screens/PrivacyPolicyScreen';
 import { DeleteAccountScreen } from './src/screens/DeleteAccountScreen';
@@ -36,6 +37,7 @@ export default function App() {
 
   useEffect(() => {
     initAdMob();
+    initSounds();
   }, []);
 
   return (
