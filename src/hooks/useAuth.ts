@@ -28,18 +28,30 @@ export const isAuthConfigured =
     Boolean(GOOGLE_CLIENT_IDS.iosClientId) ||
     Boolean(GOOGLE_CLIENT_IDS.androidClientId));
 
+// ── Android native Google Sign-In (avoids deprecated implicit OAuth flow) ────
+let GoogleSignin: any = null;
+let statusCodes: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const pkg = require('@react-native-google-signin/google-signin');
+    GoogleSignin = pkg.GoogleSignin;
+    statusCodes = pkg.statusCodes;
+    if (GOOGLE_CLIENT_IDS.webClientId) {
+      GoogleSignin.configure({ webClientId: GOOGLE_CLIENT_IDS.webClientId });
+    }
+  } catch {}
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // expo-auth-session — only used on native (iOS / Android).
-  // On web we use Firebase's signInWithPopup which handles COOP correctly.
-  // Still initialised unconditionally to satisfy React's rules-of-hooks.
+  // expo-auth-session — only used on iOS and web.
+  // Android uses native GoogleSignin to avoid deprecated implicit OAuth flow.
   const [, response, promptAsync] = Google.useAuthRequest({
-    clientId:        GOOGLE_CLIENT_IDS.webClientId     || 'unconfigured',
-    iosClientId:     GOOGLE_CLIENT_IDS.iosClientId     || 'unconfigured',
-    androidClientId: GOOGLE_CLIENT_IDS.androidClientId || 'unconfigured',
+    clientId:    GOOGLE_CLIENT_IDS.webClientId || 'unconfigured',
+    iosClientId: GOOGLE_CLIENT_IDS.iosClientId || 'unconfigured',
   });
 
   // Watch Firebase auth state
@@ -55,22 +67,30 @@ export function useAuth() {
     return unsub;
   }, []);
 
-  // Native only: exchange Google id_token → Firebase credential
+  // iOS only: exchange Google id_token → Firebase credential
   useEffect(() => {
-    if (Platform.OS === 'web') return; // web uses signInWithPopup
+    if (Platform.OS !== 'ios') return;
     if (response?.type === 'success') {
       const { id_token } = response.params;
       if (id_token && auth) {
         const credential = GoogleAuthProvider.credential(id_token);
-        signInWithCredential(auth, credential).catch((e) =>
-          setError(e.message)
-        );
+        signInWithCredential(auth, credential).catch((e) => setError(e.message));
       }
     }
     if (response?.type === 'error') {
       setError(response.error?.message ?? 'Sign-in failed');
     }
   }, [response]);
+
+  async function signInAndroid() {
+    if (!GoogleSignin || !auth) return;
+    await GoogleSignin.hasPlayServices();
+    const result = await GoogleSignin.signIn();
+    const idToken = result.data?.idToken ?? (result as any).idToken;
+    if (!idToken) throw new Error('No id_token returned from Google');
+    const credential = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, credential);
+  }
 
   async function signIn() {
     if (!isAuthConfigured) {
@@ -80,22 +100,27 @@ export function useAuth() {
     setError(null);
     try {
       if (Platform.OS === 'web') {
-        // Web: Firebase popup handles auth natively — no COOP issues
         if (!auth) return;
         const provider = new GoogleAuthProvider();
         await signInWithPopup(auth, provider);
+      } else if (Platform.OS === 'android') {
+        await signInAndroid();
       } else {
-        // Native: expo-auth-session OAuth flow
         await promptAsync();
       }
     } catch (e: any) {
-      setError(e.message);
+      if (e.code !== statusCodes?.SIGN_IN_CANCELLED) {
+        setError(e.message);
+      }
     }
   }
 
   async function signOut() {
     if (!auth) return;
     setError(null);
+    if (Platform.OS === 'android' && GoogleSignin) {
+      await GoogleSignin.signOut().catch(() => {});
+    }
     await fbSignOut(auth);
   }
 
