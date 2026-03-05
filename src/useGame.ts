@@ -294,6 +294,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Star upgrade handler ─────────────────────────────────────────────
     engine.onStarUpgrade(({ starId, planetId, planetTypeId, x, y }) => {
+      playSound('star');
       const planet = PLANETS[planetTypeId - 1];
       const isSick = sickPlanetIdsRef.current.has(planetId);
       sickPlanetIdsRef.current.delete(planetId);
@@ -375,6 +376,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Black hole suck handler ──────────────────────────────────────────
     engine.onBlackHoleSuck(({ blackHoleId, planetId, planetTypeId, x, y }) => {
+      playSound('blackhole');
       sickPlanetIdsRef.current.delete(planetId); // clean up if sick planet gets sucked
       const planet = PLANETS[planetTypeId - 1];
 
@@ -401,6 +403,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Virus infect handler ─────────────────────────────────────────────
     engine.onVirusInfect(({ virusId, planetId, planetTypeId, x, y }) => {
+      playSound('virus');
       sickPlanetIdsRef.current.add(planetId);
 
       const planet = PLANETS[planetTypeId - 1];
@@ -693,10 +696,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     const prev = stateRef.current;
 
-    if (prev.currentIsVirus)      { playSound('virus'); }
-    else if (prev.currentIsStar)      { playSound('star'); }
-    else if (prev.currentIsBlackHole) { playSound('blackhole'); }
-    else                              { playSound('drop'); }
+    playSound('drop');
 
     // ── Drop a virus ───────────────────────────────────────────────────
     if (prev.currentIsVirus) {
