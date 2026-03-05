@@ -13,7 +13,7 @@ import {
 import { User } from 'firebase/auth';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
-import { isSoundEnabled, setSoundEnabled } from '../utils/SoundManager';
+import { isSoundEnabled, setSoundEnabled, isAmbientEnabled, setAmbientEnabled } from '../utils/SoundManager';
 
 type InnerScreen = null | 'privacy' | 'delete';
 
@@ -27,10 +27,16 @@ interface Props {
 export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props) {
   const [inner, setInner] = useState<InnerScreen>(null);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [ambientOn, setAmbientOn] = useState(() => isAmbientEnabled());
 
   function toggleSound(val: boolean) {
     setSoundOn(val);
     setSoundEnabled(val);
+  }
+
+  function toggleAmbient(val: boolean) {
+    setAmbientOn(val);
+    setAmbientEnabled(val);
   }
 
   function handleClose() {
@@ -90,6 +96,17 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
                   onValueChange={toggleSound}
                   trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#7c6fff' }}
                   thumbColor={soundOn ? '#fff' : 'rgba(255,255,255,0.6)'}
+                />
+              </View>
+
+              <View style={s.row}>
+                <Text style={s.rowIcon}>🪐</Text>
+                <Text style={s.rowLabel}>Ambient Space Sound</Text>
+                <Switch
+                  value={ambientOn}
+                  onValueChange={toggleAmbient}
+                  trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#7c6fff' }}
+                  thumbColor={ambientOn ? '#fff' : 'rgba(255,255,255,0.6)'}
                 />
               </View>
 

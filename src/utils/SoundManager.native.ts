@@ -25,11 +25,18 @@ const pool: Record<SoundKey, Audio.Sound | null> = {
 };
 
 let initialized = false;
-let soundEnabled = true;
+let sfxEnabled = true;
+let ambientEnabled = true;
 
-export function isSoundEnabled(): boolean { return soundEnabled; }
+export function isSoundEnabled(): boolean { return sfxEnabled; }
+export function isAmbientEnabled(): boolean { return ambientEnabled; }
+
 export function setSoundEnabled(enabled: boolean): void {
-  soundEnabled = enabled;
+  sfxEnabled = enabled;
+}
+
+export function setAmbientEnabled(enabled: boolean): void {
+  ambientEnabled = enabled;
   if (enabled) {
     startAmbientAlien();
   } else {
@@ -60,7 +67,7 @@ export async function initSounds(): Promise<void> {
 }
 
 export async function playSound(key: SoundKey): Promise<void> {
-  if (!soundEnabled) return;
+  if (!sfxEnabled) return;
   const sound = pool[key];
   if (!sound) return;
   try {
@@ -84,7 +91,7 @@ export async function stopAmbientAlien(): Promise<void> {
 }
 
 export async function startAmbientAlien(): Promise<void> {
-  if (ambientSound || !soundEnabled) return;
+  if (ambientSound || !ambientEnabled) return;
   try {
     const { sound } = await Audio.Sound.createAsync(ASSETS.ambient_alien, {
       shouldPlay: true,

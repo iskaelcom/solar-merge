@@ -9,6 +9,7 @@
 type SoundKey = 'drop' | 'merge' | 'star' | 'blackhole' | 'virus' | 'gameover';
 
 const SOUND_PREF_KEY = 'solar_merge_sound_enabled';
+const AMBIENT_PREF_KEY = 'solar_merge_ambient_enabled';
 
 let soundEnabled: boolean = (() => {
   try {
@@ -17,10 +18,27 @@ let soundEnabled: boolean = (() => {
   } catch { return true; }
 })();
 
+let ambientEnabled: boolean = (() => {
+  try {
+    const val = typeof localStorage !== 'undefined' ? localStorage.getItem(AMBIENT_PREF_KEY) : null;
+    return val === null ? true : val === 'true';
+  } catch { return true; }
+})();
+
 export function isSoundEnabled(): boolean { return soundEnabled; }
+export function isAmbientEnabled(): boolean { return ambientEnabled; }
 
 export function setSoundEnabled(enabled: boolean): void {
   soundEnabled = enabled;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SOUND_PREF_KEY, String(enabled));
+    }
+  } catch { }
+}
+
+export function setAmbientEnabled(enabled: boolean): void {
+  ambientEnabled = enabled;
   if (enabled) {
     startAmbientAlien();
   } else {
@@ -28,7 +46,7 @@ export function setSoundEnabled(enabled: boolean): void {
   }
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(SOUND_PREF_KEY, String(enabled));
+      localStorage.setItem(AMBIENT_PREF_KEY, String(enabled));
     }
   } catch { }
 }
@@ -294,74 +312,97 @@ export function stopAmbientAlien(): void {
 }
 
 export function startAmbientAlien(): void {
-  if (ambientNodes || !soundEnabled) return;
+  if (ambientNodes || !ambientEnabled) return;
   const c = getCtx();
   if (!c) return;
-  resumeCtx(c);
+
+  // Don't start nodes if suspended; the interaction listener will trigger this when ready.
+  if (c.state !== 'running') {
+    c.resume(); // Try to resume, but don't set ambientNodes yet.
+    return;
+  }
 
   const now = c.currentTime;
   const masterGain = c.createGain();
   masterGain.connect(c.destination);
   masterGain.gain.setValueAtTime(0, now);
-  masterGain.gain.linearRampToValueAtTime(0.35, now + 4);
+  masterGain.gain.linearRampToValueAtTime(0.25, now + 8); // Even slower, 8s fade in for 30s vibe
 
   const nodes: (OscillatorNode | AudioBufferSourceNode)[] = [];
 
-  // 1. FM "Space Hum" (Carrier + Modulator)
-  const carrier = c.createOscillator();
-  const modulator = c.createOscillator();
-  const modGain = c.createGain();
+  // 1. Expanded Ethereal Pad: G minor 9 + 11 (G, Bb, D, F, A, C)
+  const freqs = [98, 116.54, 146.83, 174.61, 220, 261.63]; // G2, Bb2, D3, F3, A3, C4
+  freqs.forEach((f, i) => {
+    const osc = c.createOscillator();
+    const g = c.createGain();
 
-  carrier.frequency.setValueAtTime(55, now); // Low G
-  modulator.frequency.setValueAtTime(0.5, now); // Slow oscillation
-  modGain.gain.setValueAtTime(20, now); // Frequency modulation depth
+    // Mix sine/triangle but with subtle detuning per voice for choral richness
+    osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(f + (Math.random() - 0.5) * 0.5, now);
 
-  modulator.connect(modGain);
-  modGain.connect(carrier.frequency);
-  carrier.connect(masterGain);
+    // Very slow asynchronous volume breathing (10-20 second cycles)
+    g.gain.setValueAtTime(0.06, now);
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    lfo.frequency.setValueAtTime(0.03 + i * 0.007, now); // Slower modulation
+    lfoGain.gain.setValueAtTime(0.045, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(g.gain);
+    lfo.start(now);
+    nodes.push(lfo);
 
-  carrier.start(now);
-  modulator.start(now);
-  nodes.push(carrier, modulator);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(now);
+    nodes.push(osc);
+  });
 
-  // 2. High-pitched "Distant Alien Beeps" (Randomized sparse beeps)
-  const scheduleBeep = (delay: number) => {
+  // 2. Varied Ethereal Sparkles (Longer decays, more variety)
+  const scheduleSparkle = (delay: number) => {
     if (!ambientNodes) return;
     const startTime = c.currentTime + delay;
     const osc = c.createOscillator();
     const g = c.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1000 + Math.random() * 1000, startTime);
+    // Pentatonic + Extension: G5, A5, Bb5, C6, D6, F6, G6
+    const sparkleNotes = [783.99, 880, 932.33, 1046.5, 1174.66, 1396.91, 1567.98];
+    const freq = sparkleNotes[Math.floor(Math.random() * sparkleNotes.length)];
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    // Gentle crystalline ping
     g.gain.setValueAtTime(0, startTime);
-    g.gain.linearRampToValueAtTime(0.06, startTime + 0.1);
-    g.gain.exponentialRampToValueAtTime(0.001, startTime + 2.5);
+    g.gain.linearRampToValueAtTime(0.025, startTime + 0.2); // Slower attack
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + 6); // Longer 6s release
 
     osc.connect(g);
     g.connect(masterGain);
     try {
       osc.start(startTime);
-      osc.stop(startTime + 2.6);
-    } catch { } // Context might be closed
+      osc.stop(startTime + 6.1);
+    } catch { }
 
+    // Sparsely scheduled for 30s feel
     setTimeout(() => {
-      if (ambientNodes) scheduleBeep(Math.random() * 8 + 5);
-    }, (delay + 4) * 1000);
+      if (ambientNodes) scheduleSparkle(Math.random() * 12 + 6);
+    }, (delay + 6) * 1000);
   };
-  scheduleBeep(3);
+  scheduleSparkle(5);
 
-  // 3. Modulated Filtered Noise
+  // 3. Cinematic Deep Space Wind (Lower frequencies, slower sweeps)
   const noiseSource = c.createBufferSource();
-  noiseSource.buffer = createPinkNoise(c, 4);
+  noiseSource.buffer = createPinkNoise(c, 10); // Multi-second loop
   noiseSource.loop = true;
   const filter = c.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(600, now);
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(250, now);
+  filter.Q.setValueAtTime(1.5, now); // More resonance for "sheen"
 
+  // Extremely slow atmospheric "breathing" (20-30s feel)
   const filterLFO = c.createOscillator();
   const filterLFOGain = c.createGain();
-  filterLFO.frequency.setValueAtTime(0.15, now);
-  filterLFOGain.gain.setValueAtTime(300, now); // Modulate filter cutoff
+  filterLFO.frequency.setValueAtTime(0.02, now); // 50 second cycle
+  filterLFOGain.gain.setValueAtTime(120, now);
   filterLFO.connect(filterLFOGain);
   filterLFOGain.connect(filter.frequency);
 
@@ -380,9 +421,9 @@ if (typeof window !== 'undefined') {
     const c = getCtx();
     if (c && c.state === 'suspended') {
       c.resume().then(() => {
-        if (soundEnabled) startAmbientAlien();
+        if (ambientEnabled) startAmbientAlien();
       });
-    } else if (c && c.state === 'running' && soundEnabled) {
+    } else if (c && c.state === 'running' && ambientEnabled) {
       startAmbientAlien();
     }
   };
