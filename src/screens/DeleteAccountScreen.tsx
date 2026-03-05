@@ -1,12 +1,17 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 
-export function DeleteAccountScreen() {
+export function DeleteAccountScreen({ onBack }: { onBack?: () => void } = {}) {
+  function handleBack() {
+    if (onBack) { onBack(); return; }
+    if (Platform.OS === 'web') window.history.back();
+  }
+
   return (
     <View style={s.root}>
       <View style={s.topBar}>
-        {Platform.OS === 'web' && (
-          <TouchableOpacity onPress={() => { window.history.back(); }} style={s.backBtn}>
+        {(onBack || Platform.OS === 'web') && (
+          <TouchableOpacity onPress={handleBack} style={s.backBtn}>
             <Text style={s.backText}>← Back</Text>
           </TouchableOpacity>
         )}

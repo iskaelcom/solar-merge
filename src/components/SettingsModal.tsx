@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
-  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -11,16 +10,10 @@ import {
   View,
 } from 'react-native';
 import { User } from 'firebase/auth';
+import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
+import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
 
-const WEB_BASE = 'https://iskaelcom.github.io/solar-merge';
-
-function openPage(path: string) {
-  if (Platform.OS === 'web') {
-    window.open(`/solar-merge${path}`, '_blank');
-  } else {
-    Linking.openURL(`${WEB_BASE}${path}`);
-  }
-}
+type InnerScreen = null | 'privacy' | 'delete';
 
 interface Props {
   visible: boolean;
@@ -30,6 +23,13 @@ interface Props {
 }
 
 export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props) {
+  const [inner, setInner] = useState<InnerScreen>(null);
+
+  function handleClose() {
+    setInner(null);
+    onClose();
+  }
+
   function confirmDelete() {
     Alert.alert(
       'Delete Account',
@@ -42,7 +42,7 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
           onPress: async () => {
             try {
               await onDeleteAccount();
-              onClose();
+              handleClose();
             } catch (e: any) {
               Alert.alert('Error', e.message ?? 'Failed to delete account.');
             }
@@ -53,68 +53,90 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
   }
 
   return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={visible}
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={s.backdrop}>
-        <View style={s.card}>
-          {/* Header */}
-          <View style={s.header}>
-            <Text style={s.title}>⚙️  Settings</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={s.closeBtn}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={s.body} showsVerticalScrollIndicator={false}>
-            {/* Legal section */}
-            <Text style={s.sectionLabel}>LEGAL</Text>
-
-            <TouchableOpacity style={s.row} onPress={() => openPage('/privacy-policy')}>
-              <Text style={s.rowIcon}>🔒</Text>
-              <Text style={s.rowLabel}>Privacy Policy</Text>
-              <Text style={s.rowChevron}>›</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={s.row} onPress={() => openPage('/delete-account')}>
-              <Text style={s.rowIcon}>📋</Text>
-              <Text style={s.rowLabel}>Data Deletion Info</Text>
-              <Text style={s.rowChevron}>›</Text>
-            </TouchableOpacity>
-
-            {/* Account section — only visible when signed in */}
-            {user && (
-              <>
-                <Text style={[s.sectionLabel, { marginTop: 16 }]}>ACCOUNT</Text>
-
-                <View style={s.accountRow}>
-                  <Text style={s.accountName} numberOfLines={1}>
-                    {user.displayName ?? user.email ?? 'Signed in'}
-                  </Text>
-                </View>
-
-                <TouchableOpacity style={[s.row, s.deleteRow]} onPress={confirmDelete}>
-                  <Text style={s.rowIcon}>🗑️</Text>
-                  <Text style={s.deleteLabel}>Delete Account</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* About section */}
-            <Text style={[s.sectionLabel, { marginTop: 16 }]}>ABOUT</Text>
-            <View style={s.row}>
-              <Text style={s.rowIcon}>🪐</Text>
-              <Text style={s.rowLabel}>Solar Merge</Text>
-              <Text style={s.versionText}>v1.0.0</Text>
+    <>
+      {/* ── Main settings modal ───────────────────────────────── */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={visible && inner === null}
+        onRequestClose={handleClose}
+        statusBarTranslucent
+      >
+        <View style={s.backdrop}>
+          <View style={s.card}>
+            <View style={s.header}>
+              <Text style={s.title}>⚙️  Settings</Text>
+              <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={s.closeBtn}>✕</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+
+            <ScrollView style={s.body} showsVerticalScrollIndicator={false}>
+              <Text style={s.sectionLabel}>LEGAL</Text>
+
+              <TouchableOpacity style={s.row} onPress={() => setInner('privacy')}>
+                <Text style={s.rowIcon}>🔒</Text>
+                <Text style={s.rowLabel}>Privacy Policy</Text>
+                <Text style={s.rowChevron}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.row} onPress={() => setInner('delete')}>
+                <Text style={s.rowIcon}>📋</Text>
+                <Text style={s.rowLabel}>Data Deletion Info</Text>
+                <Text style={s.rowChevron}>›</Text>
+              </TouchableOpacity>
+
+              {user && (
+                <>
+                  <Text style={[s.sectionLabel, { marginTop: 16 }]}>ACCOUNT</Text>
+
+                  <View style={s.accountRow}>
+                    <Text style={s.accountName} numberOfLines={1}>
+                      {user.displayName ?? user.email ?? 'Signed in'}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity style={[s.row, s.deleteRow]} onPress={confirmDelete}>
+                    <Text style={s.rowIcon}>🗑️</Text>
+                    <Text style={s.deleteLabel}>Delete Account</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <Text style={[s.sectionLabel, { marginTop: 16 }]}>ABOUT</Text>
+              <View style={s.row}>
+                <Text style={s.rowIcon}>🪐</Text>
+                <Text style={s.rowLabel}>Solar Merge</Text>
+                <Text style={s.versionText}>v1.0.0</Text>
+              </View>
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* ── Privacy Policy sub-screen ─────────────────────────── */}
+      <Modal
+        animationType="slide"
+        visible={visible && inner === 'privacy'}
+        onRequestClose={() => setInner(null)}
+        statusBarTranslucent
+      >
+        <PrivacyPolicyScreen
+          onBack={() => setInner(null)}
+          onOpenDelete={() => setInner('delete')}
+        />
+      </Modal>
+
+      {/* ── Delete Account sub-screen ─────────────────────────── */}
+      <Modal
+        animationType="slide"
+        visible={visible && inner === 'delete'}
+        onRequestClose={() => setInner(null)}
+        statusBarTranslucent
+      >
+        <DeleteAccountScreen onBack={() => setInner(null)} />
+      </Modal>
+    </>
   );
 }
 

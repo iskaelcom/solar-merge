@@ -1,20 +1,22 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 
-function openDeleteAccount() {
-  if (Platform.OS === 'web') {
-    window.location.href = '/solar-merge/delete-account';
-  } else {
-    Linking.openURL('https://iskaelcom.github.io/solar-merge/delete-account');
-  }
+interface Props {
+  onBack?: () => void;
+  onOpenDelete?: () => void;
 }
 
-export function PrivacyPolicyScreen() {
+export function PrivacyPolicyScreen({ onBack, onOpenDelete }: Props = {}) {
+  function handleBack() {
+    if (onBack) { onBack(); return; }
+    if (Platform.OS === 'web') window.history.back();
+  }
+
   return (
     <View style={s.root}>
       <View style={s.topBar}>
-        {Platform.OS === 'web' && (
-          <TouchableOpacity onPress={() => { window.history.back(); }} style={s.backBtn}>
+        {(onBack || Platform.OS === 'web') && (
+          <TouchableOpacity onPress={handleBack} style={s.backBtn}>
             <Text style={s.backText}>← Back</Text>
           </TouchableOpacity>
         )}
@@ -66,9 +68,11 @@ export function PrivacyPolicyScreen() {
             Your leaderboard data (name and score) is retained as long as you have an account. You may delete
             your data at any time.
           </Body>
-          <TouchableOpacity onPress={openDeleteAccount}>
-            <Text style={s.link}>→ How to delete your account</Text>
-          </TouchableOpacity>
+          {onOpenDelete && (
+            <TouchableOpacity onPress={onOpenDelete}>
+              <Text style={s.link}>→ How to delete your account</Text>
+            </TouchableOpacity>
+          )}
         </Section>
 
         <Section title="Children's Privacy">
