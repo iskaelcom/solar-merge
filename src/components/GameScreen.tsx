@@ -20,6 +20,7 @@ import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
 import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 import { LeaderboardModal } from './LeaderboardModal';
+import { SettingsModal } from './SettingsModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
@@ -63,8 +64,9 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
   const [showTutorial, setShowTutorial] = useState(() => !isTutorialSeen());
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const { user, loading: authLoading, error: authError, signIn, signOut } = useAuth();
+  const { user, loading: authLoading, error: authError, signIn, signOut, deleteAccount } = useAuth();
   const { entries, loading: lbLoading, fetchError: lbError, userRank, submitScore } = useLeaderboard(user);
 
   // Submit score + show interstitial whenever the game ends.
@@ -157,11 +159,16 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
       {/* ── Stars background ─────────────────────────────────── */}
       <Stars />
 
-      {/* ── Row 1: BEST | SCORE | 🏆 ─────────────────────────── */}
+      {/* ── Row 1: ⚙️ | BEST | SCORE | 🏆 ──────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
-        <View style={styles.bestBox}>
-          <Text style={styles.bestLabel}>BEST</Text>
-          <Text style={styles.bestValue}>{state.highScore.toLocaleString()}</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity style={styles.helpBtn} onPress={() => setShowSettings(true)}>
+            <Text style={styles.helpText}>⚙️</Text>
+          </TouchableOpacity>
+          <View style={styles.bestBox}>
+            <Text style={styles.bestLabel}>BEST</Text>
+            <Text style={styles.bestValue}>{state.highScore.toLocaleString()}</Text>
+          </View>
         </View>
 
         <View style={styles.scoreBox}>
@@ -366,6 +373,15 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         userRank={userRank}
         onSignIn={signIn}
         onSignOut={signOut}
+        onDeleteAccount={deleteAccount}
+      />
+
+      {/* ── Settings overlay ──────────────────────────────────── */}
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+        user={user}
+        onDeleteAccount={deleteAccount}
       />
     </LinearGradient>
   );
@@ -580,6 +596,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.95,
     shadowRadius: 6,
     elevation: 4,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   helpBtn: {
     width: 32,

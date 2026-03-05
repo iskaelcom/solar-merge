@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -27,6 +28,7 @@ interface Props {
   userRank: number | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  onDeleteAccount: () => Promise<void>;
 }
 
 export function LeaderboardModal({
@@ -41,7 +43,19 @@ export function LeaderboardModal({
   userRank,
   onSignIn,
   onSignOut,
+  onDeleteAccount,
 }: Props) {
+  function confirmDelete() {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your leaderboard score and account data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: onDeleteAccount },
+      ],
+    );
+  }
+
   return (
     <Modal
       transparent
@@ -74,6 +88,9 @@ export function LeaderboardModal({
               </View>
               <TouchableOpacity style={styles.signOutBtn} onPress={onSignOut}>
                 <Text style={styles.signOutText}>Sign out</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
+                <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -245,6 +262,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
   },
   signOutText: { color: 'rgba(255,255,255,0.55)', fontSize: 12 },
+  deleteBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,80,80,0.4)',
+  },
+  deleteText: { color: '#FF5252', fontSize: 12 },
   signInBanner: {
     paddingHorizontal: 16,
     paddingVertical: 10,

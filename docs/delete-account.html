@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delete Account – Solar Merge</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0f0;
+      line-height: 1.7;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #f87171;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      color: #fca5a5;
+      margin: 32px 0 12px;
+      border-left: 3px solid #dc2626;
+      padding-left: 12px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: #ccc;
+    }
+
+    ol,
+    ul {
+      margin: 8px 0 12px 20px;
+      color: #ccc;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    a {
+      color: #a78bfa;
+    }
+
+    .card {
+      background: #12122a;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+
+    .warning {
+      background: #1f0f0f;
+      border: 1px solid #7f1d1d;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      color: #fca5a5;
+    }
+
+    .warning strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .step-num {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: #7c3aed;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-weight: bold;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .step-text {
+      padding-top: 3px;
+    }
+
+    .footer {
+      margin-top: 48px;
+      text-align: center;
+      color: #555;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Delete Account</h1>
+    <p class="subtitle">Solar Merge &nbsp;·&nbsp; Permanently remove your data</p>
+
+    <div class="warning">
+      <strong>⚠ This action is permanent</strong>
+      Deleting your account will permanently erase your leaderboard score, display name, and all associated data.
+      This cannot be undone.
+    </div>
+
+    <div class="card">
+      <h2>What Gets Deleted</h2>
+      <ul>
+        <li>Your Google account sign-in session in the app</li>
+        <li>Your leaderboard entry (score, drop count, display name)</li>
+        <li>Your Firebase Authentication account linked to Solar Merge</li>
+      </ul>
+      <p>Your Google account itself is <strong>not</strong> deleted — only the data associated with Solar Merge.</p>
+    </div>
+
+    <div class="card">
+      <h2>How to Delete Your Account In-App</h2>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-text">Open <strong>Solar Merge</strong> on your device.</div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-text">Tap the <strong>Leaderboard</strong> button on the main screen.</div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-text">If you are signed in, scroll to the bottom of the leaderboard panel and tap
+          <strong>"Delete Account"</strong>.
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">4</span>
+        <div class="step-text">Confirm the deletion in the dialog that appears. Your data will be permanently deleted
+          immediately.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Request Deletion by Email</h2>
+      <p>
+        If you cannot access the app or prefer to request deletion manually, send an email to:
+      </p>
+      <p>
+        <strong>iskaeldotcom@gmail.com</strong><br />
+        Subject: <em>Delete Account – Solar Merge</em><br />
+        Include the email address associated with your Google account.
+      </p>
+      <p>We will process your request and confirm deletion within 7 business days.</p>
+    </div>
+
+    <div class="card">
+      <h2>Data Retention After Deletion</h2>
+      <p>
+        Once deleted, your data is removed from our Firestore database immediately. Firebase Authentication
+        records are purged within 30 days in accordance with Google's data retention policies.
+        No backups retain personally identifiable information beyond 30 days.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Questions</h2>
+      <p>
+        If you have any questions, contact us at <strong>iskaeldotcom@gmail.com</strong> or visit our
+        <a href="privacy-policy.html">Privacy Policy</a>.
+      </p>
+    </div>
+
+    <div class="footer">
+      &copy; 2026 Solar Merge. All rights reserved.
+    </div>
+  </div>
+</body>
+
+</html>

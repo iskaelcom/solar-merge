@@ -8,9 +8,11 @@ import {
   signInWithPopup,
   onAuthStateChanged,
   signOut as fbSignOut,
+  deleteUser,
   User,
 } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '../firebase';
+import { auth, db, isFirebaseConfigured } from '../firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -124,5 +126,21 @@ export function useAuth() {
     await fbSignOut(auth);
   }
 
-  return { user, loading, error, signIn, signOut };
+  async function deleteAccount() {
+    if (!auth?.currentUser) return;
+    setError(null);
+    const uid = auth.currentUser.uid;
+    // Delete Firestore score document
+    if (db) {
+      await deleteDoc(doc(db, 'scores', uid)).catch(() => {});
+    }
+    // Sign out from Google on Android
+    if (Platform.OS === 'android' && GoogleSignin) {
+      await GoogleSignin.signOut().catch(() => {});
+    }
+    // Delete Firebase Auth account
+    await deleteUser(auth.currentUser);
+  }
+
+  return { user, loading, error, signIn, signOut, deleteAccount };
 }
