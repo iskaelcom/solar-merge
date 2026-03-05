@@ -161,14 +161,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
       {/* ── Row 1: ⚙️ | BEST | SCORE | 🏆 ──────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.helpBtn} onPress={() => setShowSettings(true)}>
-            <Text style={styles.helpText}>⚙️</Text>
-          </TouchableOpacity>
-          <View style={styles.bestBox}>
-            <Text style={styles.bestLabel}>BEST</Text>
-            <Text style={styles.bestValue}>{state.highScore.toLocaleString()}</Text>
-          </View>
+        <TouchableOpacity style={styles.helpBtn} onPress={() => setShowSettings(true)}>
+          <Text style={styles.helpText}>⚙️</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bestBox}>
+          <Text style={styles.bestLabel}>BEST</Text>
+          <Text style={styles.bestValue}>{state.highScore.toLocaleString()}</Text>
         </View>
 
         <View style={styles.scoreBox}>
