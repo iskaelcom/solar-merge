@@ -9,25 +9,33 @@ import { Audio } from 'expo-av';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ASSETS = {
-  drop:      require('../../assets/sounds/drop.wav')      as number,
-  merge:     require('../../assets/sounds/merge.wav')     as number,
-  star:      require('../../assets/sounds/star.wav')      as number,
+  drop: require('../../assets/sounds/drop.wav') as number,
+  merge: require('../../assets/sounds/merge.wav') as number,
+  star: require('../../assets/sounds/star.wav') as number,
   blackhole: require('../../assets/sounds/blackhole.wav') as number,
-  virus:     require('../../assets/sounds/virus.wav')     as number,
-  gameover:  require('../../assets/sounds/gameover.wav')  as number,
+  virus: require('../../assets/sounds/virus.wav') as number,
+  gameover: require('../../assets/sounds/gameover.wav') as number,
+  ambient_alien: require('../../assets/sounds/ambient_alien.wav') as number,
 };
 
 type SoundKey = keyof typeof ASSETS;
 
 const pool: Record<SoundKey, Audio.Sound | null> = {
-  drop: null, merge: null, star: null, blackhole: null, virus: null, gameover: null,
+  drop: null, merge: null, star: null, blackhole: null, virus: null, gameover: null, ambient_alien: null,
 };
 
 let initialized = false;
 let soundEnabled = true;
 
 export function isSoundEnabled(): boolean { return soundEnabled; }
-export function setSoundEnabled(enabled: boolean): void { soundEnabled = enabled; }
+export function setSoundEnabled(enabled: boolean): void {
+  soundEnabled = enabled;
+  if (enabled) {
+    startAmbientAlien();
+  } else {
+    stopAmbientAlien();
+  }
+}
 
 export async function initSounds(): Promise<void> {
   if (initialized) return;
@@ -61,4 +69,28 @@ export async function playSound(key: SoundKey): Promise<void> {
   } catch {
     // Ignore playback errors (e.g. audio focus lost)
   }
+}
+
+let ambientSound: Audio.Sound | null = null;
+
+export async function stopAmbientAlien(): Promise<void> {
+  if (ambientSound) {
+    try {
+      await ambientSound.stopAsync();
+      await ambientSound.unloadAsync();
+    } catch { }
+    ambientSound = null;
+  }
+}
+
+export async function startAmbientAlien(): Promise<void> {
+  if (ambientSound || !soundEnabled) return;
+  try {
+    const { sound } = await Audio.Sound.createAsync(ASSETS.ambient_alien, {
+      shouldPlay: true,
+      isLooping: true,
+      volume: 0.45,
+    });
+    ambientSound = sound;
+  } catch { }
 }

@@ -21,6 +21,11 @@ export function isSoundEnabled(): boolean { return soundEnabled; }
 
 export function setSoundEnabled(enabled: boolean): void {
   soundEnabled = enabled;
+  if (enabled) {
+    startAmbientAlien();
+  } else {
+    stopAmbientAlien();
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(SOUND_PREF_KEY, String(enabled));
@@ -136,10 +141,10 @@ function synthBlackhole(c: AudioContext) {
 
   // Main sweep: 320Hz → 50Hz exponential, sawtooth-like harmonics
   const freqs = [1, 2, 3, 4];
-  const amps  = [0.60, 0.22, 0.12, 0.06];
+  const amps = [0.60, 0.22, 0.12, 0.06];
   freqs.forEach((mult, i) => {
     const osc = c.createOscillator();
-    const g   = c.createGain();
+    const g = c.createGain();
     osc.connect(g);
     g.connect(c.destination);
     osc.frequency.setValueAtTime(320 * mult, now);
@@ -174,11 +179,11 @@ function synthGameOver(c: AudioContext) {
 
   noteFreqs.forEach((freq, idx) => {
     const start = now + idx * noteDur;
-    const end   = start + noteDur;
+    const end = start + noteDur;
 
     // Fundamental
     const osc1 = c.createOscillator();
-    const g1   = c.createGain();
+    const g1 = c.createGain();
     osc1.connect(g1);
     g1.connect(c.destination);
     osc1.frequency.setValueAtTime(freq, start);
@@ -191,7 +196,7 @@ function synthGameOver(c: AudioContext) {
 
     // 2nd harmonic (warm trombone-like)
     const osc2 = c.createOscillator();
-    const g2   = c.createGain();
+    const g2 = c.createGain();
     osc2.connect(g2);
     g2.connect(c.destination);
     osc2.frequency.setValueAtTime(freq * 2, start);
@@ -248,6 +253,143 @@ function synthVirus(c: AudioContext) {
   carrier.stop(now + dur);
 }
 
+// ── Alien Ambient: eerie sci-fi space sounds ──────────────────────────
+
+let ambientNodes: {
+  oscillators: (OscillatorNode | AudioBufferSourceNode)[];
+  gain: GainNode;
+} | null = null;
+
+function createPinkNoise(c: AudioContext, duration: number = 2) {
+  const bufferSize = c.sampleRate * duration;
+  const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.96900 * b2 + white * 0.1538520;
+    b3 = 0.86650 * b3 + white * 0.3104856;
+    b4 = 0.55000 * b4 + white * 0.5329522;
+    b5 = -0.7616 * b5 - white * 0.0168980;
+    data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+    data[i] *= 0.11; // gain compensation
+    b6 = white * 0.115926;
+  }
+  return buffer;
+}
+
+export function stopAmbientAlien(): void {
+  if (ambientNodes) {
+    const { oscillators, gain } = ambientNodes;
+    const now = gain.context.currentTime;
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+    setTimeout(() => {
+      oscillators.forEach(o => { try { o.stop(); o.disconnect(); } catch { } });
+      gain.disconnect();
+    }, 1600);
+    ambientNodes = null;
+  }
+}
+
+export function startAmbientAlien(): void {
+  if (ambientNodes || !soundEnabled) return;
+  const c = getCtx();
+  if (!c) return;
+  resumeCtx(c);
+
+  const now = c.currentTime;
+  const masterGain = c.createGain();
+  masterGain.connect(c.destination);
+  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.linearRampToValueAtTime(0.35, now + 4);
+
+  const nodes: (OscillatorNode | AudioBufferSourceNode)[] = [];
+
+  // 1. FM "Space Hum" (Carrier + Modulator)
+  const carrier = c.createOscillator();
+  const modulator = c.createOscillator();
+  const modGain = c.createGain();
+
+  carrier.frequency.setValueAtTime(55, now); // Low G
+  modulator.frequency.setValueAtTime(0.5, now); // Slow oscillation
+  modGain.gain.setValueAtTime(20, now); // Frequency modulation depth
+
+  modulator.connect(modGain);
+  modGain.connect(carrier.frequency);
+  carrier.connect(masterGain);
+
+  carrier.start(now);
+  modulator.start(now);
+  nodes.push(carrier, modulator);
+
+  // 2. High-pitched "Distant Alien Beeps" (Randomized sparse beeps)
+  const scheduleBeep = (delay: number) => {
+    if (!ambientNodes) return;
+    const startTime = c.currentTime + delay;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1000 + Math.random() * 1000, startTime);
+    g.gain.setValueAtTime(0, startTime);
+    g.gain.linearRampToValueAtTime(0.06, startTime + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + 2.5);
+
+    osc.connect(g);
+    g.connect(masterGain);
+    try {
+      osc.start(startTime);
+      osc.stop(startTime + 2.6);
+    } catch { } // Context might be closed
+
+    setTimeout(() => {
+      if (ambientNodes) scheduleBeep(Math.random() * 8 + 5);
+    }, (delay + 4) * 1000);
+  };
+  scheduleBeep(3);
+
+  // 3. Modulated Filtered Noise
+  const noiseSource = c.createBufferSource();
+  noiseSource.buffer = createPinkNoise(c, 4);
+  noiseSource.loop = true;
+  const filter = c.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(600, now);
+
+  const filterLFO = c.createOscillator();
+  const filterLFOGain = c.createGain();
+  filterLFO.frequency.setValueAtTime(0.15, now);
+  filterLFOGain.gain.setValueAtTime(300, now); // Modulate filter cutoff
+  filterLFO.connect(filterLFOGain);
+  filterLFOGain.connect(filter.frequency);
+
+  noiseSource.connect(filter);
+  filter.connect(masterGain);
+  noiseSource.start(now);
+  filterLFO.start(now);
+  nodes.push(noiseSource, filterLFO);
+
+  ambientNodes = { oscillators: nodes, gain: masterGain };
+}
+
+// Global resume listener for browser autoplay policy
+if (typeof window !== 'undefined') {
+  const resume = () => {
+    const c = getCtx();
+    if (c && c.state === 'suspended') {
+      c.resume().then(() => {
+        if (soundEnabled) startAmbientAlien();
+      });
+    } else if (c && c.state === 'running' && soundEnabled) {
+      startAmbientAlien();
+    }
+  };
+  window.addEventListener('click', resume, { once: true });
+  window.addEventListener('touchstart', resume, { once: true });
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function initSounds(): Promise<void> {
@@ -262,12 +404,12 @@ export function playSound(key: SoundKey): Promise<void> {
   if (!c) return Promise.resolve();
   resumeCtx(c);
 
-  if (key === 'drop')           synthDrop(c);
-  else if (key === 'merge')     synthMerge(c);
-  else if (key === 'star')      synthStar(c);
+  if (key === 'drop') synthDrop(c);
+  else if (key === 'merge') synthMerge(c);
+  else if (key === 'star') synthStar(c);
   else if (key === 'blackhole') synthBlackhole(c);
-  else if (key === 'virus')     synthVirus(c);
-  else if (key === 'gameover')  synthGameOver(c);
+  else if (key === 'virus') synthVirus(c);
+  else if (key === 'gameover') synthGameOver(c);
 
   return Promise.resolve();
 }
