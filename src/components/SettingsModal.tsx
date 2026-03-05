@@ -5,6 +5,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -12,6 +13,7 @@ import {
 import { User } from 'firebase/auth';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
+import { isSoundEnabled, setSoundEnabled } from '../utils/SoundManager';
 
 type InnerScreen = null | 'privacy' | 'delete';
 
@@ -24,6 +26,12 @@ interface Props {
 
 export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props) {
   const [inner, setInner] = useState<InnerScreen>(null);
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+
+  function toggleSound(val: boolean) {
+    setSoundOn(val);
+    setSoundEnabled(val);
+  }
 
   function handleClose() {
     setInner(null);
@@ -72,7 +80,20 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
             </View>
 
             <ScrollView style={s.body} showsVerticalScrollIndicator={false}>
-              <Text style={s.sectionLabel}>LEGAL</Text>
+              <Text style={s.sectionLabel}>SOUND</Text>
+
+              <View style={s.row}>
+                <Text style={s.rowIcon}>🔊</Text>
+                <Text style={s.rowLabel}>Sound Effects</Text>
+                <Switch
+                  value={soundOn}
+                  onValueChange={toggleSound}
+                  trackColor={{ false: 'rgba(255,255,255,0.15)', true: '#7c6fff' }}
+                  thumbColor={soundOn ? '#fff' : 'rgba(255,255,255,0.6)'}
+                />
+              </View>
+
+              <Text style={[s.sectionLabel, { marginTop: 8 }]}>LEGAL</Text>
 
               <TouchableOpacity style={s.row} onPress={() => setInner('privacy')}>
                 <Text style={s.rowIcon}>🔒</Text>

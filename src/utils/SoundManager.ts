@@ -8,6 +8,26 @@
 
 type SoundKey = 'drop' | 'merge' | 'star' | 'blackhole' | 'virus' | 'gameover';
 
+const SOUND_PREF_KEY = 'solar_merge_sound_enabled';
+
+let soundEnabled: boolean = (() => {
+  try {
+    const val = typeof localStorage !== 'undefined' ? localStorage.getItem(SOUND_PREF_KEY) : null;
+    return val === null ? true : val === 'true';
+  } catch { return true; }
+})();
+
+export function isSoundEnabled(): boolean { return soundEnabled; }
+
+export function setSoundEnabled(enabled: boolean): void {
+  soundEnabled = enabled;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SOUND_PREF_KEY, String(enabled));
+    }
+  } catch { }
+}
+
 let ctx: AudioContext | null = null;
 
 function getCtx(): AudioContext | null {
@@ -237,6 +257,7 @@ export function initSounds(): Promise<void> {
 }
 
 export function playSound(key: SoundKey): Promise<void> {
+  if (!soundEnabled) return Promise.resolve();
   const c = getCtx();
   if (!c) return Promise.resolve();
   resumeCtx(c);

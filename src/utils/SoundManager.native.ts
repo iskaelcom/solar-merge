@@ -24,6 +24,10 @@ const pool: Record<SoundKey, Audio.Sound | null> = {
 };
 
 let initialized = false;
+let soundEnabled = true;
+
+export function isSoundEnabled(): boolean { return soundEnabled; }
+export function setSoundEnabled(enabled: boolean): void { soundEnabled = enabled; }
 
 export async function initSounds(): Promise<void> {
   if (initialized) return;
@@ -48,6 +52,7 @@ export async function initSounds(): Promise<void> {
 }
 
 export async function playSound(key: SoundKey): Promise<void> {
+  if (!soundEnabled) return;
   const sound = pool[key];
   if (!sound) return;
   try {
