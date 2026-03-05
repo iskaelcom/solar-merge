@@ -689,9 +689,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const dropPlanet = useCallback((x: number) => {
     if (isDroppingRef.current || stateRef.current.gameOver || !physicsRef.current) return;
     isDroppingRef.current = true;
-    playSound('drop');
 
     const prev = stateRef.current;
+
+    if (prev.currentIsVirus)      { playSound('virus'); }
+    else if (prev.currentIsStar)      { playSound('star'); }
+    else if (prev.currentIsBlackHole) { playSound('blackhole'); }
+    else                              { playSound('drop'); }
 
     // ── Drop a virus ───────────────────────────────────────────────────
     if (prev.currentIsVirus) {

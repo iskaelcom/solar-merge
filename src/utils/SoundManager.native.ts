@@ -9,15 +9,18 @@ import { Audio } from 'expo-av';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ASSETS = {
-  drop:  require('../../assets/sounds/drop.wav')  as number,
-  merge: require('../../assets/sounds/merge.wav') as number,
+  drop:      require('../../assets/sounds/drop.wav')      as number,
+  merge:     require('../../assets/sounds/merge.wav')     as number,
+  star:      require('../../assets/sounds/star.wav')      as number,
+  blackhole: require('../../assets/sounds/blackhole.wav') as number,
+  virus:     require('../../assets/sounds/virus.wav')     as number,
+  gameover:  require('../../assets/sounds/gameover.wav')  as number,
 };
 
 type SoundKey = keyof typeof ASSETS;
 
 const pool: Record<SoundKey, Audio.Sound | null> = {
-  drop:  null,
-  merge: null,
+  drop: null, merge: null, star: null, blackhole: null, virus: null, gameover: null,
 };
 
 let initialized = false;
