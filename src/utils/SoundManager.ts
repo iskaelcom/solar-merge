@@ -108,50 +108,80 @@ function synthStar(c: AudioContext) {
   });
 }
 
-// ── Black hole: deep ominous descending rumble (450ms) ───────────────────────
+// ── Black hole: punchy "whomp" sweep 320Hz → 50Hz (500ms) ───────────────────
 
 function synthBlackhole(c: AudioContext) {
   const now = c.currentTime;
-  const dur = 0.45;
+  const dur = 0.5;
 
-  // Main descending oscillator
-  const osc1 = c.createOscillator();
-  const gain1 = c.createGain();
-  osc1.connect(gain1);
-  gain1.connect(c.destination);
-  osc1.frequency.setValueAtTime(110, now);
-  osc1.frequency.exponentialRampToValueAtTime(45, now + dur);
-  gain1.gain.setValueAtTime(0, now);
-  gain1.gain.linearRampToValueAtTime(0.5, now + 0.06);
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + dur);
-  osc1.start(now);
-  osc1.stop(now + dur + 0.01);
+  // Main sweep: 320Hz → 50Hz exponential, sawtooth-like harmonics
+  const freqs = [1, 2, 3, 4];
+  const amps  = [0.60, 0.22, 0.12, 0.06];
+  freqs.forEach((mult, i) => {
+    const osc = c.createOscillator();
+    const g   = c.createGain();
+    osc.connect(g);
+    g.connect(c.destination);
+    osc.frequency.setValueAtTime(320 * mult, now);
+    osc.frequency.exponentialRampToValueAtTime(50 * mult, now + dur);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(amps[i] * 0.9, now + 0.002); // instant attack
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.start(now);
+    osc.stop(now + dur + 0.01);
+  });
 
-  // Detuned second oscillator for width
-  const osc2 = c.createOscillator();
-  const gain2 = c.createGain();
-  osc2.connect(gain2);
-  gain2.connect(c.destination);
-  osc2.frequency.setValueAtTime(112, now);
-  osc2.frequency.exponentialRampToValueAtTime(46, now + dur);
-  gain2.gain.setValueAtTime(0, now);
-  gain2.gain.linearRampToValueAtTime(0.35, now + 0.06);
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + dur);
-  osc2.start(now);
-  osc2.stop(now + dur + 0.01);
+  // Detuned layer (+1.8%) for width
+  const oscDet = c.createOscillator();
+  const gainDet = c.createGain();
+  oscDet.connect(gainDet);
+  gainDet.connect(c.destination);
+  oscDet.frequency.setValueAtTime(320 * 1.018, now);
+  oscDet.frequency.exponentialRampToValueAtTime(50 * 1.018, now + dur);
+  gainDet.gain.setValueAtTime(0, now);
+  gainDet.gain.linearRampToValueAtTime(0.32, now + 0.002);
+  gainDet.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  oscDet.start(now);
+  oscDet.stop(now + dur + 0.01);
+}
 
-  // Sub-octave
-  const osc3 = c.createOscillator();
-  const gain3 = c.createGain();
-  osc3.connect(gain3);
-  gain3.connect(c.destination);
-  osc3.frequency.setValueAtTime(55, now);
-  osc3.frequency.exponentialRampToValueAtTime(22, now + dur);
-  gain3.gain.setValueAtTime(0, now);
-  gain3.gain.linearRampToValueAtTime(0.25, now + 0.08);
-  gain3.gain.exponentialRampToValueAtTime(0.001, now + dur);
-  osc3.start(now);
-  osc3.stop(now + dur + 0.01);
+// ── Game Over: sad descending 4-note minor phrase (900ms) ────────────────────
+
+function synthGameOver(c: AudioContext) {
+  const now = c.currentTime;
+  const noteFreqs = [440, 370, 330, 247];
+  const noteDur = 0.21;
+
+  noteFreqs.forEach((freq, idx) => {
+    const start = now + idx * noteDur;
+    const end   = start + noteDur;
+
+    // Fundamental
+    const osc1 = c.createOscillator();
+    const g1   = c.createGain();
+    osc1.connect(g1);
+    g1.connect(c.destination);
+    osc1.frequency.setValueAtTime(freq, start);
+    g1.gain.setValueAtTime(0, start);
+    g1.gain.linearRampToValueAtTime(0.5, start + 0.018);
+    g1.gain.setValueAtTime(0.5, start + noteDur * 0.7);
+    g1.gain.exponentialRampToValueAtTime(0.001, end);
+    osc1.start(start);
+    osc1.stop(end + 0.01);
+
+    // 2nd harmonic (warm trombone-like)
+    const osc2 = c.createOscillator();
+    const g2   = c.createGain();
+    osc2.connect(g2);
+    g2.connect(c.destination);
+    osc2.frequency.setValueAtTime(freq * 2, start);
+    g2.gain.setValueAtTime(0, start);
+    g2.gain.linearRampToValueAtTime(0.22, start + 0.018);
+    g2.gain.setValueAtTime(0.22, start + noteDur * 0.7);
+    g2.gain.exponentialRampToValueAtTime(0.001, end);
+    osc2.start(start);
+    osc2.stop(end + 0.01);
+  });
 }
 
 // ── Virus: eerie glitchy warble (220ms) ──────────────────────────────────────
@@ -211,11 +241,12 @@ export function playSound(key: SoundKey): Promise<void> {
   if (!c) return Promise.resolve();
   resumeCtx(c);
 
-  if (key === 'drop')      synthDrop(c);
-  else if (key === 'merge')      synthMerge(c);
+  if (key === 'drop')           synthDrop(c);
+  else if (key === 'merge')     synthMerge(c);
   else if (key === 'star')      synthStar(c);
   else if (key === 'blackhole') synthBlackhole(c);
   else if (key === 'virus')     synthVirus(c);
+  else if (key === 'gameover')  synthGameOver(c);
 
   return Promise.resolve();
 }

@@ -535,6 +535,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
               checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
             };
           });
+          playSound('gameover');
           loopActiveRef.current = false;
           cancelAnimationFrame(rafRef.current);
 
