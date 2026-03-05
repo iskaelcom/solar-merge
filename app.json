@@ -6,20 +6,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "splash": {
       "backgroundColor": "#000000"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.iskael.solarmerge"
-    },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
       "package": "com.iskael.solarmerge"
     },
     "web": {
+      "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "baseUrl": "/solar-merge"
     },
