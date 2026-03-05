@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useInterstitial } from '../hooks/useInterstitial';
 
 interface Props {
   score: number;
@@ -22,8 +21,6 @@ interface Props {
 export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn, onShowLeaderboard }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const { showInterstitial } = useInterstitial(onRestart);
-
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
@@ -41,7 +38,7 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
   }, []);
 
   const handleRestart = () => {
-    showInterstitial();
+    onRestart();
   };
 
   const isNewHigh = score >= highScore && score > 0;

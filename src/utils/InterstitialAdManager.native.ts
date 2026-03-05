@@ -22,16 +22,13 @@ ad.addAdEventListener(AdEventType.ERROR, () => {
   isLoaded = false;
 });
 
-export function preloadInterstitial() {
-  if (!isLoaded) {
-    ad.load();
-  }
-}
+// Preload immediately on first import
+ad.load();
 
 export function showInterstitialAd() {
   if (isLoaded) {
     ad.show();
   } else {
-    ad.load(); // not ready yet, load for next time
+    ad.load(); // not ready, load for next time
   }
 }
