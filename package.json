@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export -p web && node scripts/obfuscate-bundle.js && node scripts/prepare-static-routes.js",
-    "build:android": "mkdir -p android/app/src/main/assets && npx expo export:embed --platform android --dev false --entry-file node_modules/expo/AppEntry.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res && cd android && ./gradlew assembleRelease && cd .. && cp android/app/build/outputs/apk/release/app-release.apk solar-merge-release.apk && echo 'APK ready: solar-merge-release.apk'"
+    "build:android": "mkdir -p android/app/src/main/assets && npx expo export:embed --platform android --dev false --entry-file node_modules/expo/AppEntry.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res && cd android && ./gradlew assembleRelease && cd .. && cp android/app/build/outputs/apk/release/app-release.apk solar-merge-release.apk && echo 'APK ready: solar-merge-release.apk'",
+    "build:aab": "mkdir -p android/app/src/main/assets && npx expo export:embed --platform android --dev false --entry-file node_modules/expo/AppEntry.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res && cd android && ./gradlew bundleRelease && cd .. && cp android/app/build/outputs/bundle/release/app-release.aab solar-merge-release.aab && echo 'AAB ready: solar-merge-release.aab'"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",

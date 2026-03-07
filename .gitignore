@@ -19,6 +19,7 @@ credentials.json
 *.mobileprovision
 *.orig.*
 *.apk
+*.aab
 
 # Metro
 .metro-health-check*
