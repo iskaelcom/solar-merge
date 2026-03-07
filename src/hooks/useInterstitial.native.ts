@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 
-const interstitialUnitId = __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-3940256099942544/1033173712';
+const interstitialUnitId = __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-9833011672001766/7428219091';
 
 export const useInterstitial = (onAdClosed: () => void) => {
     const [interstitial, setInterstitial] = useState<InterstitialAd | null>(null);
