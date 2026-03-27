@@ -159,8 +159,8 @@ export class SolarPhysics {
   // Deferred operations: replaces setTimeout(0) — flushed at end of each step()
   private deferredOps: Array<() => void> = [];
   // Max speed cap to prevent runaway bodies after merges/shockwaves
-  private static readonly MAX_SPEED = 40;
-  private static readonly MAX_SPEED_SQ = 40 * 40;
+  private static readonly MAX_SPEED = 32;
+  private static readonly MAX_SPEED_SQ = 32 * 32;
   // Spatial grid for broadphase radius queries in shockwave/suction (cell = 120px)
   private spatialGrid: SpatialGrid;
   // Shield
@@ -667,8 +667,8 @@ export class SolarPhysics {
    */
   applyMergeShockwave(x: number, y: number, mergedPlanetSize: number, excludeId?: string): void {
     const intensity = Math.sqrt(mergedPlanetSize / 15);
-    const maxKick = mergedPlanetSize * 0.12 * intensity;
-    const shockRadius = mergedPlanetSize * 5.5 * intensity;
+    const maxKick = mergedPlanetSize * 0.05 * intensity;
+    const shockRadius = mergedPlanetSize * 2.5 * intensity;
 
     // Build spatial grid then query only cells that overlap the shock radius
     this.spatialGrid.build(this.planets.values());
