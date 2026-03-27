@@ -180,8 +180,8 @@ export class SolarPhysics {
     this.engine = Matter.Engine.create({
       gravity: { x: 0, y: GRAVITY },
       enableSleeping: true,
-      positionIterations: 8,    // increased for precision/smoothness
-      velocityIterations: 6,    // increased for precision/smoothness
+      positionIterations: 4,    // balanced (reduced from 8 for battery/heat)
+      velocityIterations: 2,    // balanced (reduced from 6 for battery/heat)
       constraintIterations: 2,
     });
 
@@ -761,9 +761,9 @@ export class SolarPhysics {
   }
 
   step(delta: number): void {
-    // Support up to ~120fps by allowing smaller delta min.
-    // Clamping to 8.33ms (120fps) or 16.6ms (60fps) prevents large tunneling on lag.
-    Matter.Engine.update(this.engine, Math.min(delta, 16.6));
+    // Balanced ~45fps cap (22ms) for better battery/thermal life while keeping it smooth.
+    // Clamping protects against large tunneling on lag.
+    Matter.Engine.update(this.engine, Math.min(delta, 22));
     // Flush merges/removals queued during collision events — same frame, no macrotask
     this.flushDeferred();
     this.checkShield();
