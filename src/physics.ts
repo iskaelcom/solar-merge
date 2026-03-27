@@ -415,8 +415,8 @@ export class SolarPhysics {
       label: 'star_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
-    // Dampen rotation 8× so stars spin slowly instead of flipping wildly
-    Matter.Body.setInertia(body, body.inertia * 8);
+    // Dampen rotation 2× so stars spin slowly instead of flipping wildly
+    Matter.Body.setInertia(body, body.inertia * 2);
     const entry: StarPhysicsBody = { id, body };
     this.stars.set(id, entry);
     this.bodyIdToStar.set(body.id, entry);
@@ -453,7 +453,7 @@ export class SolarPhysics {
       label: 'bh_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
-    Matter.Body.setInertia(body, body.inertia * 8);
+    Matter.Body.setInertia(body, body.inertia * 2);
     const entry: BlackHolePhysicsBody = { id, body };
     this.blackHoles.set(id, entry);
     this.bodyIdToBlackHole.set(body.id, entry);
@@ -494,7 +494,7 @@ export class SolarPhysics {
       label: 'virus_' + id,
       collisionFilter: { category: 0x0001, mask: 0x0001 | 0x0002 },
     });
-    Matter.Body.setInertia(body, body.inertia * 8);
+    Matter.Body.setInertia(body, body.inertia * 2);
     const entry: VirusPhysicsBody = { id, body };
     this.viruses.set(id, entry);
     this.bodyIdToVirus.set(body.id, entry);
@@ -576,8 +576,8 @@ export class SolarPhysics {
         mask: 0x0001 | 0x0002,
       },
     });
-    // Dampen rotation 8× — planets still spin naturally but won't flip wildly on collision
-    Matter.Body.setInertia(body, body.inertia * 8);
+    // Dampen rotation 2× — planets still spin naturally but won't flip wildly on collision
+    Matter.Body.setInertia(body, body.inertia * 2);
 
     const entry: PhysicsPlanet = { id, planetId, body };
     this.planets.set(id, entry);

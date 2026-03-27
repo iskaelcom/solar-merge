@@ -142,7 +142,7 @@ export const MAX_SPAWN_LEVEL = 4;
 // Physics settings
 export const GRAVITY = 2;
 export const RESTITUTION = 0.28; // slightly more lively
-export const FRICTION = 0.4;     // smoother sliding
+export const FRICTION = 0.1;     // even smoother for faster rolling/sliding
 export const FRICTION_AIR = 0.01;
 
 // Score combo reset time (ms)
