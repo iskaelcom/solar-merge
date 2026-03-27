@@ -159,8 +159,8 @@ export class SolarPhysics {
   // Deferred operations: replaces setTimeout(0) — flushed at end of each step()
   private deferredOps: Array<() => void> = [];
   // Max speed cap to prevent runaway bodies after merges/shockwaves
-  private static readonly MAX_SPEED = 28;
-  private static readonly MAX_SPEED_SQ = 28 * 28;
+  private static readonly MAX_SPEED = 40;
+  private static readonly MAX_SPEED_SQ = 40 * 40;
   // Spatial grid for broadphase radius queries in shockwave/suction (cell = 120px)
   private spatialGrid: SpatialGrid;
   // Shield
@@ -180,9 +180,9 @@ export class SolarPhysics {
     this.engine = Matter.Engine.create({
       gravity: { x: 0, y: GRAVITY },
       enableSleeping: true,
-      positionIterations: 4,    // default 6 — reduced for lower CPU
-      velocityIterations: 3,    // default 4 — reduced for lower CPU
-      constraintIterations: 1,  // default 2 — no constraints in this game
+      positionIterations: 8,    // increased for precision/smoothness
+      velocityIterations: 6,    // increased for precision/smoothness
+      constraintIterations: 2,
     });
 
     this.createWalls();
@@ -561,7 +561,7 @@ export class SolarPhysics {
     });
   }
 
-  addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 1): void {
+  addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 3): void {
     const planet = PLANETS[planetId - 1];
     const radius = planet.size * planet.hitboxRatio;
 
@@ -761,7 +761,9 @@ export class SolarPhysics {
   }
 
   step(delta: number): void {
-    Matter.Engine.update(this.engine, Math.min(delta, 33));
+    // Support up to ~120fps by allowing smaller delta min.
+    // Clamping to 8.33ms (120fps) or 16.6ms (60fps) prevents large tunneling on lag.
+    Matter.Engine.update(this.engine, Math.min(delta, 16.6));
     // Flush merges/removals queued during collision events — same frame, no macrotask
     this.flushDeferred();
     this.checkShield();

@@ -253,7 +253,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
               style={[
                 styles.dropLine,
                 {
-                  left: Animated.subtract(pointerXAnim, 1),
+                  transform: [{ translateX: pointerXAnim }],
                   top: previewY * 2,
                   height: gameHeight - previewY * 2,
                 },
@@ -267,18 +267,23 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
               pointerEvents="none"
               style={{
                 position: 'absolute',
-                left: Animated.subtract(pointerXAnim, previewRadius),
-                top: previewY - previewRadius,
+                top: previewY,
+                transform: [
+                  { translateX: pointerXAnim },
+                  { translateY: -previewRadius }, // offset by radius so it's centered on X
+                ],
               }}
             >
-              {state.currentIsVirus
-                ? <VirusPlanetView x={previewRadius} y={previewRadius} ghost />
-                : state.currentIsBlackHole
-                  ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
-                  : state.currentIsStar
-                    ? <StarView x={previewRadius} y={previewRadius} ghost />
-                    : <PlanetView planetId={state.currentPlanetId} x={previewRadius} y={previewRadius} ghost />
-              }
+              <View style={{ transform: [{ translateX: -previewRadius }] }}>
+                {state.currentIsVirus
+                  ? <VirusPlanetView x={previewRadius} y={previewRadius} ghost />
+                  : state.currentIsBlackHole
+                    ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
+                    : state.currentIsStar
+                      ? <StarView x={previewRadius} y={previewRadius} ghost />
+                      : <PlanetView planetId={state.currentPlanetId} x={previewRadius} y={previewRadius} ghost />
+                }
+              </View>
             </Animated.View>
           )}
 
@@ -645,9 +650,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  dropLine: {
+    dropLine: {
     position: 'absolute',
     width: 2,
+    left: -1, // center of the line on X=0
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderStyle: 'dashed',
   },

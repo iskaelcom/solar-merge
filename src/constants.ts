@@ -134,15 +134,15 @@ export const GAME_HEIGHT = 580;
 export const DANGER_HEIGHT = 30;
 
 // Delay (ms) before next planet appears after dropping
-export const DROP_DELAY = 650;
+export const DROP_DELAY = 450;
 
 // Max planet level to randomly spawn (1-based index)
 export const MAX_SPAWN_LEVEL = 4;
 
 // Physics settings
-export const GRAVITY = 1.25;
-export const RESTITUTION = 0.22; // bounciness reduced slightly
-export const FRICTION = 0.6;     // increased friction for stability
+export const GRAVITY = 2;
+export const RESTITUTION = 0.28; // slightly more lively
+export const FRICTION = 0.4;     // smoother sliding
 export const FRICTION_AIR = 0.01;
 
 // Score combo reset time (ms)
