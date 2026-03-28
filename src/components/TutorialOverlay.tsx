@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PlanetThumb } from './PlanetView';
 import { StarThumb } from './StarView';
 import { BlackHoleThumb } from './BlackHoleView';
@@ -17,22 +18,17 @@ import { User } from 'firebase/auth';
 
 const TUTORIAL_KEY = 'solar-merge-tutorial-v2';
 
-export function isTutorialSeen(): boolean {
+export async function isTutorialSeen(): Promise<boolean> {
   try {
-    return (
-      typeof localStorage !== 'undefined' &&
-      localStorage.getItem(TUTORIAL_KEY) === '1'
-    );
+    return (await AsyncStorage.getItem(TUTORIAL_KEY)) === '1';
   } catch {
     return false;
   }
 }
 
-function markSeen(): void {
+async function markSeen(): Promise<void> {
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TUTORIAL_KEY, '1');
-    }
+    await AsyncStorage.setItem(TUTORIAL_KEY, '1');
   } catch { }
 }
 

@@ -6,6 +6,10 @@
  */
 
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const SOUND_PREF_KEY = 'solar_merge_sound_enabled';
+const AMBIENT_PREF_KEY = 'solar_merge_ambient_enabled';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ASSETS = {
@@ -33,6 +37,7 @@ export function isAmbientEnabled(): boolean { return ambientEnabled; }
 
 export function setSoundEnabled(enabled: boolean): void {
   sfxEnabled = enabled;
+  AsyncStorage.setItem(SOUND_PREF_KEY, String(enabled)).catch(() => { });
 }
 
 export function setAmbientEnabled(enabled: boolean): void {
@@ -42,11 +47,21 @@ export function setAmbientEnabled(enabled: boolean): void {
   } else {
     stopAmbientAlien();
   }
+  AsyncStorage.setItem(AMBIENT_PREF_KEY, String(enabled)).catch(() => { });
 }
 
 export async function initSounds(): Promise<void> {
   if (initialized) return;
   initialized = true;
+
+  // Load preferences
+  try {
+    const sfxVal = await AsyncStorage.getItem(SOUND_PREF_KEY);
+    if (sfxVal !== null) sfxEnabled = sfxVal === 'true';
+
+    const ambVal = await AsyncStorage.getItem(AMBIENT_PREF_KEY);
+    if (ambVal !== null) ambientEnabled = ambVal === 'true';
+  } catch { }
 
   await Audio.setAudioModeAsync({
     playsInSilentModeIOS: true,

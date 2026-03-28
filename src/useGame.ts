@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SolarPhysics } from './physics';
 import { playSound } from './utils/SoundManager';
 import {
@@ -41,9 +42,9 @@ export const calculateChecksum = (score: number, dropCount: number): string => {
 };
 
 const storage = {
-  get: (): { score: number; dropCount: number; checksum: string } => {
+  get: async (): Promise<{ score: number; dropCount: number; checksum: string }> => {
     try {
-      const val = typeof localStorage !== 'undefined' ? localStorage.getItem(HIGH_SCORE_KEY) : null;
+      const val = await AsyncStorage.getItem(HIGH_SCORE_KEY);
       if (!val) return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
       const data = JSON.parse(val);
       if (data.checksum === calculateChecksum(data.score, data.dropCount)) {
@@ -52,12 +53,10 @@ const storage = {
     } catch { }
     return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
   },
-  set: (score: number, dropCount: number) => {
+  set: async (score: number, dropCount: number) => {
     try {
-      if (typeof localStorage !== 'undefined') {
-        const checksum = calculateChecksum(score, dropCount);
-        localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify({ score, dropCount, checksum }));
-      }
+      const checksum = calculateChecksum(score, dropCount);
+      await AsyncStorage.setItem(HIGH_SCORE_KEY, JSON.stringify({ score, dropCount, checksum }));
     } catch { }
   },
 };
@@ -153,17 +152,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return bagRef.current.shift()!;
   }, [refillBag]);
 
-  const [state, setState] = useState<GameState>(() => {
-    const saved = storage.get();
-    return {
-      ...INITIAL_STATE,
-      highScore: saved.score,
-      checksum: calculateChecksum(0, 0),
-      currentPlanetId: 1,
-      nextPlanetId: 2,
-      pointerX: gameWidth / 2,
-    };
-  });
+  const [state, setState] = useState<GameState>(() => ({
+    ...INITIAL_STATE,
+    pointerX: gameWidth / 2,
+  }));
+
+  // Load high score on mount
+  useEffect(() => {
+    storage.get().then((saved) => {
+      setState((s) => ({ ...s, highScore: saved.score }));
+    });
+  }, []);
   const stateRef = useRef<GameState>(state);
   stateRef.current = state;
 

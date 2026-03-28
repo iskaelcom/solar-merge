@@ -62,7 +62,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
 
-  const [showTutorial, setShowTutorial] = useState(() => !isTutorialSeen());
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    isTutorialSeen().then((seen) => {
+      if (!seen) setShowTutorial(true);
+    });
+  }, []);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
