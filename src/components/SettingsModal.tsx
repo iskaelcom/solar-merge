@@ -14,6 +14,7 @@ import { User } from 'firebase/auth';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { DeleteAccountScreen } from '../screens/DeleteAccountScreen';
 import { isSoundEnabled, setSoundEnabled, isAmbientEnabled, setAmbientEnabled } from '../utils/SoundManager';
+import Constants from 'expo-constants';
 
 type InnerScreen = null | 'privacy' | 'delete';
 
@@ -145,7 +146,7 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
               <View style={s.row}>
                 <Text style={s.rowIcon}>🪐</Text>
                 <Text style={s.rowLabel}>Solar Merge</Text>
-                <Text style={s.versionText}>v1.0.0</Text>
+                <Text style={s.versionText}>v{Constants.expoConfig?.version || '1.0.0'}</Text>
               </View>
             </ScrollView>
           </View>
