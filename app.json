@@ -15,7 +15,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.iskael.solarmerge"
+      "package": "com.iskael.solarmerge",
+      "newArchEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -37,11 +38,13 @@
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "1.9.24",
+            "kotlinVersion": "2.0.21",
             "enableMultiDex": true
           }
         }
-      ]
+      ],
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
