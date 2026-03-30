@@ -20,6 +20,8 @@ import {
   SHIELD_THRESHOLD_DEFAULT,
   SHIELD_THRESHOLD_MIN,
   SHIELD_THRESHOLD_ADAPT_DROPS,
+  MAX_SESSION_DIAMONDS,
+  DIAMONDS_PER_MINUTE,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 
@@ -27,6 +29,7 @@ let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
 
 const HIGH_SCORE_KEY = 'solar-merge-highscore';
+const DIAMONDS_KEY = 'solar-merge-diamonds';
 
 const SALT = 'sm-v2-secure';
 
@@ -42,21 +45,37 @@ export const calculateChecksum = (score: number, dropCount: number): string => {
 };
 
 const storage = {
-  get: async (): Promise<{ score: number; dropCount: number; checksum: string }> => {
+  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number }> => {
     try {
-      const val = await AsyncStorage.getItem(HIGH_SCORE_KEY);
-      if (!val) return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
-      const data = JSON.parse(val);
-      if (data.checksum === calculateChecksum(data.score, data.dropCount)) {
-        return data;
+      const [scoreVal, diamondsVal] = await Promise.all([
+        AsyncStorage.getItem(HIGH_SCORE_KEY),
+        AsyncStorage.getItem(DIAMONDS_KEY),
+      ]);
+
+      let scoreData = { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
+      if (scoreVal) {
+        const data = JSON.parse(scoreVal);
+        if (data.checksum === calculateChecksum(data.score, data.dropCount)) {
+          scoreData = data;
+        }
       }
+
+      return {
+        ...scoreData,
+        diamonds: diamondsVal ? parseInt(diamondsVal, 10) : 0,
+      };
     } catch { }
-    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
+    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0 };
   },
-  set: async (score: number, dropCount: number) => {
+  setScore: async (score: number, dropCount: number) => {
     try {
       const checksum = calculateChecksum(score, dropCount);
       await AsyncStorage.setItem(HIGH_SCORE_KEY, JSON.stringify({ score, dropCount, checksum }));
+    } catch { }
+  },
+  setDiamonds: async (total: number) => {
+    try {
+      await AsyncStorage.setItem(DIAMONDS_KEY, total.toString());
     } catch { }
   },
 };
@@ -93,6 +112,8 @@ const INITIAL_STATE: GameState = {
   mergeSpawnIds: [],
   sickPlanetIds: [],
   shieldLayers: 0,
+  diamonds: 0,
+  sessionDiamonds: 0,
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -127,6 +148,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   // Adaptive threshold: starts at 5, drops to min 3 after 30 drops with no merge
   const currentThresholdMinRef = useRef<number>(SHIELD_THRESHOLD_DEFAULT);
   const dropsSinceLastMergeRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(Date.now());
+  const totalDiamondsRef = useRef<number>(0);
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle(Array.from({ length: MAX_SPAWN_LEVEL }, (_, i) => i + 1));
@@ -157,10 +180,15 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pointerX: gameWidth / 2,
   }));
 
-  // Load high score on mount
+  // Load high score and diamonds on mount
   useEffect(() => {
     storage.get().then((saved) => {
-      setState((s) => ({ ...s, highScore: saved.score }));
+      totalDiamondsRef.current = saved.diamonds;
+      setState((s) => ({
+        ...s,
+        highScore: saved.score,
+        diamonds: saved.diamonds,
+      }));
     });
   }, []);
   const stateRef = useRef<GameState>(state);
@@ -274,7 +302,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           const newHighScore = Math.max(prev.highScore, newScore);
 
           if (newHighScore > prev.highScore) {
-            storage.set(newHighScore, dropCountRef.current);
+            storage.setScore(newHighScore, dropCountRef.current);
           }
 
           return {
@@ -358,7 +386,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           const newScore = scoreRef.current;
           const newHighScore = Math.max(prev.highScore, newScore);
           if (newHighScore > prev.highScore) {
-            storage.set(newHighScore, dropCountRef.current);
+            storage.setScore(newHighScore, dropCountRef.current);
           }
 
           return {
@@ -470,7 +498,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const newHighScore = Math.max(prev.highScore, newScore);
 
         if (newHighScore > prev.highScore) {
-          storage.set(newHighScore, dropCountRef.current);
+          storage.setScore(newHighScore, dropCountRef.current);
         }
 
         return {
@@ -527,13 +555,26 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         if (Math.abs(highest.vy) < 1.0) {
           setState((prev) => {
             const newHighScore = Math.max(prev.highScore, scoreRef.current);
+            const elapsedMs = Date.now() - startTimeRef.current;
+            const finalSessionDiamonds = Math.min(
+              MAX_SESSION_DIAMONDS,
+              Math.floor(elapsedMs / 60000) * DIAMONDS_PER_MINUTE
+            );
+            const newTotalDiamonds = prev.diamonds + finalSessionDiamonds;
+
             if (newHighScore > prev.highScore) {
-              storage.set(newHighScore, dropCountRef.current);
+              storage.setScore(newHighScore, dropCountRef.current);
             }
+            if (finalSessionDiamonds > 0) {
+              storage.setDiamonds(newTotalDiamonds);
+            }
+
             return {
               ...prev,
               gameOver: true,
               highScore: newHighScore,
+              diamonds: newTotalDiamonds,
+              sessionDiamonds: finalSessionDiamonds,
               checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
             };
           });
@@ -625,18 +666,26 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             y: v.body.position.y,
           }));
 
-          return {
-            ...prev,
-            planets: updated,
-            stars: updatedStars,
-            blackHoles: updatedBlackHoles,
-            viruses: updatedViruses,
-            sickPlanetIds: cleanSickIds,
-            explosions: [...prev.explosions, ...newExplosions],
-            mergeSpawnIds: freshMergeIds.length > 0
-              ? [...cleanMergeSpawnIds, ...freshMergeIds]
-              : cleanMergeSpawnIds,
-          };
+            // Update session diamonds based on playtime
+            const elapsedMs = Date.now() - startTimeRef.current;
+            const sessionDots = Math.min(
+              MAX_SESSION_DIAMONDS,
+              Math.floor(elapsedMs / 60000) * DIAMONDS_PER_MINUTE
+            );
+
+            return {
+              ...prev,
+              planets: updated,
+              stars: updatedStars,
+              blackHoles: updatedBlackHoles,
+              viruses: updatedViruses,
+              sickPlanetIds: cleanSickIds,
+              sessionDiamonds: sessionDots,
+              explosions: [...prev.explosions, ...newExplosions],
+              mergeSpawnIds: freshMergeIds.length > 0
+                ? [...cleanMergeSpawnIds, ...freshMergeIds]
+                : cleanMergeSpawnIds,
+            };
         });
       }
 
@@ -825,6 +874,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, []);
 
   const restart = useCallback(() => {
+    isDroppingRef.current = false;
+    startTimeRef.current = Date.now();
     loopActiveRef.current = false;
     cancelAnimationFrame(rafRef.current);
     pendingSpawnsRef.current = [];
@@ -850,6 +901,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       return {
         ...INITIAL_STATE,
         highScore: Math.max(prev.highScore, prev.score),
+        diamonds: prev.diamonds,
+        sessionDiamonds: 0,
         currentPlanetId: current,
         nextPlanetId: next,
         currentIsStar: false,

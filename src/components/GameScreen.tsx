@@ -203,9 +203,17 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
           )}
         </View>
 
-        <View style={styles.nextBox}>
-          <Text style={styles.nextLabel}>Next</Text>
-          <PlanetThumb planetId={afterPlanetId} size={28} />
+        <View style={styles.headerRight}>
+          <View style={styles.diamondBox}>
+            <View style={styles.diamondRow}>
+              <Text style={styles.diamondValue}>💎 {state.diamonds.toLocaleString()}</Text>
+            </View>
+          </View>
+
+          <View style={styles.nextBox}>
+            <Text style={styles.nextLabel}>Next</Text>
+            <PlanetThumb planetId={afterPlanetId} size={28} />
+          </View>
         </View>
       </View>
 
@@ -359,6 +367,8 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
           userRank={userRank}
           isSignedIn={!!user}
           onShowLeaderboard={() => setShowLeaderboard(true)}
+          diamonds={state.diamonds}
+          sessionDiamonds={state.sessionDiamonds}
         />
       )}
 
@@ -533,6 +543,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  diamondBox: {
+    justifyContent: 'center',
+    marginRight: 4,
+    zIndex: 1,
+  },
+  diamondRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  diamondValue: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 229, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   levelText: {
     color: '#fff',

@@ -165,3 +165,7 @@ export const SHIELD_MAX_LAYERS = 3;          // total shield layers granted at o
 export const SHIELD_THRESHOLD_DEFAULT = 5;   // starting minimum combo for first milestone
 export const SHIELD_THRESHOLD_MIN = 3;        // floor — threshold never drops below this
 export const SHIELD_THRESHOLD_ADAPT_DROPS = 30; // drops with no merge before threshold is lowered
+
+// Diamonds
+export const MAX_SESSION_DIAMONDS = 10;
+export const DIAMONDS_PER_MINUTE = 1;

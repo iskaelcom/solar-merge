@@ -16,9 +16,11 @@ interface Props {
   userRank?: number | null;
   isSignedIn?: boolean;
   onShowLeaderboard?: () => void;
+  diamonds: number;
+  sessionDiamonds: number;
 }
 
-export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn, onShowLeaderboard }: Props) {
+export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn, onShowLeaderboard, diamonds, sessionDiamonds }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -66,11 +68,19 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
               <Text style={styles.scoreLabel}>Score</Text>
               <Text style={styles.scoreValue}>{score.toLocaleString()}</Text>
             </View>
-            <View style={styles.divider} />
             <View style={styles.scoreRow}>
               <Text style={styles.scoreLabel}>Best</Text>
               <Text style={styles.bestValue}>{highScore.toLocaleString()}</Text>
             </View>
+            {(sessionDiamonds ?? 0) > 0 && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.scoreRow}>
+                  <Text style={styles.scoreLabel}>Diamonds</Text>
+                  <Text style={styles.diamondValue}>💎 +{sessionDiamonds}</Text>
+                </View>
+              </>
+            )}
           </View>
 
           {isSignedIn && (
@@ -194,6 +204,11 @@ const styles = StyleSheet.create({
   bestValue: {
     color: '#FFD600',
     fontSize: 22,
+    fontWeight: '800',
+  },
+  diamondValue: {
+    color: '#00E5FF',
+    fontSize: 20,
     fontWeight: '800',
   },
   divider: {

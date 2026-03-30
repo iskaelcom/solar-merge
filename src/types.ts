@@ -57,4 +57,6 @@ export interface GameState {
   mergeSpawnIds: string[]; // IDs of planets freshly spawned from a merge (for pop animation)
   sickPlanetIds: string[]; // IDs of planets currently infected by a virus
   shieldLayers: number;    // 0 = no shield, 1-3 = active layers
+  diamonds: number;        // total persistent diamonds
+  sessionDiamonds: number; // diamonds earned in the current active session
 }
