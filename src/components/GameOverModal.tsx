@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatCompactNumber } from '../utils/format';
 
 interface Props {
   score: number;
@@ -77,7 +78,7 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
                 <View style={styles.divider} />
                 <View style={styles.scoreRow}>
                   <Text style={styles.scoreLabel}>Diamonds</Text>
-                  <Text style={styles.diamondValue}>💎 +{sessionDiamonds}</Text>
+                  <Text style={styles.diamondValue}>💎 +{formatCompactNumber(sessionDiamonds)}</Text>
                 </View>
               </>
             )}

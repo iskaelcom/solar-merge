@@ -24,6 +24,7 @@ import { SettingsModal } from './SettingsModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
+import { formatCompactNumber } from '../utils/format';
 
 const WALL_THICKNESS = 6;
 
@@ -206,7 +207,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         <View style={styles.headerRight}>
           <View style={styles.diamondBox}>
             <View style={styles.diamondRow}>
-              <Text style={styles.diamondValue}>💎 {state.diamonds.toLocaleString()}</Text>
+              <Text style={styles.diamondValue}>💎 {formatCompactNumber(state.diamonds)}</Text>
             </View>
           </View>
 
