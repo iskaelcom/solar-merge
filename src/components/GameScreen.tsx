@@ -534,8 +534,7 @@ const styles = StyleSheet.create({
   },
   nextBox: {
     alignItems: 'center',
-    gap: 4,
-    width: 68,
+    gap: 2,
     zIndex: 1,
   },
   nextLabel: {
@@ -546,7 +545,6 @@ const styles = StyleSheet.create({
   },
   diamondBox: {
     justifyContent: 'center',
-    marginRight: 4,
     zIndex: 1,
   },
   diamondRow: {
@@ -644,7 +642,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 12,
   },
   headerLeft: {
     flexDirection: 'row',
