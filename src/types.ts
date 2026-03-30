@@ -59,4 +59,6 @@ export interface GameState {
   shieldLayers: number;    // 0 = no shield, 1-3 = active layers
   diamonds: number;        // total persistent diamonds
   sessionDiamonds: number; // diamonds earned in the current active session
+  streak: number;          // current login streak
+  lastStreakDate: string;  // ISO date string of last activity
 }

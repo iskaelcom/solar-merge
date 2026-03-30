@@ -189,10 +189,18 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
       {/* ── Row 2: Help | Logo (fixed center) | After ────────── */}
       <View style={[styles.subHeader, { width: gameWidth + WALL_THICKNESS * 2 }]}>
-        <TouchableOpacity style={styles.helpBox} onPress={() => setShowTutorial(true)}>
-          <Text style={styles.helpIcon}>?</Text>
-          <Text style={styles.helpLabel}>Help</Text>
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity style={styles.helpBox} onPress={() => setShowTutorial(true)}>
+            <Text style={styles.helpIcon}>?</Text>
+            <Text style={styles.helpLabel}>Help</Text>
+          </TouchableOpacity>
+
+          <View style={styles.streakBox}>
+            <View style={styles.streakRow}>
+              <Text style={styles.streakValue}>🔥 {state.streak}</Text>
+            </View>
+          </View>
+        </View>
 
         <View style={styles.subHeaderCenter} pointerEvents="none">
           {state.showCombo ? (
@@ -567,6 +575,29 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
+  streakBox: {
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 102, 0, 0.2)',
+  },
+  streakValue: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    textShadowColor: 'rgba(255, 102, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
   levelText: {
     color: '#fff',
     fontSize: 13,
@@ -648,7 +679,7 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   helpBtn: {
     width: 32,

@@ -30,6 +30,8 @@ const genId = () => `p_${++idCounter}`;
 
 const HIGH_SCORE_KEY = 'solar-merge-highscore';
 const DIAMONDS_KEY = 'solar-merge-diamonds';
+const STREAK_KEY = 'solar-merge-streak';
+const LAST_STREAK_DATE_KEY = 'solar-merge-last-streak-date';
 
 const SALT = 'sm-v2-secure';
 
@@ -45,11 +47,13 @@ export const calculateChecksum = (score: number, dropCount: number): string => {
 };
 
 const storage = {
-  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number }> => {
+  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null }> => {
     try {
-      const [scoreVal, diamondsVal] = await Promise.all([
+      const [scoreVal, diamondsVal, streakVal, lastDateVal] = await Promise.all([
         AsyncStorage.getItem(HIGH_SCORE_KEY),
         AsyncStorage.getItem(DIAMONDS_KEY),
+        AsyncStorage.getItem(STREAK_KEY),
+        AsyncStorage.getItem(LAST_STREAK_DATE_KEY),
       ]);
 
       let scoreData = { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
@@ -63,9 +67,11 @@ const storage = {
       return {
         ...scoreData,
         diamonds: diamondsVal ? parseInt(diamondsVal, 10) : 0,
+        streak: streakVal ? parseInt(streakVal, 10) : 0,
+        lastStreakDate: lastDateVal,
       };
     } catch { }
-    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0 };
+    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0, streak: 0, lastStreakDate: null };
   },
   setScore: async (score: number, dropCount: number) => {
     try {
@@ -76,6 +82,14 @@ const storage = {
   setDiamonds: async (total: number) => {
     try {
       await AsyncStorage.setItem(DIAMONDS_KEY, total.toString());
+    } catch { }
+  },
+  setStreak: async (streak: number, lastDate: string) => {
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(STREAK_KEY, streak.toString()),
+        AsyncStorage.setItem(LAST_STREAK_DATE_KEY, lastDate),
+      ]);
     } catch { }
   },
 };
@@ -114,6 +128,8 @@ const INITIAL_STATE: GameState = {
   shieldLayers: 0,
   diamonds: 0,
   sessionDiamonds: 0,
+  streak: 1,
+  lastStreakDate: '',
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -717,7 +733,53 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     refillBag();
     const current = getFromBag();
     const next = getFromBag(current);
-    setState(s => ({ ...s, currentPlanetId: current, nextPlanetId: next }));
+
+    // ─── Streak & Score Init ───────────────────────────────────────────
+    storage.get().then(({ score, dropCount, diamonds, streak: sStreak, lastStreakDate: sDate }) => {
+      scoreRef.current = score;
+      dropCountRef.current = dropCount;
+
+      // Calculate streak
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let finalStreak = sStreak || 1;
+      let finalDate = sDate;
+
+      if (!sDate) {
+        finalStreak = 1;
+        finalDate = today.toISOString();
+        storage.setStreak(finalStreak, finalDate);
+      } else {
+        const lastDate = new Date(sDate);
+        lastDate.setHours(0, 0, 0, 0);
+
+        const diffTime = today.getTime() - lastDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 0) {
+          if (diffDays <= 3) {
+            finalStreak += 1;
+          } else {
+            finalStreak = 1;
+          }
+          finalDate = today.toISOString();
+          storage.setStreak(finalStreak, finalDate);
+        }
+      }
+
+      setState(s => ({
+        ...s,
+        currentPlanetId: current,
+        nextPlanetId: next,
+        highScore: score,
+        score,
+        dropCount,
+        diamonds,
+        streak: finalStreak,
+        lastStreakDate: finalDate || today.toISOString(),
+      }));
+    });
 
     initPhysics();
     startLoop();
