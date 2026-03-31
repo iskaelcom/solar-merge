@@ -121,7 +121,7 @@ export function GameOverModal({ score, highScore, onRestart, onContinue, userRan
                   end={{ x: 1, y: 0 }}
                 >
                   <Text style={s.continueText}>
-                    💎 Continue ({Math.ceil(score / 5000) * 10})
+                    Continue (💎 {Math.ceil(score / 5000) * 10})
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
