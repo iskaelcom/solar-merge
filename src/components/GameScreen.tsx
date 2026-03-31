@@ -191,8 +191,8 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
       <View style={[styles.subHeader, { width: gameWidth + WALL_THICKNESS * 2 }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity style={styles.helpBox} onPress={() => setShowTutorial(true)}>
-            <Text style={styles.helpIcon}>?</Text>
             <Text style={styles.helpLabel}>Help</Text>
+            <Text style={styles.helpIcon}>?</Text>
           </TouchableOpacity>
 
           <View style={styles.streakBox}>
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
   subHeader: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: 6,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 2,
@@ -555,6 +555,7 @@ const styles = StyleSheet.create({
   diamondBox: {
     justifyContent: 'center',
     zIndex: 1,
+    marginTop: 16,
   },
   diamondRow: {
     flexDirection: 'row',
@@ -578,6 +579,7 @@ const styles = StyleSheet.create({
   streakBox: {
     justifyContent: 'center',
     zIndex: 1,
+    marginTop: 16,
   },
   streakRow: {
     flexDirection: 'row',
@@ -699,7 +701,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    width: 68,
+    width: 48,
   },
   helpIcon: {
     width: 32,
@@ -720,7 +722,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-    dropLine: {
+  dropLine: {
     position: 'absolute',
     width: 2,
     left: -1, // center of the line on X=0
