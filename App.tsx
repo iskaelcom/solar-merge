@@ -1,6 +1,6 @@
-// Polyfill globals required by matter-js in React Native / Hermes environment
+// Polyfill minimum globals required by matter-js only if they don't exist
 if (typeof (global as any).window === 'undefined') {
-  (global as any).window = global;
+  (global as any).window = {};
 }
 if (typeof (global as any).document === 'undefined') {
   (global as any).document = {
@@ -8,7 +8,7 @@ if (typeof (global as any).document === 'undefined') {
     createElementNS: () => ({ style: {} }),
     addEventListener: () => { },
     removeEventListener: () => { },
-  };
+  } as any;
 }
 
 import React, { useEffect } from 'react';
