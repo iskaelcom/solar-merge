@@ -14,6 +14,7 @@ interface Props {
   score: number;
   highScore: number;
   onRestart: () => void;
+  onContinue?: () => void;
   userRank?: number | null;
   isSignedIn?: boolean;
   onShowLeaderboard?: () => void;
@@ -21,7 +22,7 @@ interface Props {
   sessionDiamonds: number;
 }
 
-export function GameOverModal({ score, highScore, onRestart, userRank, isSignedIn, onShowLeaderboard, diamonds, sessionDiamonds }: Props) {
+export function GameOverModal({ score, highScore, onRestart, onContinue, userRank, isSignedIn, onShowLeaderboard, diamonds, sessionDiamonds }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -47,38 +48,38 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
   const isNewHigh = score >= highScore && score > 0;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
-      <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[s.overlay, { opacity: opacityAnim }]}>
+      <Animated.View style={[s.card, { transform: [{ scale: scaleAnim }] }]}>
         <LinearGradient
           colors={['#1a1a5e', '#0d0d3a']}
-          style={styles.gradient}
+          style={s.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Text style={styles.emoji}>💥</Text>
-          <Text style={styles.title}>Game Over!</Text>
+          <Text style={s.emoji}>💥</Text>
+          <Text style={s.title}>Game Over!</Text>
 
           {isNewHigh && (
-            <View style={styles.newHighBadge}>
-              <Text style={styles.newHighText}>🏆 NEW HIGH SCORE!</Text>
+            <View style={s.newHighBadge}>
+              <Text style={s.newHighText}>🏆 NEW HIGH SCORE!</Text>
             </View>
           )}
 
-          <View style={styles.scoreSection}>
-            <View style={styles.scoreRow}>
-              <Text style={styles.scoreLabel}>Score</Text>
-              <Text style={styles.scoreValue}>{score.toLocaleString()}</Text>
+          <View style={s.scoreSection}>
+            <View style={s.scoreRow}>
+              <Text style={s.scoreLabel}>Score</Text>
+              <Text style={s.scoreValue}>{score.toLocaleString()}</Text>
             </View>
-            <View style={styles.scoreRow}>
-              <Text style={styles.scoreLabel}>Best</Text>
-              <Text style={styles.bestValue}>{highScore.toLocaleString()}</Text>
+            <View style={s.scoreRow}>
+              <Text style={s.scoreLabel}>Best</Text>
+              <Text style={s.bestValue}>{highScore.toLocaleString()}</Text>
             </View>
             {(sessionDiamonds ?? 0) > 0 && (
               <>
-                <View style={styles.divider} />
-                <View style={styles.scoreRow}>
-                  <Text style={styles.scoreLabel}>Diamonds</Text>
-                  <Text style={styles.diamondValue}>💎 +{formatCompactNumber(sessionDiamonds)}</Text>
+                <View style={s.divider} />
+                <View style={s.scoreRow}>
+                  <Text style={s.scoreLabel}>Diamonds</Text>
+                  <Text style={s.diamondValue}>💎 +{formatCompactNumber(sessionDiamonds)}</Text>
                 </View>
               </>
             )}
@@ -86,46 +87,89 @@ export function GameOverModal({ score, highScore, onRestart, userRank, isSignedI
 
           {isSignedIn && (
             <TouchableOpacity
-              style={[styles.rankBadge, userRank ? styles.rankBadgeTop : styles.rankBadgeOut]}
+              style={[s.rankBadge, userRank ? s.rankBadgeTop : s.rankBadgeOut]}
               onPress={onShowLeaderboard}
               activeOpacity={onShowLeaderboard ? 0.7 : 1}
             >
-              <Text style={[styles.rankText, userRank ? styles.rankTextTop : styles.rankTextOut]}>
+              <Text style={[s.rankText, userRank ? s.rankTextTop : s.rankTextOut]}>
                 {userRank
                   ? `${['🥇', '🥈', '🥉'][userRank - 1] ?? '🏅'} Rank #${userRank} di Leaderboard!`
                   : '📊 Belum masuk Top 10'}
               </Text>
               {onShowLeaderboard && (
-                <Text style={styles.rankTapHint}>Tap to view →</Text>
+                <Text style={s.rankTapHint}>Tap to view →</Text>
               )}
             </TouchableOpacity>
           )}
 
-          <View style={styles.planetHintRow}>
-            <Text style={styles.hintText}>Merge planets to reach the ☀️ Sun!</Text>
+          <View style={s.planetHintRow}>
+            <Text style={s.hintText}>Merge planets to reach the ☀️ Sun!</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.restartBtn}
-            onPress={handleRestart}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={['#FF8A00', '#FF4500']}
-              style={styles.restartGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+          <View style={s.btnGroup}>
+            {onContinue && (
+              <TouchableOpacity
+                style={[s.continueBtn, diamonds < Math.ceil(score / 5000) * 10 && s.btnDisabled]}
+                onPress={onContinue}
+                disabled={diamonds < Math.ceil(score / 5000) * 10}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={diamonds >= Math.ceil(score / 5000) * 10 ? ['#00E5FF', '#0097A7'] : ['#555', '#333']}
+                  style={s.restartGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={s.continueText}>
+                    💎 Continue ({Math.ceil(score / 5000) * 10})
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={s.restartBtn}
+              onPress={handleRestart}
+              activeOpacity={0.85}
             >
-              <Text style={styles.restartText}>🚀 Play Again</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={['#FF8A00', '#FF4500']}
+                style={s.restartGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={s.restartText}>🚀 Play Again</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
       </Animated.View>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  btnGroup: {
+    width: '100%',
+    gap: 12,
+  },
+  continueBtn: {
+    width: '100%',
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.3)',
+  },
+  continueText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  btnDisabled: {
+    opacity: 0.5,
+    borderColor: 'transparent',
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,15,0.75)',

@@ -826,4 +826,34 @@ export class SolarPhysics {
     this.virusInfectCallbacks = [];
     this.sunMergeCallbacks = [];
   }
+
+  /**
+   * Removes all planets, stars, black holes, and viruses that are 
+   * above the specified Y threshold (e.g. they are in the danger zone).
+   */
+  clearTop(yThreshold: number): void {
+    const toRemove: string[] = [];
+    this.planets.forEach((p, id) => {
+      if (p.body.position.y < yThreshold) toRemove.push(id);
+    });
+    toRemove.forEach(id => this.removePlanet(id));
+
+    const starsToRemove: string[] = [];
+    this.stars.forEach((s, id) => {
+      if (s.body.position.y < yThreshold) starsToRemove.push(id);
+    });
+    starsToRemove.forEach(id => this.removeStar(id));
+
+    const bhToRemove: string[] = [];
+    this.blackHoles.forEach((bh, id) => {
+      if (bh.body.position.y < yThreshold) bhToRemove.push(id);
+    });
+    bhToRemove.forEach(id => this.removeBlackHole(id));
+
+    const virToRemove: string[] = [];
+    this.viruses.forEach((v, id) => {
+      if (v.body.position.y < yThreshold) virToRemove.push(id);
+    });
+    virToRemove.forEach(id => this.removeVirus(id));
+  }
 }

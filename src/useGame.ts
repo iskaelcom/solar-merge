@@ -1014,5 +1014,51 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }, 50);
   }, [gameWidth, initPhysics, startLoop]);
 
-  return { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef, scoreRef, dropCountRef };
+  const continueGame = useCallback(() => {
+    const cost = Math.ceil(scoreRef.current / 5000) * 10;
+    if (stateRef.current.diamonds < cost || !physicsRef.current) return false;
+
+    const newTotal = stateRef.current.diamonds - cost;
+    totalDiamondsRef.current = newTotal;
+    storage.setDiamonds(newTotal);
+
+    // Clear top area to give space (150px from top)
+    physicsRef.current.clearTop(160);
+
+    setState((s) => ({
+      ...s,
+      gameOver: false,
+      diamonds: newTotal,
+      // Sync state with physics after clearing
+      planets: physicsRef.current!.getAllPlanets().map(p => ({
+        id: p.id,
+        planetId: p.planetId,
+        x: p.body.position.x,
+        y: p.body.position.y,
+        angle: p.body.angle,
+      })),
+      stars: physicsRef.current!.getAllStars().map(s => ({
+        id: s.id,
+        x: s.body.position.x,
+        y: s.body.position.y,
+        angle: s.body.angle,
+      })),
+      blackHoles: physicsRef.current!.getAllBlackHoles().map(bh => ({
+        id: bh.id,
+        x: bh.body.position.x,
+        y: bh.body.position.y,
+      })),
+      viruses: physicsRef.current!.getAllViruses().map(v => ({
+        id: v.id,
+        x: v.body.position.x,
+        y: v.body.position.y,
+      })),
+    }));
+
+    // Restart the loop
+    startLoop();
+    return true;
+  }, [startLoop]);
+
+  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, isDroppingRef, scoreRef, dropCountRef };
 }

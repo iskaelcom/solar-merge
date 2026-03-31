@@ -57,9 +57,8 @@ export function GameScreen() {
   return <GameView key={`${dims.w}x${dims.h}`} gameWidth={dims.w} gameHeight={dims.h} />;
 }
 
-// ── Inner game view: fully remounts when dimensions change ────────────────────
 function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
-  const { state, setPointerX, dropPlanet, restart, removeExplosion, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -381,6 +380,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
           score={state.score}
           highScore={state.highScore}
           onRestart={restart}
+          onContinue={continueGame}
           userRank={userRank}
           isSignedIn={!!user}
           onShowLeaderboard={() => setShowLeaderboard(true)}
