@@ -739,31 +739,42 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       scoreRef.current = score;
       dropCountRef.current = dropCount;
 
-      // Calculate streak
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Calculate streak using local YYYY-MM-DD to be timezone-robust
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       let finalStreak = sStreak || 1;
       let finalDate = sDate;
 
       if (!sDate) {
+        // First time ever
         finalStreak = 1;
-        finalDate = today.toISOString();
+        finalDate = todayStr;
         storage.setStreak(finalStreak, finalDate);
       } else {
-        const lastDate = new Date(sDate);
-        lastDate.setHours(0, 0, 0, 0);
+        // Compare dates by parsing and stripping time
+        const lastDateParts = sDate.includes('T') ? sDate.split('T')[0].split('-') : sDate.split('-');
+        const lastDateObj = new Date(parseInt(lastDateParts[0], 10), parseInt(lastDateParts[1], 10) - 1, parseInt(lastDateParts[2], 10));
+        const todayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        const diffTime = today.getTime() - lastDate.getTime();
+        const diffTime = todayObj.getTime() - lastDateObj.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays > 0) {
-          if (diffDays <= 3) {
+          if (diffDays === 1) {
+            // Consecutive day
             finalStreak += 1;
+          } else if (diffDays <= 3) {
+            // Player missed a day or two but within grace period? 
+            // Previous code said diffDays <= 3. Let's stick to incrementing if diffDays === 1,
+            // otherwise if they missed some days (diffDays > 1) we reset to 1.
+            // Actually the original code said diffDays <= 3, which is very lenient.
+            // Let's make it strict: must be exactly 1 day for increment, else reset.
+            finalStreak = 1;
           } else {
             finalStreak = 1;
           }
-          finalDate = today.toISOString();
+          finalDate = todayStr;
           storage.setStreak(finalStreak, finalDate);
         }
       }
@@ -777,7 +788,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         dropCount,
         diamonds,
         streak: finalStreak,
-        lastStreakDate: finalDate || today.toISOString(),
+        lastStreakDate: finalDate || todayStr,
       }));
     });
 
