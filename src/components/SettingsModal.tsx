@@ -30,6 +30,14 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [ambientOn, setAmbientOn] = useState(() => isAmbientEnabled());
 
+  // Sync state with SoundManager whenever modal becomes visible
+  React.useEffect(() => {
+    if (visible) {
+      setSoundOn(isSoundEnabled());
+      setAmbientOn(isAmbientEnabled());
+    }
+  }, [visible]);
+
   function toggleSound(val: boolean) {
     setSoundOn(val);
     setSoundEnabled(val);

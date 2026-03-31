@@ -57,11 +57,19 @@ export async function initSounds(): Promise<void> {
   // Load preferences
   try {
     const sfxVal = await AsyncStorage.getItem(SOUND_PREF_KEY);
-    if (sfxVal !== null) sfxEnabled = sfxVal === 'true';
+    if (sfxVal !== null) {
+      sfxEnabled = sfxVal === 'true';
+      // console.log('[SoundManager] Loaded SFX setting:', sfxEnabled);
+    }
 
     const ambVal = await AsyncStorage.getItem(AMBIENT_PREF_KEY);
-    if (ambVal !== null) ambientEnabled = ambVal === 'true';
-  } catch { }
+    if (ambVal !== null) {
+      ambientEnabled = ambVal === 'true';
+      // console.log('[SoundManager] Loaded Ambient setting:', ambientEnabled);
+    }
+  } catch (e) {
+    // console.error('[SoundManager] Error loading sound settings:', e);
+  }
 
   await Audio.setAudioModeAsync({
     playsInSilentModeIOS: true,
