@@ -47,6 +47,7 @@ export const calculateChecksum = (score: number, dropCount: number): string => {
 };
 
 const getStreakReward = (streak: number): number => {
+  if (streak % 50 === 0) return 100;
   const dayInCycle = streak % 10 === 0 ? 10 : streak % 10;
   if (dayInCycle === 1) return 5;
   if (dayInCycle <= 3) return 10;
