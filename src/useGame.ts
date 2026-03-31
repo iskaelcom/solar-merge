@@ -748,8 +748,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ─── Streak & Score Init ───────────────────────────────────────────
     storage.get().then(({ score, dropCount, diamonds, streak: sStreak, lastStreakDate: sDate }) => {
-      scoreRef.current = score;
-      dropCountRef.current = dropCount;
+      scoreRef.current = 0;
+      dropCountRef.current = 0;
 
       // Calculate streak using local YYYY-MM-DD to be timezone-robust
       const now = new Date();
@@ -798,8 +798,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         currentPlanetId: current,
         nextPlanetId: next,
         highScore: score,
-        score,
-        dropCount,
+        score: 0,
+        dropCount: 0,
+        checksum: calculateChecksum(0, 0),
         diamonds: totalDiamondsRef.current,
         streak: finalStreak,
         lastStreakDate: finalDate || todayStr,
