@@ -46,6 +46,16 @@ export const calculateChecksum = (score: number, dropCount: number): string => {
   return Math.abs(hash).toString(36);
 };
 
+const getStreakReward = (streak: number): number => {
+  const dayInCycle = streak % 10 === 0 ? 10 : streak % 10;
+  if (dayInCycle === 1) return 5;
+  if (dayInCycle <= 3) return 10;
+  if (dayInCycle <= 5) return 15;
+  if (dayInCycle === 6) return 20;
+  if (dayInCycle <= 9) return 25;
+  return 50; // day 10
+};
+
 const storage = {
   get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null }> => {
     try {
@@ -130,6 +140,7 @@ const INITIAL_STATE: GameState = {
   sessionDiamonds: 0,
   streak: 1,
   lastStreakDate: '',
+  streakReward: null,
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -745,11 +756,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
       let finalStreak = sStreak || 1;
       let finalDate = sDate;
+      let rewardGranted = null;
 
       if (!sDate) {
         // First time ever
         finalStreak = 1;
         finalDate = todayStr;
+        rewardGranted = getStreakReward(finalStreak);
         storage.setStreak(finalStreak, finalDate);
       } else {
         // Compare dates by parsing and stripping time
@@ -764,19 +777,19 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           if (diffDays === 1) {
             // Consecutive day
             finalStreak += 1;
-          } else if (diffDays <= 3) {
-            // Player missed a day or two but within grace period? 
-            // Previous code said diffDays <= 3. Let's stick to incrementing if diffDays === 1,
-            // otherwise if they missed some days (diffDays > 1) we reset to 1.
-            // Actually the original code said diffDays <= 3, which is very lenient.
-            // Let's make it strict: must be exactly 1 day for increment, else reset.
-            finalStreak = 1;
           } else {
+            // Reset if missed more than grace period (3 days)
             finalStreak = 1;
           }
           finalDate = todayStr;
+          rewardGranted = getStreakReward(finalStreak);
           storage.setStreak(finalStreak, finalDate);
         }
+      }
+
+      if (rewardGranted !== null) {
+        totalDiamondsRef.current += rewardGranted;
+        storage.setDiamonds(totalDiamondsRef.current);
       }
 
       setState(s => ({
@@ -786,9 +799,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         highScore: score,
         score,
         dropCount,
-        diamonds,
+        diamonds: totalDiamondsRef.current,
         streak: finalStreak,
         lastStreakDate: finalDate || todayStr,
+        streakReward: rewardGranted,
       }));
     });
 

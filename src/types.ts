@@ -61,4 +61,5 @@ export interface GameState {
   sessionDiamonds: number; // diamonds earned in the current active session
   streak: number;          // current login streak
   lastStreakDate: string;  // ISO date string of last activity
+  streakReward: number | null; // diamonds earned today from streak
 }

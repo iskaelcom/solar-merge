@@ -21,6 +21,7 @@ import { ExplosionEffect } from './ExplosionEffect';
 import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 import { LeaderboardModal } from './LeaderboardModal';
 import { SettingsModal } from './SettingsModal';
+import { StreakRewardModal } from './StreakRewardModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
@@ -72,6 +73,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   }, []);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showStreakReward, setShowStreakReward] = useState(false);
+
+  useEffect(() => {
+    if (state.streakReward !== null) {
+      setShowStreakReward(true);
+    }
+  }, [state.streakReward]);
 
   const { user, loading: authLoading, error: authError, signIn, signOut, deleteAccount } = useAuth();
   const { entries, loading: lbLoading, fetchError: lbError, userRank, submitScore } = useLeaderboard(user);
@@ -411,6 +419,14 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         onClose={() => setShowSettings(false)}
         user={user}
         onDeleteAccount={deleteAccount}
+      />
+
+      {/* ── Streak Reward overlay ────────────────────────────── */}
+      <StreakRewardModal
+        visible={showStreakReward}
+        streak={state.streak}
+        reward={state.streakReward || 0}
+        onClose={() => setShowStreakReward(false)}
       />
     </LinearGradient>
   );
