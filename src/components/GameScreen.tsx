@@ -76,10 +76,10 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const [showStreakReward, setShowStreakReward] = useState(false);
 
   useEffect(() => {
-    if (state.streakReward !== null) {
+    if (state.streakReward !== null && !showTutorial) {
       setShowStreakReward(true);
     }
-  }, [state.streakReward]);
+  }, [state.streakReward, showTutorial]);
 
   const { user, loading: authLoading, error: authError, signIn, signOut, deleteAccount } = useAuth();
   const { entries, loading: lbLoading, fetchError: lbError, userRank, submitScore } = useLeaderboard(user);
