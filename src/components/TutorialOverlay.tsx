@@ -145,6 +145,27 @@ function MysteryVisual() {
   );
 }
 
+function MagicShopVisual() {
+  return (
+    <View style={vis.row}>
+      <View style={vis.powerItem}>
+        <Text style={{ fontSize: 32 }}>💎</Text>
+        <Text style={vis.powerLabel}>Earn</Text>
+      </View>
+      <Text style={vis.symbol}>→</Text>
+      <View style={vis.powerItem}>
+        <Text style={{ fontSize: 32 }}>🪄</Text>
+        <Text style={vis.powerLabel}>Spend</Text>
+      </View>
+      <Text style={vis.symbol}>→</Text>
+      <View style={vis.powerItem}>
+        <Text style={{ fontSize: 32 }}>🧪</Text>
+        <Text style={vis.powerLabel}>Shrink</Text>
+      </View>
+    </View>
+  );
+}
+
 function DangerVisual() {
   return (
     <View style={{ alignItems: 'center' }}>
@@ -281,6 +302,11 @@ const SLIDES: Slide[] = [
     title: 'Mystery Planet ❓',
     body: 'Appears every few drops! This mystery item hides a planet inside. After 3 more drops, it will reveal its true form (Lv 1-4). Plan your space carefully!',
     visual: <MysteryVisual />,
+  },
+  {
+    title: 'Magic Shop 🪄',
+    body: 'Earn Diamonds by playing and getting streaks. Tap the Wizard icon to buy powerful spells like Planet Shrink to help you manage the board!',
+    visual: <MagicShopVisual />,
   },
   {
     title: '⚠️ Danger Zone',
