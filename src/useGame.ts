@@ -1105,8 +1105,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     startLoop();
 
     setState((prev) => {
-      const isRenewal = prev.shrinkTimeLeft > 0;
-      const nextCost = isRenewal ? prev.shrinkCost + WIZARD_SHRINK_COST_INCREMENT : WIZARD_SHRINK_BASE_COST;
+      // Every purchase increments the cost for the next one, until it expires and resets to base.
+      const nextCost = prev.shrinkCost + WIZARD_SHRINK_COST_INCREMENT;
       
       return {
         ...prev,
