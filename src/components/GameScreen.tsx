@@ -381,10 +381,10 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             onResponderRelease={handleTouchEnd}
             {...(Platform.OS === 'web' ? { onMouseMove: handleMouseMove } : {})}
           />
-          
+
           {/* Floating Wizard Button */}
-          <TouchableOpacity 
-            style={[styles.wizardBtn, { left: gameWidth - 55, top: gameHeight - 55 }]} 
+          <TouchableOpacity
+            style={[styles.wizardBtn, { left: gameWidth - 45, top: 45 }]}
             onPress={() => setShowWizard(true)}
             activeOpacity={0.7}
           >
@@ -802,34 +802,30 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     zIndex: 100,
+    opacity: 1,
   },
   wizardInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(108, 92, 231, 0.9)',
-    borderWidth: 2,
-    borderColor: '#FFD700',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.38)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.48)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
   },
   wizardEmoji: {
-    fontSize: 24,
+    fontSize: 16,
   },
   wizardActiveDot: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#00FF85',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#1E1E2E',
   },
   shrinkTimerHud: {
