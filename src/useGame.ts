@@ -766,34 +766,37 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       scoreRef.current = 0;
       dropCountRef.current = 0;
 
-      // Calculate streak using local YYYY-MM-DD to be timezone-robust
+      // Calculate streak tracking via local time YYYY-MM-DD
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-      let finalStreak = sStreak || 1;
-      let finalDate = sDate;
-      let rewardGranted = null;
+      const lastVisit = sDate ? sDate.split('T')[0] : null;
+      const isToday = lastVisit === todayStr;
+      const isYesterday = lastVisit === yesterdayStr;
 
-      if (!sDate) {
+      let finalStreak = sStreak || 0;
+      let finalDate = sDate || null;
+      let rewardGranted: number | null = null;
+
+      if (!lastVisit) {
+        // First play
         finalStreak = 1;
         finalDate = todayStr;
-        rewardGranted = getStreakReward(finalStreak);
-        storage.setStreak(finalStreak, finalDate);
-      } else {
-        const lastDateParts = sDate.includes('T') ? sDate.split('T')[0].split('-') : sDate.split('-');
-        const lastDateObj = new Date(parseInt(lastDateParts[0], 10), parseInt(lastDateParts[1], 10) - 1, parseInt(lastDateParts[2], 10));
-        const todayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        const diffTime = todayObj.getTime() - lastDateObj.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays > 0) {
-          if (diffDays === 1) finalStreak += 1;
-          else finalStreak = 1;
-          finalDate = todayStr;
-          rewardGranted = getStreakReward(finalStreak);
-          storage.setStreak(finalStreak, finalDate);
+        rewardGranted = getStreakReward(1);
+        storage.setStreak(1, todayStr);
+      } else if (!isToday) {
+        if (isYesterday) {
+          finalStreak += 1;
+        } else {
+          finalStreak = 1;
         }
+        finalDate = todayStr;
+        rewardGranted = getStreakReward(finalStreak);
+        storage.setStreak(finalStreak, todayStr);
       }
 
       if (rewardGranted !== null) {
@@ -803,22 +806,25 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         totalDiamondsRef.current = diamonds;
       }
 
-      setState(s => ({
-        ...s,
-        currentPlanetId: current,
-        nextPlanetId: next,
-        highScore: score,
-        score: 0,
-        dropCount: 0,
-        checksum: calculateChecksum(0, 0),
-        diamonds: totalDiamondsRef.current,
-        streak: finalStreak,
-        lastStreakDate: finalDate || todayStr,
-        streakReward: rewardGranted,
-        // Reset shrink on reload as requested
-        shrinkTimeLeft: 0,
-        shrinkCost: WIZARD_SHRINK_BASE_COST,
-      }));
+      setState(s => {
+        // Only set the initial planets if the board is still empty (brand new game).
+        // This prevents the sequence from "resetting to 1" if storage.get() resolves mid-play.
+        const isFreshGame = s.planets.length === 0 && s.dropCount === 0;
+        
+        return {
+          ...s,
+          highScore: score,
+          diamonds: totalDiamondsRef.current,
+          streak: finalStreak,
+          lastStreakDate: finalDate || todayStr,
+          streakReward: rewardGranted,
+          currentPlanetId: isFreshGame ? current : s.currentPlanetId,
+          nextPlanetId: isFreshGame ? next : s.nextPlanetId,
+          // Reset shrink on reload as requested
+          shrinkTimeLeft: 0,
+          shrinkCost: WIZARD_SHRINK_BASE_COST,
+        };
+      });
     });
 
     initPhysics();
