@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  TouchableWithoutFeedback,
   ScrollView,
+  Platform,
 } from 'react-native';
 
 interface Props {
@@ -44,19 +44,20 @@ export const WizardModal = ({
           </View>
 
           <ScrollView style={s.body} showsVerticalScrollIndicator={false}>
-            <View style={s.statsRow}>
-              <Text style={s.sectionLabel}>YOUR DIAMONDS</Text>
-              <View style={s.diamondBadge}>
-                <Text style={s.diamondText}>💎 {diamonds}</Text>
-              </View>
+            <Text style={s.sectionLabel}>PURCHASE</Text>
+            <View style={s.row}>
+              <Text style={s.rowIcon}>💎</Text>
+              <Text style={s.rowLabel}>Your Diamonds</Text>
+              <Text style={s.diamondValueText}>{diamonds}</Text>
             </View>
 
-            <Text style={s.sectionLabel}>AVAILABLE SPELLS</Text>
+            <Text style={[s.sectionLabel, { marginTop: 12 }]}>AVAILABLE SPELLS</Text>
 
-            <View style={s.row}>
-              <View style={s.itemInfo}>
+            <View style={s.spellRow}>
+              <View style={s.spellInfo}>
                 <View style={s.nameRow}>
-                  <Text style={s.rowLabel}>🧪 Planet Shrink</Text>
+                  <Text style={s.spellIcon}>🧪</Text>
+                  <Text style={s.spellLabel}>Planet Shrink</Text>
                   {shrinkTimeLeft > 0 && (
                     <View style={s.activeBadge}>
                       <Text style={s.activeText}>
@@ -65,8 +66,8 @@ export const WizardModal = ({
                     </View>
                   )}
                 </View>
-                <Text style={s.itemDesc}>
-                  Shrinks planets ID 4 to 10 by 80% for 5 minutes.
+                <Text style={s.spellDesc}>
+                  Shrinks planets ID 4-10 by 80% for 5 mins
                 </Text>
               </View>
 
@@ -75,6 +76,7 @@ export const WizardModal = ({
                   style={[s.buyButton, diamonds < shrinkCost && s.buyButtonDisabled]}
                   onPress={onBuyShrink}
                   disabled={diamonds < shrinkCost}
+                  activeOpacity={0.7}
                 >
                   <Text style={s.buyButtonText}>{shrinkCost} 💎</Text>
                 </TouchableOpacity>
@@ -86,12 +88,15 @@ export const WizardModal = ({
             </View>
 
             {/* Placeholder for future spells */}
-            <View style={[s.row, { opacity: 0.4 }]}>
-              <View style={s.itemInfo}>
-                <Text style={s.rowLabel}>Locked Spell</Text>
-                <Text style={s.itemDesc}>Stay tuned for more magic...</Text>
+            <View style={[s.spellRow, { opacity: 0.3, borderBottomWidth: 0 }]}>
+              <View style={s.spellInfo}>
+                <View style={s.nameRow}>
+                  <Text style={s.spellIcon}>🔒</Text>
+                  <Text style={s.spellLabel}>Locked Spell</Text>
+                </View>
+                <Text style={s.spellDesc}>Coming soon...</Text>
               </View>
-              <View style={[s.buyButton, { backgroundColor: '#333' }]}>
+              <View style={[s.buyButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
                 <Text style={s.buyButtonText}>???</Text>
               </View>
             </View>
@@ -135,12 +140,6 @@ const s = StyleSheet.create({
   title: { color: '#fff', fontSize: 18, fontWeight: '800' },
   closeBtn: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 16, fontWeight: '700' },
   body: { paddingVertical: 8 },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingRight: 20,
-  },
   sectionLabel: {
     color: 'rgba(255, 255, 255, 0.35)',
     fontSize: 11,
@@ -150,73 +149,74 @@ const s = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 4,
   },
-  diamondBadge: {
-    backgroundColor: 'rgba(0, 229, 255, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  diamondText: {
-    color: '#00E5FF',
-    fontSize: 13,
-    fontWeight: '800',
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 13,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  itemInfo: {
+  rowIcon: { fontSize: 18, width: 30 },
+  rowLabel: { flex: 1, color: '#e0e0f0', fontSize: 15 },
+  diamondValueText: { color: '#00E5FF', fontSize: 15, fontWeight: '800' },
+  
+  spellRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  spellInfo: {
     flex: 1,
     marginRight: 12,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
     gap: 8,
   },
-  rowLabel: { color: '#e0e0f0', fontSize: 16, fontWeight: '700' },
-  itemDesc: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 12,
-    lineHeight: 16,
+  spellIcon: { fontSize: 18, width: 30 },
+  spellLabel: { color: '#e0e0f0', fontSize: 15, fontWeight: '700' },
+  spellDesc: {
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: 11,
+    paddingLeft: 30, // aligning with text label above
   },
   activeBadge: {
-    backgroundColor: 'rgba(0, 255, 133, 0.15)',
+    backgroundColor: 'rgba(0, 255, 133, 0.1)',
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 1,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 133, 0.3)',
+    borderColor: 'rgba(0, 255, 133, 0.2)',
   },
   activeText: {
     color: '#00FF85',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
   },
   buyButton: {
     backgroundColor: '#7c6fff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     minWidth: 70,
     alignItems: 'center',
   },
   buyButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   buyButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     opacity: 0.5,
   },
   buyButtonText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
   },
 });
