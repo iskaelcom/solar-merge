@@ -239,7 +239,7 @@ export class SolarPhysics {
   }
 
   private setupCollisionHandler() {
-    Matter.Events.on(this.engine, 'collisionStart', (event) => {
+    const handleCollisions = (event: Matter.IEventCollision<Matter.Engine>) => {
       event.pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
 
@@ -343,51 +343,63 @@ export class SolarPhysics {
         const pB = this.getByBodyId(bodyB.id);
 
         if (!pA || !pB) return;
-        if (pA.isMystery || pB.isMystery) return; // Mystery planets cannot merge
-        if (pA.planetId !== pB.planetId) return;
-        if (this.pendingRemovalIds.has(pA.id) || this.pendingRemovalIds.has(pB.id)) return;
-
-        const key = [pA.id, pB.id].sort().join('|');
-        if (this.pendingMergeKeys.has(key)) return;
-        this.pendingMergeKeys.add(key);
-        this.pendingRemovalIds.add(pA.id);
-        this.pendingRemovalIds.add(pB.id);
-
-        const midX = (bodyA.position.x + bodyB.position.x) / 2;
-        const midY = (bodyA.position.y + bodyB.position.y) / 2;
-        // Capture averaged velocity NOW (bodies still alive) for inheritance by spawn
-        const vAvgX = (bodyA.velocity.x + bodyB.velocity.x) / 2;
-        const vAvgY = (bodyA.velocity.y + bodyB.velocity.y) / 2;
-
-        // ── Two Suns merged → collapse into a Black Hole ─────────────────
-        if (pA.planetId >= PLANETS.length) {
-          this.defer(() => {
-            if (this.planets.has(pA.id)) this.removePlanet(pA.id);
-            if (this.planets.has(pB.id)) this.removePlanet(pB.id);
-
-            const bhId = `sun_bh_${Date.now()}`;
-            this.addBlackHole(bhId, midX, midY);
-
-            this.sunMergeCallbacks.forEach((cb) =>
-              cb({ id1: pA.id, id2: pB.id, blackHoleId: bhId, x: midX, y: midY })
-            );
-            this.pendingMergeKeys.delete(key);
-          });
-          return;
-        }
-
-        // Defer to end of step() so we don't mutate during collision processing
-        this.defer(() => {
-          if (this.planets.has(pA.id)) this.removePlanet(pA.id);
-          if (this.planets.has(pB.id)) this.removePlanet(pB.id);
-
-          this.mergeCallbacks.forEach((cb) =>
-            cb({ id1: pA.id, id2: pB.id, planetId: pA.planetId, x: midX, y: midY, vx: vAvgX, vy: vAvgY })
-          );
-
-          this.pendingMergeKeys.delete(key);
-        });
+        this.processPlanetMerge(pA, pB);
       });
+    };
+
+    Matter.Events.on(this.engine, 'collisionStart', handleCollisions);
+    // Note: We avoid collisionActive globally as it prevents efficient sleeping 
+    // and adds overhead. Special reveal merges are handled in tickMysteryPlanets.
+  }
+
+  /**
+   * Internal logic to check if two planets should merge and then orchestrate the removal/spawn.
+   */
+  private processPlanetMerge(pA: PhysicsPlanet, pB: PhysicsPlanet): void {
+    if (pA.isMystery || pB.isMystery) return; // Mystery planets cannot merge
+    if (pA.planetId !== pB.planetId) return;
+    if (this.pendingRemovalIds.has(pA.id) || this.pendingRemovalIds.has(pB.id)) return;
+
+    const key = [pA.id, pB.id].sort().join('|');
+    if (this.pendingMergeKeys.has(key)) return;
+
+    this.pendingMergeKeys.add(key);
+    this.pendingRemovalIds.add(pA.id);
+    this.pendingRemovalIds.add(pB.id);
+
+    const midX = (pA.body.position.x + pB.body.position.x) / 2;
+    const midY = (pA.body.position.y + pB.body.position.y) / 2;
+    // Capture averaged velocity NOW (bodies still alive) for inheritance by spawn
+    const vAvgX = (pA.body.velocity.x + pB.body.velocity.x) / 2;
+    const vAvgY = (pA.body.velocity.y + pB.body.velocity.y) / 2;
+
+    // ── Two Suns merged → collapse into a Black Hole ─────────────────
+    if (pA.planetId >= PLANETS.length) {
+      this.defer(() => {
+        if (this.planets.has(pA.id)) this.removePlanet(pA.id);
+        if (this.planets.has(pB.id)) this.removePlanet(pB.id);
+
+        const bhId = `sun_bh_${Date.now()}`;
+        this.addBlackHole(bhId, midX, midY);
+
+        this.sunMergeCallbacks.forEach((cb) =>
+          cb({ id1: pA.id, id2: pB.id, blackHoleId: bhId, x: midX, y: midY })
+        );
+        this.pendingMergeKeys.delete(key);
+      });
+      return;
+    }
+
+    // Defer to end of step() so we don't mutate during collision processing
+    this.defer(() => {
+      if (this.planets.has(pA.id)) this.removePlanet(pA.id);
+      if (this.planets.has(pB.id)) this.removePlanet(pB.id);
+
+      this.mergeCallbacks.forEach((cb) =>
+        cb({ id1: pA.id, id2: pB.id, planetId: pA.planetId, x: midX, y: midY, vx: vAvgX, vy: vAvgY })
+      );
+
+      this.pendingMergeKeys.delete(key);
     });
   }
 
@@ -676,6 +688,22 @@ export class SolarPhysics {
             y: p.body.position.y,
             planetSize: targetPlanet.size,
           }));
+
+          // ── INSTANT MERGE CHECK ──
+          // Since we scale the body while it might be resting against others,
+          // collisionStart won't necessarily fire. We manually query overlaps here.
+          const otherBodies = Array.from(this.planets.values())
+            .filter(other => other.id !== p.id && !other.isMystery)
+            .map(other => other.body);
+
+          const immediateOverlaps = Matter.Query.collides(p.body, otherBodies);
+          for (const collision of immediateOverlaps) {
+            const bodyB = collision.bodyA === p.body ? collision.bodyB : collision.bodyA;
+            const pB = this.getByBodyId(bodyB.id);
+            if (pB) {
+              this.processPlanetMerge(p, pB);
+            }
+          }
         }
       }
     });
