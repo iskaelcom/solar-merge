@@ -10,6 +10,7 @@ import {
   STAR_RADIUS,
   BLACK_HOLE_RADIUS,
   VIRUS_RADIUS,
+  MYSTERY_PLANET_RADIUS,
   DANGER_HEIGHT,
 } from './constants';
 
@@ -17,6 +18,9 @@ export interface PhysicsPlanet {
   id: string;
   planetId: number;
   body: Matter.Body;
+  isMystery?: boolean;
+  truePlanetId?: number;
+  mysteryRevealDrops?: number;
 }
 
 /**
@@ -151,6 +155,7 @@ export class SolarPhysics {
   private blackHoleSuckCallbacks: BlackHoleSuckCallback[] = [];
   private virusInfectCallbacks: VirusInfectCallback[] = [];
   private sunMergeCallbacks: SunMergeCallback[] = [];
+  private mysteryRevealCallbacks: Array<(data: { id: string, x: number, y: number, planetSize: number }) => void> = [];
   private pendingMergeKeys: Set<string> = new Set();
   private pendingRemovalIds: Set<string> = new Set();
   private pendingStarRemovalIds: Set<string> = new Set();
@@ -249,6 +254,7 @@ export class SolarPhysics {
 
           if (
             planet &&
+            !planet.isMystery &&
             !this.pendingBlackHoleRemovalIds.has(bh.id) &&
             !this.pendingRemovalIds.has(planet.id)
           ) {
@@ -280,6 +286,7 @@ export class SolarPhysics {
 
           if (
             planet &&
+            !planet.isMystery &&
             !this.pendingVirusRemovalIds.has(vir.id) &&
             !this.pendingRemovalIds.has(planet.id)
           ) {
@@ -309,6 +316,7 @@ export class SolarPhysics {
 
           if (
             planet &&
+            !planet.isMystery &&
             !this.pendingStarRemovalIds.has(star.id) &&
             !this.pendingRemovalIds.has(planet.id)
           ) {
@@ -335,6 +343,7 @@ export class SolarPhysics {
         const pB = this.getByBodyId(bodyB.id);
 
         if (!pA || !pB) return;
+        if (pA.isMystery || pB.isMystery) return; // Mystery planets cannot merge
         if (pA.planetId !== pB.planetId) return;
         if (this.pendingRemovalIds.has(pA.id) || this.pendingRemovalIds.has(pB.id)) return;
 
@@ -489,6 +498,10 @@ export class SolarPhysics {
     this.sunMergeCallbacks.push(cb);
   }
 
+  onMysteryReveal(cb: (data: { id: string, x: number, y: number, planetSize: number }) => void): void {
+    this.mysteryRevealCallbacks.push(cb);
+  }
+
   addVirus(id: string, x: number, y: number): void {
     const body = Matter.Bodies.circle(x, y, VIRUS_RADIUS, {
       restitution: 0.4,
@@ -599,6 +612,78 @@ export class SolarPhysics {
     // contact with an existing body, making it appear stuck at the top.
     Matter.Body.setVelocity(body, { x: vx, y: vy });
     if ((body as any).isSleeping) (body as any).isSleeping = false;
+  }
+
+  addMysteryPlanet(id: string, truePlanetId: number, mysteryRevealDrops: number, x: number, y: number, vx = 0, vy = 3): void {
+    const radius = MYSTERY_PLANET_RADIUS; // Disguise radius
+
+    const body = Matter.Bodies.circle(x, y, radius, {
+      restitution: RESTITUTION,
+      friction: FRICTION,
+      frictionAir: FRICTION_AIR,
+      density: 0.002,
+      label: id,
+      collisionFilter: {
+        category: 0x0001,
+        mask: 0x0001 | 0x0002,
+      },
+    });
+    // Dampen rotation 2×
+    Matter.Body.setInertia(body, body.inertia * 2);
+
+    const entry: PhysicsPlanet = { id, planetId: 1, isMystery: true, truePlanetId, mysteryRevealDrops, body };
+    this.planets.set(id, entry);
+    this.bodyIdToPlanet.set(body.id, entry);
+    this._planetsCache = null;
+    Matter.Composite.add(this.engine.world, body);
+
+    if (vx !== 0 || vy !== 0) {
+      Matter.Body.setVelocity(body, { x: vx, y: vy });
+    }
+  }
+
+  tickMysteryPlanets(): void {
+    let triggered = false;
+    this.planets.forEach((p) => {
+      if (p.isMystery && p.mysteryRevealDrops !== undefined && p.mysteryRevealDrops > 0) {
+        p.mysteryRevealDrops--;
+        if (p.mysteryRevealDrops === 0) {
+          // Reveal the planet
+          p.isMystery = false;
+          p.planetId = p.truePlanetId!;
+          
+          const targetPlanet = PLANETS[p.planetId - 1];
+          const trueRadius = targetPlanet.size * targetPlanet.hitboxRatio;
+          const scaleMultiplier = trueRadius / MYSTERY_PLANET_RADIUS;
+          
+          Matter.Body.scale(p.body, scaleMultiplier, scaleMultiplier);
+          
+          // Apply active shrink if it qualifies
+          if (this.shrinkActive && p.planetId >= 4) {
+             Matter.Body.scale(p.body, this.shrinkScale, this.shrinkScale);
+          }
+          
+          // Awaken body for resolution
+          Matter.Sleeping.set(p.body, false);
+          Matter.Body.setVelocity(p.body, { x: p.body.velocity.x, y: p.body.velocity.y + 0.1 });
+          (p.body as any).sleepCounter = 0;
+          triggered = true;
+
+          // Dispatch visually
+          this.mysteryRevealCallbacks.forEach(cb => cb({
+            id: p.id,
+            x: p.body.position.x,
+            y: p.body.position.y,
+            planetSize: targetPlanet.size,
+          }));
+        }
+      }
+    });
+
+    if (triggered) {
+      this.sleepLockTicks = 60; // Keep engine alive to push overlapping bodies apart
+      this.engine.enableSleeping = false;
+    }
   }
 
   removePlanet(id: string): void {

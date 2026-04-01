@@ -5,6 +5,7 @@ export interface RenderPlanet {
   y: number;
   angle: number;
   scale?: number;
+  isMystery?: boolean;
 }
 
 export interface Explosion {
@@ -49,6 +50,8 @@ export interface GameState {
   currentIsStar: boolean;      // true → user is holding a star to drop
   currentIsBlackHole: boolean; // true → user is holding a black hole to drop
   currentIsVirus: boolean;     // true → user is holding a virus planet to drop
+  currentIsMystery: boolean;   // true → user is holding a mystery planet to drop
+  mysteryPlanetId: number;     // The hidden identity (1-4) of the currently held mystery planet
   pointerX: number;
   isDropping: boolean;
   gameOver: boolean;

@@ -16,6 +16,9 @@ import {
   BLACK_HOLE_SPAWN_INTERVAL,
   VIRUS_RADIUS,
   VIRUS_SPAWN_INTERVAL,
+  MYSTERY_PLANET_SPAWN_INTERVAL,
+  MYSTERY_PLANET_RADIUS,
+  MYSTERY_PLANET_REVEAL_DROPS,
   SHIELD_MAX_LAYERS,
   SHIELD_THRESHOLD_DEFAULT,
   SHIELD_THRESHOLD_MIN,
@@ -133,6 +136,8 @@ const INITIAL_STATE: GameState = {
   currentIsStar: false,
   currentIsBlackHole: false,
   currentIsVirus: false,
+  currentIsMystery: false,
+  mysteryPlanetId: 1,
   pointerX: GAME_WIDTH / 2,
   isDropping: false,
   gameOver: false,
@@ -162,7 +167,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   // Actual score lives in a ref — display-only copy goes to state, tampering state has no effect
   const scoreRef = useRef<number>(0);
   // Track merge-spawned planets that need to be added to render state
-  const pendingSpawnsRef = useRef<Array<{ id: string; planetId: number; x: number; y: number }>>([]);
+  const pendingSpawnsRef = useRef<Array<{ id: string; planetId: number; x: number; y: number; isMystery?: boolean }>>([]);
   // Track explosions triggered by merges
   const pendingExplosionsRef = useRef<Explosion[]>([]);
   // Track IDs of planets spawned from a merge (for pop animation)
@@ -546,6 +551,24 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       setState((prev) => ({ ...prev, shieldLayers: shieldLayersRef.current }));
     });
 
+    engine.onMysteryReveal(({ id, x, y, planetSize }) => {
+      playSound('buy');
+      const newExplosion: Explosion = {
+        id: `reveal_${id}_${Date.now()}`,
+        x,
+        y,
+        planetSize,
+        color: '#DDA0DD', // Plum / Magical purple
+        scale: 0.1,
+      };
+      
+      setState((s) => ({
+        ...s,
+        explosions: [...s.explosions, newExplosion],
+        mergeSpawnIds: [...s.mergeSpawnIds, id],
+      }));
+    });
+
     physicsRef.current = engine;
   }, [gameWidth, gameHeight]);
 
@@ -585,6 +608,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             y: p.body.position.y,
             angle: p.body.angle,
             scale: 1.0, 
+            isMystery: p.isMystery,
           }));
 
           // Reset shrink logic immediately in the engine
@@ -671,12 +695,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
                 x: pos.x,
                 y: pos.y,
                 angle: p.body.angle,
+                isMystery: p.isMystery,
               } as RenderPlanet;
             });
 
           // Add newly merged spawns
           spawns.forEach((s) => {
-            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0 });
+            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0, isMystery: s.isMystery });
           });
 
           // Remove stale IDs (merged/destroyed planets) from sick + mergeSpawn lists
@@ -713,11 +738,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
               Math.floor(elapsedMs / 60000) * DIAMONDS_PER_MINUTE
             );
 
+            const shrinkScale = prev.shrinkTimeLeft > 0 ? WIZARD_SHRINK_SCALE : 1.0;
+
             return {
               ...prev,
               planets: updated.map(p => ({
                 ...p,
-                scale: (p.planetId >= 4 && prev.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1.0
+                scale: (p.planetId >= 4 && prev.shrinkTimeLeft > 0) ? shrinkScale : 1.0
               })),
               stars: updatedStars,
               blackHoles: updatedBlackHoles,
@@ -857,6 +884,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             y: p.body.position.y,
             angle: p.body.angle,
             scale: 1.0,
+            isMystery: p.isMystery,
           }));
 
           // Kickstart the loop outside this updater tick. Wait for physics side-effects.
@@ -952,7 +980,37 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         };
       });
     }
-    // ── Drop a planet ──────────────────────────────────────────────────
+    // ── Drop a mystery planet ──────────────────────────────────────────
+    else if (prev.currentIsMystery) {
+      const clampedX = Math.max(MYSTERY_PLANET_RADIUS + 2, Math.min(gameWidth - MYSTERY_PLANET_RADIUS - 2, x));
+      const startY = MYSTERY_PLANET_RADIUS + 2;
+      const id = genId();
+      physicsRef.current.addMysteryPlanet(id, prev.mysteryPlanetId, MYSTERY_PLANET_REVEAL_DROPS, clampedX, startY);
+
+      const newPlanet: RenderPlanet = {
+        id,
+        planetId: prev.mysteryPlanetId,
+        x: clampedX,
+        y: startY,
+        angle: 0,
+        isMystery: true,
+      };
+
+      pendingSpawnsRef.current.push(newPlanet);
+
+      setState((s) => {
+        const dropCount = dropCountRef.current;
+        return {
+          ...s,
+          currentIsMystery: false,
+          pointerX: clampedX,
+          isDropping: true,
+          dropCount,
+          checksum: calculateChecksum(s.score, dropCount),
+        };
+      });
+    }
+    // ── Drop a normal planet ───────────────────────────────────────────
     else {
       const planet = PLANETS[prev.currentPlanetId - 1];
       const clampedX = Math.max(planet.size + 2, Math.min(gameWidth - planet.size - 2, x));
@@ -969,7 +1027,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         angle: 0,
       };
 
-      // Determine special injection. Priority: BH > Virus > Star.
+      // Determine special injection. Priority: BH > Virus > Star > Mystery.
       // Increment OUTSIDE setState to avoid double-triggers in React Dev mode.
       dropCountRef.current += 1;
 
@@ -989,6 +1047,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const injectBlackHole = dropCountRef.current % BLACK_HOLE_SPAWN_INTERVAL === 0;
       const injectVirus = !injectBlackHole && dropCountRef.current % VIRUS_SPAWN_INTERVAL === 0;
       const injectStar = !injectBlackHole && !injectVirus && dropCountRef.current % STAR_SPAWN_INTERVAL === 0;
+      const injectMystery = !injectBlackHole && !injectVirus && !injectStar && dropCountRef.current % MYSTERY_PLANET_SPAWN_INTERVAL === 0;
+
+      const nextMysteryId = injectMystery ? Math.floor(Math.random() * 4) + 1 : prev.mysteryPlanetId;
 
       const dropCount = dropCountRef.current;
       setState((s) => ({
@@ -997,6 +1058,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         currentIsBlackHole: injectBlackHole,
         currentIsVirus: injectVirus,
         currentIsStar: injectStar,
+        currentIsMystery: injectMystery,
+        mysteryPlanetId: nextMysteryId,
         currentPlanetId: s.nextPlanetId,
         nextPlanetId: getFromBag(s.nextPlanetId),
         pointerX: clampedX,
@@ -1005,6 +1068,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         checksum: calculateChecksum(s.score, dropCount),
       }));
     }
+
+    // Tick mystery planets reveal drops DOWN visually for any planet that dropped right now
+    physicsRef.current.tickMysteryPlanets();
 
     // Wake the RAF loop in case it was paused while the scene was idle
     startLoop();

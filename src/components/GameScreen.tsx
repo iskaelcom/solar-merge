@@ -15,6 +15,7 @@ import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
 import { BlackHoleView } from './BlackHoleView';
 import { VirusPlanetView } from './VirusPlanetView';
+import { MysteryPlanetView } from './MysteryPlanetView';
 import { GameOverModal } from './GameOverModal';
 import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
@@ -34,6 +35,7 @@ const MemoizedPlanetView = React.memo(PlanetView);
 const MemoizedStarView = React.memo(StarView);
 const MemoizedBlackHoleView = React.memo(BlackHoleView);
 const MemoizedVirusPlanetView = React.memo(VirusPlanetView);
+const MemoizedMysteryPlanetView = React.memo(MysteryPlanetView);
 
 // ── Outer shell: computes + debounces dimensions, remounts GameView on change ─
 export function GameScreen() {
@@ -163,7 +165,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   };
 
   // "After" slot: when holding a special, currentPlanetId is the planet after it
-  const holdingSpecial = state.currentIsStar || state.currentIsBlackHole || state.currentIsVirus;
+  const holdingSpecial = state.currentIsStar || state.currentIsBlackHole || state.currentIsVirus || state.currentIsMystery;
   const afterPlanetId = holdingSpecial ? state.currentPlanetId : state.nextPlanetId;
 
   // Pre-compute Sets once per render — O(1) lookup per planet instead of O(n) .includes()
@@ -309,17 +311,19 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
               <View style={{ transform: [{ translateX: -previewRadius }] }}>
                 {state.currentIsVirus
                   ? <VirusPlanetView x={previewRadius} y={previewRadius} ghost />
-                  : state.currentIsBlackHole
-                    ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
-                    : state.currentIsStar
-                      ? <StarView x={previewRadius} y={previewRadius} ghost />
-                      : <PlanetView 
-                          planetId={state.currentPlanetId} 
-                          x={previewRadius} 
-                          y={previewRadius} 
-                          ghost 
-                          scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
-                        />
+                  : state.currentIsMystery
+                    ? <MysteryPlanetView x={previewRadius} y={previewRadius} ghost />
+                    : state.currentIsBlackHole
+                      ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
+                      : state.currentIsStar
+                        ? <StarView x={previewRadius} y={previewRadius} ghost />
+                        : <PlanetView 
+                            planetId={state.currentPlanetId} 
+                            x={previewRadius} 
+                            y={previewRadius} 
+                            ghost 
+                            scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
+                          />
                 }
               </View>
             </Animated.View>
@@ -337,16 +341,25 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
           {/* All live planets */}
           {state.planets.map((p) => (
-            <MemoizedPlanetView
-              key={p.id}
-              planetId={p.planetId}
-              x={p.x}
-              y={p.y}
-              angle={p.angle}
-              scale={p.scale}
-              isMergeSpawn={mergeSpawnSet.has(p.id)}
-              isSick={sickPlanetSet.has(p.id)}
-            />
+            p.isMystery ? (
+              <MemoizedMysteryPlanetView
+                key={p.id}
+                x={p.x}
+                y={p.y}
+                angle={p.angle}
+              />
+            ) : (
+              <MemoizedPlanetView
+                key={p.id}
+                planetId={p.planetId}
+                x={p.x}
+                y={p.y}
+                angle={p.angle}
+                scale={p.scale}
+                isMergeSpawn={mergeSpawnSet.has(p.id)}
+                isSick={sickPlanetSet.has(p.id)}
+              />
+            )
           ))}
 
           {/* Star power-ups */}
