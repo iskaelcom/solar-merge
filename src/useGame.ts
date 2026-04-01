@@ -108,21 +108,6 @@ const storage = {
       ]);
     } catch { }
   },
-  setShrinkState: async (timeLeft: number, cost: number) => {
-    try {
-      const data = { timeLeft, cost, timestamp: Date.now() };
-      await AsyncStorage.setItem(SHRINK_STATE_KEY, JSON.stringify(data));
-    } catch { }
-  },
-  getShrinkState: async (): Promise<{ timeLeft: number; cost: number } | null> => {
-    try {
-      const val = await AsyncStorage.getItem(SHRINK_STATE_KEY);
-      if (!val) return null;
-      const { timeLeft, cost, timestamp } = JSON.parse(val);
-      const elapsed = Math.floor((Date.now() - timestamp) / 1000);
-      return { timeLeft: Math.max(0, timeLeft - elapsed), cost };
-    } catch { return null; }
-  },
 };
 
 const shuffle = (array: number[]) => {
@@ -592,6 +577,19 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       if (highest && highest.y < DANGER_HEIGHT && !isDroppingRef.current) {
         // Only Game Over if the planet is NOT falling fast (vY > -0.5 and vY < 2)
         if (Math.abs(highest.vy) < 1.0) {
+          // Capture the final snapshot of planets at full scale BEFORE we destroy physics
+          const finalPlanets: RenderPlanet[] = (physicsRef.current?.getAllPlanets() || []).map((p) => ({
+            id: p.id,
+            planetId: p.planetId,
+            x: p.body.position.x,
+            y: p.body.position.y,
+            angle: p.body.angle,
+            scale: 1.0, 
+          }));
+
+          // Reset shrink logic immediately in the engine
+          physicsRef.current?.setPlanetShrink(false, 1.0);
+
           setState((prev) => {
             const newHighScore = Math.max(prev.highScore, scoreRef.current);
             const elapsedMs = Date.now() - startTimeRef.current;
@@ -613,7 +611,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
               gameOver: true,
               highScore: newHighScore,
               diamonds: newTotalDiamonds,
+              shrinkTimeLeft: 0,
+              shrinkCost: WIZARD_SHRINK_BASE_COST,
               sessionDiamonds: finalSessionDiamonds,
+              planets: finalPlanets,
               checksum: calculateChecksum(scoreRef.current, dropCountRef.current),
             };
           });
@@ -760,11 +761,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     const current = getFromBag();
     const next = getFromBag(current);
 
-    // ─── Streak, Score & Shrink Init ──────────────────────
-    Promise.all([
-      storage.get(),
-      storage.getShrinkState(),
-    ]).then(([saved, shrink]) => {
+    // ─── Streak & Score Init ───────────────────────────────────────────
+    storage.get().then(({ score, diamonds, streak: sStreak, lastStreakDate: sDate }) => {
       scoreRef.current = 0;
       dropCountRef.current = 0;
 
@@ -772,17 +770,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      let finalStreak = saved.streak || 1;
-      let finalDate = saved.lastStreakDate;
+      let finalStreak = sStreak || 1;
+      let finalDate = sDate;
       let rewardGranted = null;
 
-      if (!finalDate) {
+      if (!sDate) {
         finalStreak = 1;
         finalDate = todayStr;
         rewardGranted = getStreakReward(finalStreak);
         storage.setStreak(finalStreak, finalDate);
       } else {
-        const lastDateParts = finalDate.includes('T') ? finalDate.split('T')[0].split('-') : finalDate.split('-');
+        const lastDateParts = sDate.includes('T') ? sDate.split('T')[0].split('-') : sDate.split('-');
         const lastDateObj = new Date(parseInt(lastDateParts[0], 10), parseInt(lastDateParts[1], 10) - 1, parseInt(lastDateParts[2], 10));
         const todayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -799,35 +797,32 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       }
 
       if (rewardGranted !== null) {
-        totalDiamondsRef.current = saved.diamonds + rewardGranted;
+        totalDiamondsRef.current = diamonds + rewardGranted;
         storage.setDiamonds(totalDiamondsRef.current);
       } else {
-        totalDiamondsRef.current = saved.diamonds;
+        totalDiamondsRef.current = diamonds;
       }
 
       setState(s => ({
         ...s,
         currentPlanetId: current,
         nextPlanetId: next,
-        highScore: saved.score,
+        highScore: score,
+        score: 0,
+        dropCount: 0,
+        checksum: calculateChecksum(0, 0),
         diamonds: totalDiamondsRef.current,
         streak: finalStreak,
         lastStreakDate: finalDate || todayStr,
         streakReward: rewardGranted,
-        // Shrink restoration
-        shrinkTimeLeft: shrink?.timeLeft || 0,
-        shrinkCost: shrink?.cost ?? WIZARD_SHRINK_BASE_COST,
+        // Reset shrink on reload as requested
+        shrinkTimeLeft: 0,
+        shrinkCost: WIZARD_SHRINK_BASE_COST,
       }));
-
-      initPhysics();
-      
-      // If shrink was active, apply to physics immediately
-      if (shrink && shrink.timeLeft > 0) {
-        physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
-      }
-      
-      startLoop();
     });
+
+    initPhysics();
+    startLoop();
 
     return () => {
       cancelAnimationFrame(rafRef.current);
@@ -847,15 +842,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextTime = Math.max(0, prev.shrinkTimeLeft - 1);
         if (nextTime === 0 && prev.shrinkTimeLeft > 0) {
           physicsRef.current?.setPlanetShrink(false, 1.0);
-          storage.setShrinkState(0, WIZARD_SHRINK_BASE_COST);
           return { ...prev, shrinkTimeLeft: 0, shrinkCost: WIZARD_SHRINK_BASE_COST };
         }
         
-        // Save to storage every 10 seconds to avoid excessive writes but keep it fresh
-        if (nextTime % 10 === 0) {
-          storage.setShrinkState(nextTime, prev.shrinkCost);
-        }
-
         return { ...prev, shrinkTimeLeft: nextTime };
       });
     }, 1000);
@@ -1027,6 +1016,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     comboRef.current = 1;
     scoreRef.current = 0;
 
+    // Reset shrink bonus on manual restart
+    physicsRef.current?.setPlanetShrink(false, 1.0);
+
     setState((prev) => {
       refillBag();
       const current = getFromBag();
@@ -1049,6 +1041,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         viruses: [],
         sickPlanetIds: [],
         shieldLayers: 0,
+        // Ensure shrink state is fully cleared even if INITIAL_STATE was mutated (safety)
+        shrinkTimeLeft: 0,
+        shrinkCost: WIZARD_SHRINK_BASE_COST,
       };
     });
 
@@ -1125,9 +1120,6 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const nextCost = cost + WIZARD_SHRINK_COST_INCREMENT;
       const nextTime = prev.shrinkTimeLeft + WIZARD_SHRINK_DURATION;
       
-      // Persist the new state immediately
-      storage.setShrinkState(nextTime, nextCost);
-
       return {
         ...prev,
         diamonds: newTotal,
