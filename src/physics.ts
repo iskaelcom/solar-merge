@@ -171,6 +171,7 @@ export class SolarPhysics {
   // Wizard bonuses
   private shrinkActive: boolean = false;
   private shrinkScale: number = 1.0;
+  private sleepLockTicks: number = 0;
   width: number;
   height: number;
 
@@ -634,13 +635,29 @@ export class SolarPhysics {
           const adjustScale = scaleMultiplier / oldScale;
           Matter.Body.scale(p.body, adjustScale, adjustScale);
         }
-
-        // Wake up the body so it can settle into its new smaller space
-        if (p.body.isSleeping) {
-          Matter.Sleeping.set(p.body, false);
-        }
       }
     });
+
+      // Unconditionally wake up ALL bodies (planets, stars, black holes, viruses)
+      // so the entire physics partition re-evaluates collisions and nothing stays frozen.
+      const wakeUpBody = (body: Matter.Body) => {
+        Matter.Sleeping.set(body, false);
+        Matter.Body.setVelocity(body, { 
+          x: body.velocity.x, 
+          y: body.velocity.y + 0.1 
+        });
+        (body as any).sleepCounter = 0;
+      };
+
+      this.planets.forEach(p => wakeUpBody(p.body));
+      this.stars.forEach(s => wakeUpBody(s.body));
+      this.blackHoles.forEach(bh => wakeUpBody(bh.body));
+      this.viruses.forEach(v => wakeUpBody(v.body));
+
+      // Matter.js SAT collision solver needs time to resolve deep penetrations 
+      // without prematurely determining the bodies are 'resting' and putting them to sleep.
+      this.sleepLockTicks = 60; // Approx 1.5 - 2 seconds of physics simulation
+      this.engine.enableSleeping = false;
   }
 
   getPlanet(id: string): PhysicsPlanet | undefined {
@@ -800,6 +817,13 @@ export class SolarPhysics {
   }
 
   step(delta: number): void {
+    if (this.sleepLockTicks > 0) {
+      this.sleepLockTicks--;
+      if (this.sleepLockTicks === 0) {
+        this.engine.enableSleeping = true;
+      }
+    }
+
     // Balanced ~45fps cap (22ms) for better battery/thermal life while keeping it smooth.
     // Clamping protects against large tunneling on lag.
     Matter.Engine.update(this.engine, Math.min(delta, 22));

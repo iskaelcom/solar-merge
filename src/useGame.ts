@@ -859,10 +859,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             scale: 1.0,
           }));
 
+          // Kickstart the loop outside this updater tick. Wait for physics side-effects.
+          // This ensures that if the physics engine has gone to sleep due to inactivity,
+          // it turns back on immediately to push the resized planets away from each other.
+          setTimeout(() => {
+            startLoop();
+          }, 0);
+
           return { 
             ...prev, 
             shrinkTimeLeft: 0, 
-            shrinkCost: WIZARD_SHRINK_BASE_COST,
+            // Do NOT reset cost here, so sequence is preserved
             planets: refreshedPlanets 
           };
         }
