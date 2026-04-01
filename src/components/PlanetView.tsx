@@ -101,36 +101,43 @@ export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false
           width: imgW,
           height: imgH,
           transform: [
-            { rotate: `${angle}rad` },
             { scale: Animated.multiply(scaleAnim, bonusScaleAnim) },
           ],
         }}
       >
-        <Image
-          source={isSick ? SICK_PLANET_IMAGES[planetId] : PLANET_IMAGES[planetId]}
-          style={{ width: imgW, height: imgH }}
-          resizeMode="contain"
-          fadeDuration={0}
-        />
-      </Animated.View>
-
-      {/* Purple sick ring — centered on the planet body (not the rings for Saturn) */}
-      {isSick && (
-        <View
-          pointerEvents="none"
+        <Animated.View
           style={{
-            position: 'absolute',
-            width: diameter + 10,
-            height: diameter + 10,
-            left: leftExtra - 5,
-            top: -5,
-            borderRadius: (diameter + 10) / 2,
-            borderWidth: 3,
-            borderColor: '#CC00FF',
-            backgroundColor: 'rgba(170,0,255,0.08)',
+            width: imgW,
+            height: imgH,
+            transform: [{ rotate: `${angle}rad` }],
           }}
-        />
-      )}
+        >
+          <Image
+            source={isSick ? SICK_PLANET_IMAGES[planetId] : PLANET_IMAGES[planetId]}
+            style={{ width: imgW, height: imgH }}
+            resizeMode="contain"
+            fadeDuration={0}
+          />
+        </Animated.View>
+
+        {/* Purple sick ring — centered on the planet body */}
+        {isSick && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: diameter + 10,
+              height: diameter + 10,
+              left: leftExtra - 5,
+              top: -5,
+              borderRadius: (diameter + 10) / 2,
+              borderWidth: 3,
+              borderColor: '#CC00FF',
+              backgroundColor: 'rgba(170,0,255,0.08)',
+            }}
+          />
+        )}
+      </Animated.View>
     </View>
   );
 });

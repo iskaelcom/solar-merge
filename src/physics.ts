@@ -615,6 +615,7 @@ export class SolarPhysics {
 
   setPlanetShrink(active: boolean, scaleMultiplier: number): void {
     const wasActive = this.shrinkActive;
+    const oldScale = this.shrinkScale;
     this.shrinkActive = active;
     this.shrinkScale = scaleMultiplier;
 
@@ -622,12 +623,16 @@ export class SolarPhysics {
     this.planets.forEach((p) => {
       if (p.planetId >= 4) {
         if (active && !wasActive) {
-          // Shrink by 80% (scale to 0.2)
+          // Normal activation
           Matter.Body.scale(p.body, scaleMultiplier, scaleMultiplier);
         } else if (!active && wasActive) {
-          // Return to normal (scale relative by 1 / 0.2 = 5.0)
-          const reverseScale = 1 / 0.2; // 5.0
+          // Deactivation: Return to normal (1.0) by scaling by (1 / current_scale)
+          const reverseScale = 1 / oldScale;
           Matter.Body.scale(p.body, reverseScale, reverseScale);
+        } else if (active && wasActive && scaleMultiplier !== oldScale) {
+          // Renewal with different scale: scale by (new / old)
+          const adjustScale = scaleMultiplier / oldScale;
+          Matter.Body.scale(p.body, adjustScale, adjustScale);
         }
       }
     });

@@ -67,7 +67,7 @@ export const WizardModal = ({
                   )}
                 </View>
                 <Text style={s.spellDesc}>
-                  Shrinks planets ID 4-10 by 80% for 5 mins
+                  Shrinks planets ID 4 to 10 to 80% of original size for 5 mins
                 </Text>
               </View>
 

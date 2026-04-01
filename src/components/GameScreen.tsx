@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame, calculateChecksum } from '../useGame';
-import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT } from '../constants';
+import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT, WIZARD_SHRINK_SCALE } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
 import { BlackHoleView } from './BlackHoleView';
@@ -313,7 +313,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
                     ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
                     : state.currentIsStar
                       ? <StarView x={previewRadius} y={previewRadius} ghost />
-                      : <PlanetView planetId={state.currentPlanetId} x={previewRadius} y={previewRadius} ghost />
+                      : <PlanetView 
+                          planetId={state.currentPlanetId} 
+                          x={previewRadius} 
+                          y={previewRadius} 
+                          ghost 
+                          scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
+                        />
                 }
               </View>
             </Animated.View>
