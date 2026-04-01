@@ -161,9 +161,9 @@ export const VIRUS_RADIUS = 22;          // physics radius (px)
 export const VIRUS_SPAWN_INTERVAL = 23;  // spawn a virus every N planet drops
 
 // Mystery Planet feature
-export const MYSTERY_PLANET_SPAWN_INTERVAL = 10; // spawn a mystery planet every N drops
-export const MYSTERY_PLANET_RADIUS = 26;         // generic mid-size disguise radius
-export const MYSTERY_PLANET_REVEAL_DROPS = 3;    // number of planet drops until it reveals itself
+export const MYSTERY_PLANET_SPAWN_INTERVAL = 47; // spawn a mystery planet every N drops
+export const MYSTERY_PLANET_RADIUS = 20;         // generic mid-size disguise radius
+export const MYSTERY_PLANET_REVEAL_DROPS = 5;    // number of planet drops until it reveals itself
 
 // Shield
 export const SHIELD_MAX_LAYERS = 3;          // total shield layers granted at once

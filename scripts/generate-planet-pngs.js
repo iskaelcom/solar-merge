@@ -405,9 +405,43 @@ const PLANETS = [
   <!-- Shine -->
   <ellipse cx="32" cy="30" rx="16" ry="10" fill="rgba(255,255,255,.35)" transform="rotate(-30,32,30)"/>
 </svg>`],
+// ── 11. MYSTERY ─────────────────────────────────────────────────────────────
+['mystery', 400, 400, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="400" height="400">
+  <defs>
+    <radialGradient id="gm" cx="35%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#DDA0DD"/>
+      <stop offset="100%" stop-color="#8A2BE2"/>
+    </radialGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <!-- Base planet -->
+  <circle cx="50" cy="50" r="47" fill="url(#gm)"/>
+  
+  <!-- Outer glowing rings/bubbles -->
+  <circle cx="50" cy="50" r="47" stroke="#E0B0FF" stroke-width="3" fill="none" opacity="0.6"/>
+  <circle cx="50" cy="50" r="41" stroke="#DDA0DD" stroke-width="2" fill="none" opacity="0.4"/>
+
+  <!-- Question Mark -->
+  <text x="50" y="68" font-family="sans-serif" font-size="50" font-weight="900" fill="#FFFFFF" text-anchor="middle" style="filter: url(#shadow)">?</text>
+
+  <!-- Sparkles -->
+  <text x="25" y="32" font-size="12" fill="#FFFFFF" opacity="0.8">&#10022;</text>
+  <text x="75" y="28" font-size="16" fill="#FFFFFF" opacity="0.9">&#10022;</text>
+  <text x="80" y="70" font-size="10" fill="#FFFFFF" opacity="0.7">&#10022;</text>
+  <text x="20" y="68" font-size="14" fill="#FFFFFF" opacity="0.8">&#10022;</text>
+  
+  <!-- Magic Dust -->
+  <circle cx="35" cy="22" r="2.5" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="65" cy="82" r="1.5" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="20" cy="48" r="2" fill="#FFFFFF" opacity="0.7"/>
+
+  <!-- Magical Shine -->
+  <ellipse cx="27" cy="27" rx="13" ry="8" fill="rgba(255,255,255,.3)" transform="rotate(-30,27,27)"/>
+</svg>`],
 
 ];
-
 // ── Where each planet's face section starts (stripped for sick variant) ──────
 const FACE_START = {
   moon:    '<!-- Closed sleepy eyes -->',

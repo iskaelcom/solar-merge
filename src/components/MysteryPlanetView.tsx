@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, Animated, Easing } from 'react-native';
+import { StyleSheet, Animated, Easing, Image } from 'react-native';
 import { MYSTERY_PLANET_RADIUS } from '../constants';
 
 interface Props {
@@ -12,6 +12,9 @@ interface Props {
 export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, angle = 0, ghost = false }) => {
   const rotation = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(1)).current;
+
+  // Use the pre-baked PNG asset
+  const source = require('../../assets/planets/mystery.png');
 
   useEffect(() => {
     // Continuous subtle breathing glow
@@ -47,9 +50,7 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, angle = 0,
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <Animated.View style={styles.bubble}>
-        <Text style={styles.questionMark}>?</Text>
-      </Animated.View>
+      <Animated.Image source={source} style={styles.image} />
     </Animated.View>
   );
 });
@@ -62,27 +63,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bubble: {
+  image: {
     width: MYSTERY_PLANET_RADIUS * 2,
     height: MYSTERY_PLANET_RADIUS * 2,
-    borderRadius: MYSTERY_PLANET_RADIUS,
-    backgroundColor: '#8A2BE2', // BlueViolet base
-    borderWidth: 3,
-    borderColor: '#DDA0DD', // Plum border
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#E0B0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  questionMark: {
-    fontSize: MYSTERY_PLANET_RADIUS * 1.2,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(255, 255, 255, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    resizeMode: 'contain',
   },
 });
