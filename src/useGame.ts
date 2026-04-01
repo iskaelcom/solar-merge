@@ -36,6 +36,7 @@ const HIGH_SCORE_KEY = 'solar-merge-highscore';
 const DIAMONDS_KEY = 'solar-merge-diamonds';
 const STREAK_KEY = 'solar-merge-streak';
 const LAST_STREAK_DATE_KEY = 'solar-merge-last-streak-date';
+const SHRINK_STATE_KEY = 'solar-merge-shrink-state';
 
 const SALT = 'sm-v2-secure';
 
@@ -106,6 +107,21 @@ const storage = {
         AsyncStorage.setItem(LAST_STREAK_DATE_KEY, lastDate),
       ]);
     } catch { }
+  },
+  setShrinkState: async (timeLeft: number, cost: number) => {
+    try {
+      const data = { timeLeft, cost, timestamp: Date.now() };
+      await AsyncStorage.setItem(SHRINK_STATE_KEY, JSON.stringify(data));
+    } catch { }
+  },
+  getShrinkState: async (): Promise<{ timeLeft: number; cost: number } | null> => {
+    try {
+      const val = await AsyncStorage.getItem(SHRINK_STATE_KEY);
+      if (!val) return null;
+      const { timeLeft, cost, timestamp } = JSON.parse(val);
+      const elapsed = Math.floor((Date.now() - timestamp) / 1000);
+      return { timeLeft: Math.max(0, timeLeft - elapsed), cost };
+    } catch { return null; }
   },
 };
 
@@ -214,17 +230,6 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     pointerX: gameWidth / 2,
   }));
 
-  // Load high score and diamonds on mount
-  useEffect(() => {
-    storage.get().then((saved) => {
-      totalDiamondsRef.current = saved.diamonds;
-      setState((s) => ({
-        ...s,
-        highScore: saved.score,
-        diamonds: saved.diamonds,
-      }));
-    });
-  }, []);
   const stateRef = useRef<GameState>(state);
   stateRef.current = state;
 
@@ -755,8 +760,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     const current = getFromBag();
     const next = getFromBag(current);
 
-    // ─── Streak & Score Init ───────────────────────────────────────────
-    storage.get().then(({ score, dropCount, diamonds, streak: sStreak, lastStreakDate: sDate }) => {
+    // ─── Streak, Score & Shrink Init ──────────────────────
+    Promise.all([
+      storage.get(),
+      storage.getShrinkState(),
+    ]).then(([saved, shrink]) => {
       scoreRef.current = 0;
       dropCountRef.current = 0;
 
@@ -764,19 +772,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      let finalStreak = sStreak || 1;
-      let finalDate = sDate;
+      let finalStreak = saved.streak || 1;
+      let finalDate = saved.lastStreakDate;
       let rewardGranted = null;
 
-      if (!sDate) {
-        // First time ever
+      if (!finalDate) {
         finalStreak = 1;
         finalDate = todayStr;
         rewardGranted = getStreakReward(finalStreak);
         storage.setStreak(finalStreak, finalDate);
       } else {
-        // Compare dates by parsing and stripping time
-        const lastDateParts = sDate.includes('T') ? sDate.split('T')[0].split('-') : sDate.split('-');
+        const lastDateParts = finalDate.includes('T') ? finalDate.split('T')[0].split('-') : finalDate.split('-');
         const lastDateObj = new Date(parseInt(lastDateParts[0], 10), parseInt(lastDateParts[1], 10) - 1, parseInt(lastDateParts[2], 10));
         const todayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -784,13 +790,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays > 0) {
-          if (diffDays === 1) {
-            // Consecutive day
-            finalStreak += 1;
-          } else {
-            // Reset if missed more than grace period (3 days)
-            finalStreak = 1;
-          }
+          if (diffDays === 1) finalStreak += 1;
+          else finalStreak = 1;
           finalDate = todayStr;
           rewardGranted = getStreakReward(finalStreak);
           storage.setStreak(finalStreak, finalDate);
@@ -798,27 +799,36 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       }
 
       if (rewardGranted !== null) {
-        totalDiamondsRef.current += rewardGranted;
+        totalDiamondsRef.current = saved.diamonds + rewardGranted;
         storage.setDiamonds(totalDiamondsRef.current);
+      } else {
+        totalDiamondsRef.current = saved.diamonds;
       }
 
       setState(s => ({
         ...s,
         currentPlanetId: current,
         nextPlanetId: next,
-        highScore: score,
-        score: 0,
-        dropCount: 0,
-        checksum: calculateChecksum(0, 0),
+        highScore: saved.score,
         diamonds: totalDiamondsRef.current,
         streak: finalStreak,
         lastStreakDate: finalDate || todayStr,
         streakReward: rewardGranted,
+        // Shrink restoration
+        shrinkTimeLeft: shrink?.timeLeft || 0,
+        shrinkCost: shrink?.cost ?? WIZARD_SHRINK_BASE_COST,
       }));
+
+      initPhysics();
+      
+      // If shrink was active, apply to physics immediately
+      if (shrink && shrink.timeLeft > 0) {
+        physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
+      }
+      
+      startLoop();
     });
 
-    initPhysics();
-    startLoop();
     return () => {
       cancelAnimationFrame(rafRef.current);
       physicsRef.current?.destroy();
@@ -837,14 +847,21 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextTime = Math.max(0, prev.shrinkTimeLeft - 1);
         if (nextTime === 0 && prev.shrinkTimeLeft > 0) {
           physicsRef.current?.setPlanetShrink(false, 1.0);
+          storage.setShrinkState(0, WIZARD_SHRINK_BASE_COST);
           return { ...prev, shrinkTimeLeft: 0, shrinkCost: WIZARD_SHRINK_BASE_COST };
         }
+        
+        // Save to storage every 10 seconds to avoid excessive writes but keep it fresh
+        if (nextTime % 10 === 0) {
+          storage.setShrinkState(nextTime, prev.shrinkCost);
+        }
+
         return { ...prev, shrinkTimeLeft: nextTime };
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [state.shrinkTimeLeft > 0]); // restart when bonus starts
+  }, [state.shrinkTimeLeft > 0]); // restart when bonus starts or restarts
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   const setPointerX = useCallback((x: number) => {
@@ -1089,29 +1106,32 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, [startLoop]);
 
   const buyShrinkBonus = useCallback(() => {
-    const cost = stateRef.current.shrinkCost;
-    if (stateRef.current.diamonds < cost) {
-      playSound('error');
-      return;
-    }
-
-    playSound('buy');
-    const newTotal = stateRef.current.diamonds - cost;
-    totalDiamondsRef.current = newTotal;
-    storage.setDiamonds(newTotal);
-
-    // Apply to physics (wakes up bodies as well)
-    physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
-    startLoop();
-
     setState((prev) => {
-      // Every purchase increments the cost for the next one, until it expires and resets to base.
-      const nextCost = prev.shrinkCost + WIZARD_SHRINK_COST_INCREMENT;
+      const cost = prev.shrinkCost;
+      if (prev.diamonds < cost) {
+        playSound('error');
+        return prev;
+      }
+
+      playSound('buy');
+      const newTotal = prev.diamonds - cost;
+      totalDiamondsRef.current = newTotal;
+      storage.setDiamonds(newTotal);
+
+      // Wake up physics and loop
+      physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
+      startLoop();
+
+      const nextCost = cost + WIZARD_SHRINK_COST_INCREMENT;
+      const nextTime = prev.shrinkTimeLeft + WIZARD_SHRINK_DURATION;
       
+      // Persist the new state immediately
+      storage.setShrinkState(nextTime, nextCost);
+
       return {
         ...prev,
         diamonds: newTotal,
-        shrinkTimeLeft: prev.shrinkTimeLeft + WIZARD_SHRINK_DURATION,
+        shrinkTimeLeft: nextTime,
         shrinkCost: nextCost,
       };
     });
