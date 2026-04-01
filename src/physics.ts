@@ -634,6 +634,11 @@ export class SolarPhysics {
           const adjustScale = scaleMultiplier / oldScale;
           Matter.Body.scale(p.body, adjustScale, adjustScale);
         }
+
+        // Wake up the body so it can settle into its new smaller space
+        if (p.body.isSleeping) {
+          Matter.Sleeping.set(p.body, false);
+        }
       }
     });
   }

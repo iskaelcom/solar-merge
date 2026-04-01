@@ -1089,29 +1089,25 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, [startLoop]);
 
   const buyShrinkBonus = useCallback(() => {
+    const cost = stateRef.current.shrinkCost;
+    if (stateRef.current.diamonds < cost) {
+      playSound('error');
+      return;
+    }
+
+    playSound('buy');
+    const newTotal = stateRef.current.diamonds - cost;
+    totalDiamondsRef.current = newTotal;
+    storage.setDiamonds(newTotal);
+
+    // Apply to physics (wakes up bodies as well)
+    physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
+    startLoop();
+
     setState((prev) => {
-      const cost = prev.shrinkCost;
-      if (prev.diamonds < cost) {
-        playSound('error');
-        return prev;
-      }
-
-      playSound('buy');
-      const newTotal = prev.diamonds - cost;
-      totalDiamondsRef.current = newTotal;
-      storage.setDiamonds(newTotal);
-
-      // If bought while timer is < 1s (effectively 0) or fresh start, base cost
-      // "Ketikan countdown timer berakhir... user bisa beli... harganya naik 10"
-      // Wait, user said "harganya naik 10 lagi setiap pembelian SEBELUM countdown timer habis"
       const isRenewal = prev.shrinkTimeLeft > 0;
       const nextCost = isRenewal ? prev.shrinkCost + WIZARD_SHRINK_COST_INCREMENT : WIZARD_SHRINK_BASE_COST;
-
-      // Apply to physics
-      if (!isRenewal) {
-        physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
-      }
-
+      
       return {
         ...prev,
         diamonds: newTotal,
@@ -1119,7 +1115,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         shrinkCost: nextCost,
       };
     });
-  }, []);
+  }, [playSound, startLoop]);
 
   return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, isDroppingRef, scoreRef, dropCountRef };
 }
