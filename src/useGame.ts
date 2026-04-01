@@ -842,7 +842,23 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextTime = Math.max(0, prev.shrinkTimeLeft - 1);
         if (nextTime === 0 && prev.shrinkTimeLeft > 0) {
           physicsRef.current?.setPlanetShrink(false, 1.0);
-          return { ...prev, shrinkTimeLeft: 0, shrinkCost: WIZARD_SHRINK_BASE_COST };
+          
+          // Force immediate visual synchronization of all planets to reflect full size (1.0)
+          const refreshedPlanets: RenderPlanet[] = (physicsRef.current?.getAllPlanets() || []).map((p) => ({
+            id: p.id,
+            planetId: p.planetId,
+            x: p.body.position.x,
+            y: p.body.position.y,
+            angle: p.body.angle,
+            scale: 1.0,
+          }));
+
+          return { 
+            ...prev, 
+            shrinkTimeLeft: 0, 
+            shrinkCost: WIZARD_SHRINK_BASE_COST,
+            planets: refreshedPlanets 
+          };
         }
         
         return { ...prev, shrinkTimeLeft: nextTime };
