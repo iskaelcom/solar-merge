@@ -22,10 +22,11 @@ const ASSETS = {
   ambient_alien: require('../../assets/sounds/ambient_alien.wav') as number,
 };
 
-type SoundKey = keyof typeof ASSETS;
+type SoundKey = keyof typeof ASSETS | 'buy' | 'error';
 
 const pool: Record<SoundKey, Audio.Sound | null> = {
   drop: null, merge: null, star: null, blackhole: null, virus: null, gameover: null, ambient_alien: null,
+  buy: null, error: null,
 };
 
 let initialized = false;
@@ -76,7 +77,7 @@ export async function initSounds(): Promise<void> {
     staysActiveInBackground: false,
   });
 
-  for (const key of Object.keys(ASSETS) as SoundKey[]) {
+  for (const key of Object.keys(ASSETS) as (keyof typeof ASSETS)[]) {
     try {
       const { sound } = await Audio.Sound.createAsync(ASSETS[key], {
         shouldPlay: false,
@@ -91,7 +92,12 @@ export async function initSounds(): Promise<void> {
 
 export async function playSound(key: SoundKey): Promise<void> {
   if (!sfxEnabled) return;
-  const sound = pool[key];
+  
+  let soundKey: keyof typeof ASSETS = key as any;
+  if (key === 'buy') soundKey = 'star';    // fallback to star sound
+  if (key === 'error') soundKey = 'virus'; // fallback to virus sound
+  
+  const sound = pool[soundKey];
   if (!sound) return;
   try {
     await sound.setPositionAsync(0);

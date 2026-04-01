@@ -22,6 +22,10 @@ import {
   SHIELD_THRESHOLD_ADAPT_DROPS,
   MAX_SESSION_DIAMONDS,
   DIAMONDS_PER_MINUTE,
+  WIZARD_SHRINK_DURATION,
+  WIZARD_SHRINK_BASE_COST,
+  WIZARD_SHRINK_COST_INCREMENT,
+  WIZARD_SHRINK_SCALE,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 
@@ -142,6 +146,8 @@ const INITIAL_STATE: GameState = {
   streak: 1,
   lastStreakDate: '',
   streakReward: null,
+  shrinkTimeLeft: 0,
+  shrinkCost: WIZARD_SHRINK_BASE_COST,
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -703,7 +709,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
             return {
               ...prev,
-              planets: updated,
+              planets: updated.map(p => ({
+                ...p,
+                scale: (p.planetId >= 4 && prev.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1.0
+              })),
               stars: updatedStars,
               blackHoles: updatedBlackHoles,
               viruses: updatedViruses,
@@ -818,6 +827,24 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ─── Wizard Bonus Timer ───────────────────────────────────────────
+  useEffect(() => {
+    if (state.shrinkTimeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setState((prev) => {
+        const nextTime = Math.max(0, prev.shrinkTimeLeft - 1);
+        if (nextTime === 0 && prev.shrinkTimeLeft > 0) {
+          physicsRef.current?.setPlanetShrink(false, 1.0);
+          return { ...prev, shrinkTimeLeft: 0, shrinkCost: WIZARD_SHRINK_BASE_COST };
+        }
+        return { ...prev, shrinkTimeLeft: nextTime };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [state.shrinkTimeLeft > 0]); // restart when bonus starts
 
   // ─── Actions ──────────────────────────────────────────────────────────────
   const setPointerX = useCallback((x: number) => {
@@ -1061,5 +1088,38 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return true;
   }, [startLoop]);
 
-  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, isDroppingRef, scoreRef, dropCountRef };
+  const buyShrinkBonus = useCallback(() => {
+    setState((prev) => {
+      const cost = prev.shrinkCost;
+      if (prev.diamonds < cost) {
+        playSound('error');
+        return prev;
+      }
+
+      playSound('buy');
+      const newTotal = prev.diamonds - cost;
+      totalDiamondsRef.current = newTotal;
+      storage.setDiamonds(newTotal);
+
+      // If bought while timer is < 1s (effectively 0) or fresh start, base cost
+      // "Ketikan countdown timer berakhir... user bisa beli... harganya naik 10"
+      // Wait, user said "harganya naik 10 lagi setiap pembelian SEBELUM countdown timer habis"
+      const isRenewal = prev.shrinkTimeLeft > 0;
+      const nextCost = isRenewal ? prev.shrinkCost + WIZARD_SHRINK_COST_INCREMENT : WIZARD_SHRINK_BASE_COST;
+
+      // Apply to physics
+      if (!isRenewal) {
+        physicsRef.current?.setPlanetShrink(true, WIZARD_SHRINK_SCALE);
+      }
+
+      return {
+        ...prev,
+        diamonds: newTotal,
+        shrinkTimeLeft: prev.shrinkTimeLeft + WIZARD_SHRINK_DURATION,
+        shrinkCost: nextCost,
+      };
+    });
+  }, []);
+
+  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, isDroppingRef, scoreRef, dropCountRef };
 }

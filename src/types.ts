@@ -4,6 +4,7 @@ export interface RenderPlanet {
   x: number;
   y: number;
   angle: number;
+  scale?: number;
 }
 
 export interface Explosion {
@@ -62,4 +63,6 @@ export interface GameState {
   streak: number;          // current login streak
   lastStreakDate: string;  // ISO date string of last activity
   streakReward: number | null; // diamonds earned today from streak
+  shrinkTimeLeft: number;      // seconds left for the shrink bonus
+  shrinkCost: number;          // current cost for the shrink bonus
 }

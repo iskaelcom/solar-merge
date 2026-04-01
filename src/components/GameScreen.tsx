@@ -22,6 +22,7 @@ import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 import { LeaderboardModal } from './LeaderboardModal';
 import { SettingsModal } from './SettingsModal';
 import { StreakRewardModal } from './StreakRewardModal';
+import { WizardModal } from './WizardModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
@@ -58,7 +59,7 @@ export function GameScreen() {
 }
 
 function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
-  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -73,6 +74,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showStreakReward, setShowStreakReward] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     if (state.streakReward !== null && !showTutorial) {
@@ -317,6 +319,16 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             </Animated.View>
           )}
 
+          {/* Shrink Timer HUD */}
+          {state.shrinkTimeLeft > 0 && (
+            <View style={styles.shrinkTimerHud}>
+              <Text style={styles.shrinkTimerLabel}>🧪 SHRINK:</Text>
+              <Text style={styles.shrinkTimerValue}>
+                {Math.floor(state.shrinkTimeLeft / 60)}:{(state.shrinkTimeLeft % 60).toString().padStart(2, '0')}
+              </Text>
+            </View>
+          )}
+
           {/* All live planets */}
           {state.planets.map((p) => (
             <MemoizedPlanetView
@@ -325,6 +337,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
               x={p.x}
               y={p.y}
               angle={p.angle}
+              scale={p.scale}
               isMergeSpawn={mergeSpawnSet.has(p.id)}
               isSick={sickPlanetSet.has(p.id)}
             />
@@ -368,6 +381,18 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             onResponderRelease={handleTouchEnd}
             {...(Platform.OS === 'web' ? { onMouseMove: handleMouseMove } : {})}
           />
+          
+          {/* Floating Wizard Button */}
+          <TouchableOpacity 
+            style={[styles.wizardBtn, { left: gameWidth - 55, top: gameHeight - 55 }]} 
+            onPress={() => setShowWizard(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.wizardInner}>
+              <Text style={styles.wizardEmoji}>🪄</Text>
+            </View>
+            {state.shrinkTimeLeft > 0 && <View style={styles.wizardActiveDot} />}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -427,6 +452,15 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         streak={state.streak}
         reward={state.streakReward || 0}
         onClose={() => setShowStreakReward(false)}
+      />
+
+      <WizardModal
+        visible={showWizard}
+        onClose={() => setShowWizard(false)}
+        diamonds={state.diamonds}
+        shrinkCost={state.shrinkCost}
+        shrinkTimeLeft={state.shrinkTimeLeft}
+        onBuyShrink={buyShrinkBonus}
       />
     </LinearGradient>
   );
@@ -762,5 +796,66 @@ const styles = StyleSheet.create({
     color: '#555',
     fontSize: 12,
     marginHorizontal: 1,
+  },
+  wizardBtn: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    zIndex: 100,
+  },
+  wizardInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(108, 92, 231, 0.9)',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  wizardEmoji: {
+    fontSize: 24,
+  },
+  wizardActiveDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#00FF85',
+    borderWidth: 2,
+    borderColor: '#1E1E2E',
+  },
+  shrinkTimerHud: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.3)',
+    zIndex: 10,
+  },
+  shrinkTimerLabel: {
+    color: '#00E5FF',
+    fontSize: 10,
+    fontWeight: '900',
+    marginRight: 4,
+  },
+  shrinkTimerValue: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

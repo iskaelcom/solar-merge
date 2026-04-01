@@ -6,7 +6,7 @@
  * Sounds are synthesized on the fly — no file loading needed.
  */
 
-type SoundKey = 'drop' | 'merge' | 'star' | 'blackhole' | 'virus' | 'gameover';
+type SoundKey = 'drop' | 'merge' | 'star' | 'blackhole' | 'virus' | 'gameover' | 'buy' | 'error';
 
 const SOUND_PREF_KEY = 'solar_merge_sound_enabled';
 const AMBIENT_PREF_KEY = 'solar_merge_ambient_enabled';
@@ -271,6 +271,45 @@ function synthVirus(c: AudioContext) {
   carrier.stop(now + dur);
 }
 
+// ── Buy: Success chime, ascending (250ms) ───────────────────────────────────
+
+function synthBuy(c: AudioContext) {
+    const now = c.currentTime;
+    const notes = [660, 880, 1100]; // E5, A5, C6-ish
+    notes.forEach((freq, idx) => {
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.connect(gain);
+        gain.connect(c.destination);
+        const start = now + idx * 0.05;
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.3, start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+        osc.start(start);
+        osc.stop(start + 0.2);
+    });
+}
+
+// ── Error: Low buzz (200ms) ────────────────────────────────────────────────
+
+function synthError(c: AudioContext) {
+    const now = c.currentTime;
+    [100, 105].forEach(freq => {
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    });
+}
+
 // ── Alien Ambient: eerie sci-fi space sounds ──────────────────────────
 
 let ambientNodes: {
@@ -451,6 +490,8 @@ export function playSound(key: SoundKey): Promise<void> {
   else if (key === 'blackhole') synthBlackhole(c);
   else if (key === 'virus') synthVirus(c);
   else if (key === 'gameover') synthGameOver(c);
+  else if (key === 'buy') synthBuy(c);
+  else if (key === 'error') synthError(c);
 
   return Promise.resolve();
 }

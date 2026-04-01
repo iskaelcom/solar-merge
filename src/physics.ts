@@ -168,6 +168,9 @@ export class SolarPhysics {
   private shieldPassedPlanetIds: Set<string> = new Set();
   private shieldRecentlyHitIds: Set<string> = new Set();
   private shieldHitCallbacks: Array<() => void> = [];
+  // Wizard bonuses
+  private shrinkActive: boolean = false;
+  private shrinkScale: number = 1.0;
   width: number;
   height: number;
 
@@ -584,6 +587,12 @@ export class SolarPhysics {
     this.bodyIdToPlanet.set(body.id, entry);
     this._planetsCache = null;
     Matter.Composite.add(this.engine.world, body);
+
+    // Apply shrink if active and planet is ID >= 4
+    if (this.shrinkActive && planetId >= 4) {
+      Matter.Body.scale(body, this.shrinkScale, this.shrinkScale);
+    }
+
     // Ensure the body is awake and starts falling immediately.
     // enableSleeping can cause a freshly-dropped planet to go to sleep on
     // contact with an existing body, making it appear stuck at the top.
@@ -602,6 +611,26 @@ export class SolarPhysics {
       this.shieldPassedPlanetIds.delete(id);
       this.shieldRecentlyHitIds.delete(id);
     }
+  }
+
+  setPlanetShrink(active: boolean, scaleMultiplier: number): void {
+    const wasActive = this.shrinkActive;
+    this.shrinkActive = active;
+    this.shrinkScale = scaleMultiplier;
+
+    // Apply scale to ALL existing planets with ID >= 4
+    this.planets.forEach((p) => {
+      if (p.planetId >= 4) {
+        if (active && !wasActive) {
+          // Shrink by 80% (scale to 0.2)
+          Matter.Body.scale(p.body, scaleMultiplier, scaleMultiplier);
+        } else if (!active && wasActive) {
+          // Return to normal (scale relative by 1 / 0.2 = 5.0)
+          const reverseScale = 1 / 0.2; // 5.0
+          Matter.Body.scale(p.body, reverseScale, reverseScale);
+        }
+      }
+    });
   }
 
   getPlanet(id: string): PhysicsPlanet | undefined {

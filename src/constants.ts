@@ -169,3 +169,9 @@ export const SHIELD_THRESHOLD_ADAPT_DROPS = 30; // drops with no merge before th
 // Diamonds
 export const MAX_SESSION_DIAMONDS = 10;
 export const DIAMONDS_PER_MINUTE = 1;
+// Wizard Bonus Spells
+export const WIZARD_SHRINK_BASE_COST = 20;
+export const WIZARD_SHRINK_COST_INCREMENT = 10;
+export const WIZARD_SHRINK_DURATION = 300;     // 5 minutes in seconds
+export const WIZARD_SHRINK_SCALE = 0.2;        // shrink to 20% size
+export const WIZARD_SHRINK_MIN_PLANET_ID = 4;  // starts from Venus

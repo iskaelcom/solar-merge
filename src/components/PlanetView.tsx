@@ -10,6 +10,7 @@ interface Props {
   ghost?: boolean;
   isMergeSpawn?: boolean;
   isSick?: boolean;
+  scale?: number;
   style?: object;
 }
 
@@ -44,7 +45,7 @@ const SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
-export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, style }: Props) => {
+export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style }: Props) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
@@ -59,6 +60,16 @@ export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false
 
   // Spring "pop" only for merge-spawned planets
   const scaleAnim = useRef(new Animated.Value(isMergeSpawn ? 0.1 : 1)).current;
+  const bonusScaleAnim = useRef(new Animated.Value(scale)).current;
+
+  useEffect(() => {
+    Animated.spring(bonusScaleAnim, {
+      toValue: scale,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  }, [scale]);
 
   useEffect(() => {
     if (!isMergeSpawn) return;
@@ -91,7 +102,7 @@ export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false
           height: imgH,
           transform: [
             { rotate: `${angle}rad` },
-            { scale: scaleAnim },
+            { scale: Animated.multiply(scaleAnim, bonusScaleAnim) },
           ],
         }}
       >
