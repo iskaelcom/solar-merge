@@ -55,6 +55,16 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, angle = 0,
   );
 });
 
+export const MysteryPlanetThumb: React.FC<{ size: number }> = ({ size }) => {
+  const source = require('../../assets/planets/mystery.png');
+  return (
+    <Image 
+      source={source} 
+      style={{ width: size, height: size, resizeMode: 'contain' }} 
+    />
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',

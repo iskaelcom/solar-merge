@@ -5,16 +5,17 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PlanetThumb } from './PlanetView';
 import { StarThumb } from './StarView';
 import { BlackHoleThumb } from './BlackHoleView';
 import { VirusPlanetThumb } from './VirusPlanetView';
+import { MysteryPlanetThumb } from './MysteryPlanetView';
 import { User } from 'firebase/auth';
 
 // ── Persistence ───────────────────────────────────────────────────────────────
-// ... existing markSeen / isTutorialSeen ...
 
 const TUTORIAL_KEY = 'solar-merge-tutorial-v2';
 
@@ -126,6 +127,24 @@ function PowerUpVisual() {
   );
 }
 
+function MysteryVisual() {
+  return (
+    <View style={vis.row}>
+      <View style={vis.powerItem}>
+        <MysteryPlanetThumb size={38} />
+        <Text style={vis.powerLabel}>Mystery</Text>
+      </View>
+      <Text style={vis.symbol}>→</Text>
+      <View style={{ gap: 4, flexDirection: 'row' }}>
+        <PlanetThumb planetId={1} size={28} />
+        <PlanetThumb planetId={2} size={28} />
+        <PlanetThumb planetId={3} size={28} />
+        <PlanetThumb planetId={4} size={28} />
+      </View>
+    </View>
+  );
+}
+
 function DangerVisual() {
   return (
     <View style={{ alignItems: 'center' }}>
@@ -210,7 +229,6 @@ function LeaderboardVisual({ user, onSignIn }: { user: User | null; onSignIn?: (
 }
 
 const vis = StyleSheet.create({
-  // ... styles ...
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,6 +276,11 @@ const SLIDES: Slide[] = [
     title: 'Special Power-Ups',
     body: '⭐ Star — upgrades a planet one level\n⚫ Black Hole — destroys nearby planets\n🦠 Virus — infects a planet. Sick planets downgrade instead of upgrading on merge!',
     visual: <PowerUpVisual />,
+  },
+  {
+    title: 'Mystery Planet ❓',
+    body: 'Appears every few drops! This mystery item hides a planet inside. After 3 more drops, it will reveal its true form (Lv 1-4). Plan your space carefully!',
+    visual: <MysteryVisual />,
   },
   {
     title: '⚠️ Danger Zone',
