@@ -172,6 +172,32 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const mergeSpawnSet = new Set(state.mergeSpawnIds);
   const sickPlanetSet = new Set(state.sickPlanetIds);
 
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (state.shrinkTimeLeft > 0 && state.shrinkTimeLeft <= 30) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, {
+            toValue: 0.2,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(blinkAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      blinkAnim.stopAnimation();
+      blinkAnim.setValue(1);
+    }
+  }, [state.shrinkTimeLeft <= 30, state.shrinkTimeLeft > 0]);
+
+  const isShrinkWarning = state.shrinkTimeLeft > 0 && state.shrinkTimeLeft <= 30;
+
   return (
     <LinearGradient colors={['#0a0a2e', '#12124a', '#1a1a5e']} style={styles.root}>
       {/* ── Stars background ─────────────────────────────────── */}
@@ -331,12 +357,16 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
           {/* Shrink Timer HUD */}
           {state.shrinkTimeLeft > 0 && (
-            <View style={styles.shrinkTimerHud}>
-              <Text style={styles.shrinkTimerLabel}>🧪 SHRINK:</Text>
-              <Text style={styles.shrinkTimerValue}>
+            <Animated.View style={[
+              styles.shrinkTimerHud, 
+              isShrinkWarning && styles.shrinkTimerHudWarning,
+              { opacity: blinkAnim }
+            ]}>
+              <Text style={[styles.shrinkTimerLabel, isShrinkWarning && styles.shrinkTimerLabelWarning]}>🧪 SHRINK:</Text>
+              <Text style={[styles.shrinkTimerValue, isShrinkWarning && styles.shrinkTimerValueWarning]}>
                 {Math.floor(state.shrinkTimeLeft / 60)}:{(state.shrinkTimeLeft % 60).toString().padStart(2, '0')}
               </Text>
-            </View>
+            </Animated.View>
           )}
 
           {/* All live planets */}
@@ -872,5 +902,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  shrinkTimerHudWarning: {
+    borderColor: 'rgba(255, 45, 85, 0.5)',
+    backgroundColor: 'rgba(50, 0, 0, 0.7)',
+  },
+  shrinkTimerLabelWarning: {
+    color: '#FF2D55',
+  },
+  shrinkTimerValueWarning: {
+    color: '#FFD1D9',
   },
 });

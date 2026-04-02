@@ -7,7 +7,9 @@ import {
   Modal,
   ScrollView,
   Platform,
+  Animated,
 } from 'react-native';
+import { useRef, useEffect } from 'react';
 
 interface Props {
   visible: boolean;
@@ -26,6 +28,32 @@ export const WizardModal = ({
   shrinkTimeLeft,
   onBuyShrink,
 }: Props) => {
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (shrinkTimeLeft > 0 && shrinkTimeLeft <= 30) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, {
+            toValue: 0.2,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(blinkAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      blinkAnim.stopAnimation();
+      blinkAnim.setValue(1);
+    }
+  }, [shrinkTimeLeft <= 30, shrinkTimeLeft > 0]);
+
+  const isWarning = shrinkTimeLeft > 0 && shrinkTimeLeft <= 30;
+
   return (
     <Modal
       transparent
@@ -59,11 +87,15 @@ export const WizardModal = ({
                   <Text style={s.spellIcon}>🧪</Text>
                   <Text style={s.spellLabel}>Planet Shrink</Text>
                   {shrinkTimeLeft > 0 && (
-                    <View style={s.activeBadge}>
-                      <Text style={s.activeText}>
+                    <Animated.View style={[
+                      s.activeBadge, 
+                      isWarning && s.warningBadge,
+                      { opacity: blinkAnim }
+                    ]}>
+                      <Text style={[s.activeText, isWarning && s.warningText]}>
                         {Math.floor(shrinkTimeLeft / 60)}:{(shrinkTimeLeft % 60).toString().padStart(2, '0')}
                       </Text>
-                    </View>
+                    </Animated.View>
                   )}
                 </View>
                 <Text style={s.spellDesc}>
@@ -198,6 +230,13 @@ const s = StyleSheet.create({
     color: '#00FF85',
     fontSize: 9,
     fontWeight: '900',
+  },
+  warningBadge: {
+    backgroundColor: 'rgba(255, 45, 85, 0.15)',
+    borderColor: 'rgba(255, 45, 85, 0.4)',
+  },
+  warningText: {
+    color: '#FF2D55',
   },
   buyButton: {
     backgroundColor: '#7c6fff',
