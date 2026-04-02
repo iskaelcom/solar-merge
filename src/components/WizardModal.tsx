@@ -18,6 +18,9 @@ interface Props {
   shrinkCost: number;
   shrinkTimeLeft: number;
   onBuyShrink: () => void;
+  shieldLayers: number;
+  shieldCost: number;
+  onBuyShield: () => void;
 }
 
 export const WizardModal = ({
@@ -27,6 +30,9 @@ export const WizardModal = ({
   shrinkCost,
   shrinkTimeLeft,
   onBuyShrink,
+  shieldLayers,
+  shieldCost,
+  onBuyShield,
 }: Props) => {
   const blinkAnim = useRef(new Animated.Value(1)).current;
 
@@ -115,6 +121,40 @@ export const WizardModal = ({
               ) : (
                 <View style={[s.buyButton, s.buyButtonActive]}>
                   <Text style={s.buyButtonText}>ACTIVE</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={s.spellRow}>
+              <View style={s.spellInfo}>
+                <View style={s.nameRow}>
+                  <Text style={s.spellIcon}>🛡️</Text>
+                  <Text style={s.spellLabel}>Shield</Text>
+                  {shieldLayers > 0 && (
+                    <View style={[s.activeBadge, { backgroundColor: 'rgba(0, 229, 255, 0.1)', borderColor: 'rgba(0, 229, 255, 0.2)' }]}>
+                      <Text style={[s.activeText, { color: '#00E5FF' }]}>
+                        {shieldLayers} LAYER{shieldLayers > 1 ? 'S' : ''}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={s.spellDesc}>
+                  Blocks planets from hitting the danger zone. Restores to 3 layers.
+                </Text>
+              </View>
+
+              {shieldLayers < 3 ? (
+                <TouchableOpacity
+                  style={[s.buyButton, diamonds < shieldCost && s.buyButtonDisabled]}
+                  onPress={onBuyShield}
+                  disabled={diamonds < shieldCost}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.buyButtonText}>{shieldCost} 💎</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[s.buyButton, s.buyButtonActive]}>
+                  <Text style={s.buyButtonText}>FULL</Text>
                 </View>
               )}
             </View>

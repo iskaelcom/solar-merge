@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame, calculateChecksum } from '../useGame';
-import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT, WIZARD_SHRINK_SCALE } from '../constants';
+import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT, WIZARD_SHRINK_SCALE, WIZARD_SHIELD_COST } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
 import { BlackHoleView } from './BlackHoleView';
@@ -61,7 +61,7 @@ export function GameScreen() {
 }
 
 function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
-  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -510,6 +510,9 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         shrinkCost={state.shrinkCost}
         shrinkTimeLeft={state.shrinkTimeLeft}
         onBuyShrink={buyShrinkBonus}
+        shieldLayers={state.shieldLayers}
+        shieldCost={WIZARD_SHIELD_COST}
+        onBuyShield={buyShield}
       />
     </LinearGradient>
   );

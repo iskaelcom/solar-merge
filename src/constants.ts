@@ -180,3 +180,4 @@ export const WIZARD_SHRINK_COST_INCREMENT = 10;
 export const WIZARD_SHRINK_DURATION = 300;     // 5 minutes in seconds
 export const WIZARD_SHRINK_SCALE = 0.8;        // shrink to 80% size
 export const WIZARD_SHRINK_MIN_PLANET_ID = 4;  // starts from Venus
+export const WIZARD_SHIELD_COST = 10;

@@ -29,6 +29,7 @@ import {
   WIZARD_SHRINK_BASE_COST,
   WIZARD_SHRINK_COST_INCREMENT,
   WIZARD_SHRINK_SCALE,
+  WIZARD_SHIELD_COST,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 
@@ -1224,5 +1225,30 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     });
   }, [playSound, startLoop]);
 
-  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, isDroppingRef, scoreRef, dropCountRef };
+  const buyShield = useCallback(() => {
+    setState((prev) => {
+      const cost = WIZARD_SHIELD_COST;
+      if (prev.diamonds < cost || prev.shieldLayers === SHIELD_MAX_LAYERS) {
+        playSound('error');
+        return prev;
+      }
+
+      playSound('buy');
+      const newTotal = prev.diamonds - cost;
+      totalDiamondsRef.current = newTotal;
+      storage.setDiamonds(newTotal);
+
+      shieldLayersRef.current = SHIELD_MAX_LAYERS;
+      physicsRef.current?.setShieldActive(true);
+      startLoop();
+
+      return {
+        ...prev,
+        diamonds: newTotal,
+        shieldLayers: SHIELD_MAX_LAYERS,
+      };
+    });
+  }, [playSound, startLoop]);
+
+  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, isDroppingRef, scoreRef, dropCountRef };
 }
