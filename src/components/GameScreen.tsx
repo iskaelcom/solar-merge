@@ -28,6 +28,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
 import { formatCompactNumber } from '../utils/format';
+import { AdMobBanner } from './AdMobBanner';
 
 const WALL_THICKNESS = 6;
 
@@ -447,6 +448,9 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
       {/* ── Planet evolution guide ────────────────────────────── */}
       <EvolutionBar />
+
+      {/* ── Banner Ad ─────────────────────────────────────────── */}
+      <AdMobBanner />
 
       {/* ── Game Over overlay ─────────────────────────────────── */}
       {state.gameOver && (
