@@ -24,7 +24,5 @@ const styles = StyleSheet.create({
     adContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#000',
-        paddingVertical: 2,
     },
 });

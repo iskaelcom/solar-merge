@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 12,
+    paddingBottom: Platform.OS === 'android' ? 0 : 12,
   },
   header: {
     flexDirection: 'row',
