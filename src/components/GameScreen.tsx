@@ -49,7 +49,7 @@ export function GameScreen() {
   const bannerH = Platform.OS === 'android' ? 60 : 0; // Approximate banner height
   //const bannerH = 60;
   const reservedVertical = topPad + 42 + 56 + 36 + bottomPad + bannerH; // header + logoRow + evoBar + padding + banner
-  const rawW = Math.min(screenW - WALL_THICKNESS * 2, 400);
+  const rawW = Math.min(screenW - WALL_THICKNESS * 2 - 20, 400);
   const rawH = Math.max(350, Math.min(
     Math.round(rawW * GAME_HEIGHT / GAME_WIDTH), // enforce natural aspect ratio
     screenH - reservedVertical,
