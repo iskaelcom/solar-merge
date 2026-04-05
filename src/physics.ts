@@ -132,6 +132,14 @@ type BlackHoleSuckCallback = (event: BlackHoleSuckEvent) => void;
 type VirusInfectCallback = (event: VirusInfectEvent) => void;
 type SunMergeCallback = (event: SunMergeEvent) => void;
 
+export interface RadiiConfig {
+  pRadii: number[];
+  sRadius: number;
+  bhRadius: number;
+  vRadius: number;
+  mRadius: number;
+}
+
 export class SolarPhysics {
   engine: Matter.Engine;
   private planets: Map<string, PhysicsPlanet> = new Map();
@@ -184,16 +192,16 @@ export class SolarPhysics {
   private virusRadius: number = 0;
   private mysteryRadius: number = 0;
 
-  constructor(width: number, height: number) {
+  constructor(width: number, height: number, radii: RadiiConfig) {
     this.width = width;
     this.height = height;
 
-    // Calculate dynamic radii once at start
-    this.radii = PLANETS.map(p => p.radiusRatio * width);
-    this.starRadius = STAR_RADIUS_RATIO * width;
-    this.blackHoleRadius = BLACK_HOLE_RADIUS_RATIO * width;
-    this.virusRadius = VIRUS_RADIUS_RATIO * width;
-    this.mysteryRadius = MYSTERY_PLANET_RADIUS_RATIO * width;
+    // Use dynamic radii passed from UI logic
+    this.radii = radii.pRadii;
+    this.starRadius = radii.sRadius;
+    this.blackHoleRadius = radii.bhRadius;
+    this.virusRadius = radii.vRadius;
+    this.mysteryRadius = radii.mRadius;
 
     this.spatialGrid = new SpatialGrid(width / 3, width);
 

@@ -265,7 +265,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const initPhysics = useCallback(() => {
     if (physicsRef.current) physicsRef.current.destroy();
 
-    const engine = new SolarPhysics(gameWidth, gameHeight);
+    const engine = new SolarPhysics(gameWidth, gameHeight, { pRadii, sRadius, bhRadius, vRadius, mRadius });
 
     engine.onMerge(({ id1, id2, planetId, x, y, vx, vy }) => {
       playSound('merge');
