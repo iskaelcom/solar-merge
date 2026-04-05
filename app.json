@@ -3,7 +3,7 @@
     "name": "Solar Merge",
     "slug": "solar-merge",
     "scheme": "solar-merge",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
         "backgroundColor": "#000000"
       },
       "package": "com.iskael.solarmerge",
-      "versionCode": 19,
+      "versionCode": 20,
       "newArchEnabled": true
     },
     "web": {

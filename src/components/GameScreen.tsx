@@ -45,8 +45,9 @@ export function GameScreen() {
   const insets = useSafeAreaInsets();
 
   const topPad = Math.max(insets.top, Platform.OS === 'ios' ? 50 : 30);
-  const bottomPad = Math.max(insets.bottom, 12);
+  const bottomPad = 12;
   const bannerH = Platform.OS === 'android' ? 60 : 0; // Approximate banner height
+  //const bannerH = 60;
   const reservedVertical = topPad + 42 + 56 + 36 + bottomPad + bannerH; // header + logoRow + evoBar + padding + banner
   const rawW = Math.min(screenW - WALL_THICKNESS * 2, 400);
   const rawH = Math.max(350, Math.min(
@@ -204,13 +205,12 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const isShrinkWarning = state.shrinkTimeLeft > 0 && state.shrinkTimeLeft <= 30;
 
   return (
-    <LinearGradient 
-      colors={['#0a0a2e', '#12124a', '#1a1a5e']} 
+    <LinearGradient
+      colors={['#0a0a2e', '#12124a', '#1a1a5e']}
       style={[
-        styles.root, 
-        { 
+        styles.root,
+        {
           paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 50 : 30),
-          paddingBottom: Math.max(insets.bottom, 4) 
         }
       ]}
     >
@@ -357,13 +357,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
                       ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
                       : state.currentIsStar
                         ? <StarView x={previewRadius} y={previewRadius} ghost />
-                        : <PlanetView 
-                            planetId={state.currentPlanetId} 
-                            x={previewRadius} 
-                            y={previewRadius} 
-                            ghost 
-                            scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
-                          />
+                        : <PlanetView
+                          planetId={state.currentPlanetId}
+                          x={previewRadius}
+                          y={previewRadius}
+                          ghost
+                          scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
+                        />
                 }
               </View>
             </Animated.View>
@@ -372,7 +372,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
           {/* Shrink Timer HUD */}
           {state.shrinkTimeLeft > 0 && (
             <Animated.View style={[
-              styles.shrinkTimerHud, 
+              styles.shrinkTimerHud,
               isShrinkWarning && styles.shrinkTimerHudWarning,
               { opacity: blinkAnim }
             ]}>
