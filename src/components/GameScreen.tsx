@@ -66,7 +66,7 @@ export function GameScreen() {
 }
 
 function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
-  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, redeemCode, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -510,6 +510,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         onClose={() => setShowSettings(false)}
         user={user}
         onDeleteAccount={deleteAccount}
+        onRedeemCode={redeemCode}
       />
 
       {/* ── Streak Reward overlay ────────────────────────────── */}

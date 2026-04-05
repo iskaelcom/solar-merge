@@ -1,0 +1,15 @@
+export const REDEEM_CODES: Record<string, number> = {
+  ISKAEL: 50,
+  JAGOKUIS: 50,
+  SOLAR: 10,
+  MERGE: 10,
+  ATMINNYAGANTENG: 20,
+  COBAINDONG: 10,
+  ABIAW: 100,
+  UMMIAW: 100,
+  AISYAH: 40,
+  HAMZAH: 40,
+  OCAN: 30,
+  ENIN: 30,
+  BIYUK: 30,
+};

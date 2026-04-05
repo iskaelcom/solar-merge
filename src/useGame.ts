@@ -32,6 +32,7 @@ import {
   WIZARD_SHIELD_COST,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
+import { REDEEM_CODES } from './constants/redeemCodes';
 
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
@@ -41,6 +42,7 @@ const DIAMONDS_KEY = 'solar-merge-diamonds';
 const STREAK_KEY = 'solar-merge-streak';
 const LAST_STREAK_DATE_KEY = 'solar-merge-last-streak-date';
 const SHRINK_STATE_KEY = 'solar-merge-shrink-state';
+const REDEEMED_CODES_KEY = 'solar-merge-redeemed-codes';
 
 const SALT = 'sm-v2-secure';
 
@@ -67,13 +69,14 @@ const getStreakReward = (streak: number): number => {
 };
 
 const storage = {
-  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null }> => {
+  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null; redeemedCodes: string[] }> => {
     try {
-      const [scoreVal, diamondsVal, streakVal, lastDateVal] = await Promise.all([
+      const [scoreVal, diamondsVal, streakVal, lastDateVal, redeemedCodesVal] = await Promise.all([
         AsyncStorage.getItem(HIGH_SCORE_KEY),
         AsyncStorage.getItem(DIAMONDS_KEY),
         AsyncStorage.getItem(STREAK_KEY),
         AsyncStorage.getItem(LAST_STREAK_DATE_KEY),
+        AsyncStorage.getItem(REDEEMED_CODES_KEY),
       ]);
 
       let scoreData = { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
@@ -89,9 +92,10 @@ const storage = {
         diamonds: diamondsVal ? parseInt(diamondsVal, 10) : 0,
         streak: streakVal ? parseInt(streakVal, 10) : 0,
         lastStreakDate: lastDateVal,
+        redeemedCodes: redeemedCodesVal ? JSON.parse(redeemedCodesVal) : [],
       };
     } catch { }
-    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0, streak: 0, lastStreakDate: null };
+    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0, streak: 0, lastStreakDate: null, redeemedCodes: [] };
   },
   setScore: async (score: number, dropCount: number) => {
     try {
@@ -110,6 +114,11 @@ const storage = {
         AsyncStorage.setItem(STREAK_KEY, streak.toString()),
         AsyncStorage.setItem(LAST_STREAK_DATE_KEY, lastDate),
       ]);
+    } catch { }
+  },
+  setRedeemedCodes: async (codes: string[]) => {
+    try {
+      await AsyncStorage.setItem(REDEEMED_CODES_KEY, JSON.stringify(codes));
     } catch { }
   },
 };
@@ -155,6 +164,7 @@ const INITIAL_STATE: GameState = {
   streakReward: null,
   shrinkTimeLeft: 0,
   shrinkCost: WIZARD_SHRINK_BASE_COST,
+  redeemedCodes: [],
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -790,7 +800,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     const next = getFromBag(current);
 
     // ─── Streak & Score Init ───────────────────────────────────────────
-    storage.get().then(({ score, diamonds, streak: sStreak, lastStreakDate: sDate }) => {
+    storage.get().then(({ score, diamonds, streak: sStreak, lastStreakDate: sDate, redeemedCodes: sCodes }) => {
       scoreRef.current = 0;
       dropCountRef.current = 0;
 
@@ -846,6 +856,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           streak: finalStreak,
           lastStreakDate: finalDate || todayStr,
           streakReward: rewardGranted,
+          redeemedCodes: sCodes || [],
           currentPlanetId: isFreshGame ? current : s.currentPlanetId,
           nextPlanetId: isFreshGame ? next : s.nextPlanetId,
           // Reset shrink on reload as requested
@@ -1250,5 +1261,35 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     });
   }, [playSound, startLoop]);
 
-  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, isDroppingRef, scoreRef, dropCountRef };
+  const redeemCode = useCallback((code: string): { success: boolean; message: string; amount?: number } => {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) return { success: false, message: 'Please enter a code' };
+
+    if (stateRef.current.redeemedCodes.includes(normalized)) {
+      return { success: false, message: 'Already redeemed' };
+    }
+
+    const amount = REDEEM_CODES[normalized];
+    if (amount) {
+      playSound('buy');
+      const newRedeemed = [...stateRef.current.redeemedCodes, normalized];
+      const newDiamonds = stateRef.current.diamonds + amount;
+      
+      totalDiamondsRef.current = newDiamonds;
+      storage.setDiamonds(newDiamonds);
+      storage.setRedeemedCodes(newRedeemed);
+
+      setState(prev => ({
+        ...prev,
+        diamonds: newDiamonds,
+        redeemedCodes: newRedeemed,
+      }));
+
+      return { success: true, message: `Redeemed! +${amount} 💎`, amount };
+    }
+
+    return { success: false, message: 'Invalid code' };
+  }, [playSound]);
+
+  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, redeemCode, isDroppingRef, scoreRef, dropCountRef };
 }

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -23,12 +24,15 @@ interface Props {
   onClose: () => void;
   user: User | null;
   onDeleteAccount: () => Promise<void>;
+  onRedeemCode: (code: string) => { success: boolean; message: string; amount?: number };
 }
 
-export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props) {
+export function SettingsModal({ visible, onClose, user, onDeleteAccount, onRedeemCode }: Props) {
   const [inner, setInner] = useState<InnerScreen>(null);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [ambientOn, setAmbientOn] = useState(() => isAmbientEnabled());
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemStatus, setRedeemStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   // Sync state with SoundManager whenever modal becomes visible
   React.useEffect(() => {
@@ -50,7 +54,18 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
 
   function handleClose() {
     setInner(null);
+    setRedeemCode('');
+    setRedeemStatus(null);
     onClose();
+  }
+
+  function handleRedeem() {
+    if (!redeemCode.trim()) return;
+    const result = onRedeemCode(redeemCode);
+    setRedeemStatus(result);
+    if (result.success) {
+      setRedeemCode('');
+    }
   }
 
   function confirmDelete() {
@@ -150,6 +165,33 @@ export function SettingsModal({ visible, onClose, user, onDeleteAccount }: Props
                 </>
               )}
 
+              <Text style={[s.sectionLabel, { marginTop: 16 }]}>REDEEM CODE</Text>
+              <View style={s.redeemContainer}>
+                <View style={s.redeemRow}>
+                  <TextInput
+                    style={s.redeemInput}
+                    placeholder="Enter code"
+                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    value={redeemCode}
+                    onChangeText={setRedeemCode}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={[s.redeemBtn, !redeemCode.trim() && { opacity: 0.5 }]}
+                    onPress={handleRedeem}
+                    disabled={!redeemCode.trim()}
+                  >
+                    <Text style={s.redeemBtnText}>Redeem</Text>
+                  </TouchableOpacity>
+                </View>
+                {redeemStatus && (
+                  <Text style={[s.redeemMsg, { color: redeemStatus.success ? '#4CAF50' : '#FF5252' }]}>
+                    {redeemStatus.message}
+                  </Text>
+                )}
+              </View>
+
               <Text style={[s.sectionLabel, { marginTop: 16 }]}>ABOUT</Text>
               <View style={s.row}>
                 <Text style={s.rowIcon}>🪐</Text>
@@ -248,4 +290,43 @@ const s = StyleSheet.create({
   accountName: { color: 'rgba(255,255,255,0.55)', fontSize: 13 },
   deleteRow: { borderBottomWidth: 0 },
   deleteLabel: { flex: 1, color: '#FF5252', fontSize: 15 },
+  redeemContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  redeemRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  redeemInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    height: 40,
+    paddingHorizontal: 14,
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  redeemBtn: {
+    backgroundColor: '#7c6fff',
+    borderRadius: 10,
+    height: 40,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  redeemBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  redeemMsg: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });

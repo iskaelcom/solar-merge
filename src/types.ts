@@ -68,4 +68,5 @@ export interface GameState {
   streakReward: number | null; // diamonds earned today from streak
   shrinkTimeLeft: number;      // seconds left for the shrink bonus
   shrinkCost: number;          // current cost for the shrink bonus
+  redeemedCodes: string[];     // list of codes already used by the player
 }
