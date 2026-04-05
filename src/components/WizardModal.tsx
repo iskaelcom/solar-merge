@@ -21,6 +21,9 @@ interface Props {
   shieldLayers: number;
   shieldCost: number;
   onBuyShield: () => void;
+  sickCount: number;
+  antidoteCost: number;
+  onBuyAntidote: () => void;
 }
 
 export const WizardModal = ({
@@ -33,6 +36,9 @@ export const WizardModal = ({
   shieldLayers,
   shieldCost,
   onBuyShield,
+  sickCount,
+  antidoteCost,
+  onBuyAntidote,
 }: Props) => {
   const blinkAnim = useRef(new Animated.Value(1)).current;
 
@@ -159,18 +165,38 @@ export const WizardModal = ({
               )}
             </View>
 
-            {/* Placeholder for future spells */}
-            <View style={[s.spellRow, { opacity: 0.3, borderBottomWidth: 0 }]}>
+            <View style={s.spellRow}>
               <View style={s.spellInfo}>
                 <View style={s.nameRow}>
-                  <Text style={s.spellIcon}>🔒</Text>
-                  <Text style={s.spellLabel}>Locked Spell</Text>
+                  <Text style={s.spellIcon}>💊</Text>
+                  <Text style={s.spellLabel}>Universal Antidote</Text>
+                  {sickCount > 0 && (
+                    <View style={[s.activeBadge, { backgroundColor: 'rgba(52, 199, 89, 0.1)', borderColor: 'rgba(52, 199, 89, 0.2)' }]}>
+                      <Text style={[s.activeText, { color: '#32D759' }]}>
+                        {sickCount} SICK
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={s.spellDesc}>Coming soon...</Text>
+                <Text style={s.spellDesc}>
+                  Cures all infected planets on screen from the virus effect.
+                </Text>
               </View>
-              <View style={[s.buyButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                <Text style={s.buyButtonText}>???</Text>
-              </View>
+
+              {sickCount > 0 ? (
+                <TouchableOpacity
+                  style={[s.buyButton, { backgroundColor: '#32D759' }, diamonds < antidoteCost && s.buyButtonDisabled]}
+                  onPress={onBuyAntidote}
+                  disabled={diamonds < antidoteCost}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.buyButtonText}>{antidoteCost} 💎</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[s.buyButton, s.buyButtonActive]}>
+                  <Text style={s.buyButtonText}>CLEAN</Text>
+                </View>
+              )}
             </View>
 
             <View style={{ height: 20 }} />

@@ -22,6 +22,7 @@ import {
   GAME_HEIGHT,
   WIZARD_SHRINK_SCALE,
   WIZARD_SHIELD_COST,
+  WIZARD_ANTIDOTE_COST,
 } from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
@@ -77,7 +78,7 @@ export function GameScreen() {
 }
 
 function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
-  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, redeemCode, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
+  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, buyAntidote, redeemCode, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -553,6 +554,9 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         shieldLayers={state.shieldLayers}
         shieldCost={WIZARD_SHIELD_COST}
         onBuyShield={buyShield}
+        sickCount={state.sickPlanetIds.length}
+        antidoteCost={WIZARD_ANTIDOTE_COST}
+        onBuyAntidote={buyAntidote}
       />
     </LinearGradient>
   );

@@ -30,6 +30,7 @@ import {
   WIZARD_SHRINK_COST_INCREMENT,
   WIZARD_SHRINK_SCALE,
   WIZARD_SHIELD_COST,
+  WIZARD_ANTIDOTE_COST,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 import { REDEEM_CODES } from './constants/redeemCodes';
@@ -1286,6 +1287,31 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     });
   }, [playSound, startLoop]);
 
+  const buyAntidote = useCallback(() => {
+    setState((prev) => {
+      const cost = WIZARD_ANTIDOTE_COST;
+      if (prev.diamonds < cost || prev.sickPlanetIds.length === 0) {
+        playSound('error');
+        return prev;
+      }
+
+      playSound('buy');
+      const newTotal = prev.diamonds - cost;
+      totalDiamondsRef.current = newTotal;
+      storage.setDiamonds(newTotal);
+
+      // Clear internal ref
+      sickPlanetIdsRef.current.clear();
+      startLoop();
+
+      return {
+        ...prev,
+        diamonds: newTotal,
+        sickPlanetIds: [],
+      };
+    });
+  }, [playSound, startLoop]);
+
   const redeemCode = useCallback((code: string): { success: boolean; message: string; amount?: number } => {
     const normalized = code.trim().toUpperCase();
     if (!normalized) return { success: false, message: 'Please enter a code' };
@@ -1316,5 +1342,5 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return { success: false, message: 'Invalid code' };
   }, [playSound]);
 
-  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, redeemCode, isDroppingRef, scoreRef, dropCountRef };
+  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, buyAntidote, redeemCode, isDroppingRef, scoreRef, dropCountRef };
 }
