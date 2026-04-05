@@ -3,7 +3,7 @@ export const PLANETS = [
     id: 1,
     name: 'Moon',
     diameter: 3474,
-    size: 20,    // Sun ÷ 1.1^9
+    radiusRatio: 0.055, // Base radius / 360px
     color: '#E8E8F0',
     darkColor: '#9090A8',
     emoji: '🌙',
@@ -15,7 +15,7 @@ export const PLANETS = [
     id: 2,
     name: 'Mercury',
     diameter: 4879,
-    size: 30,    // Moon × 1.1
+    radiusRatio: 0.083, 
     color: '#B0B0B8',
     darkColor: '#606068',
     emoji: '⚫',
@@ -27,7 +27,7 @@ export const PLANETS = [
     id: 3,
     name: 'Mars',
     diameter: 6779,
-    size: 35,    // Mercury × 1.1
+    radiusRatio: 0.097, 
     color: '#FF6B6B',
     darkColor: '#C0392B',
     emoji: '🔴',
@@ -39,7 +39,7 @@ export const PLANETS = [
     id: 4,
     name: 'Venus',
     diameter: 12104,
-    size: 45,    // Mars × 1.1
+    radiusRatio: 0.125, 
     color: '#FFD93D',
     darkColor: '#E67E22',
     emoji: '⭐',
@@ -51,7 +51,7 @@ export const PLANETS = [
     id: 5,
     name: 'Earth',
     diameter: 12742,
-    size: 55,    // Venus × 1.1
+    radiusRatio: 0.152, 
     color: '#4ECDC4',
     darkColor: '#1A6B8A',
     emoji: '🌍',
@@ -63,7 +63,7 @@ export const PLANETS = [
     id: 6,
     name: 'Neptune',
     diameter: 49244,
-    size: 65,    // Earth × 1.1
+    radiusRatio: 0.180, 
     color: '#5C6BC0',
     darkColor: '#283593',
     emoji: '💙',
@@ -75,7 +75,7 @@ export const PLANETS = [
     id: 7,
     name: 'Uranus',
     diameter: 50724,
-    size: 74,    // Neptune × 1.1
+    radiusRatio: 0.205, 
     color: '#26C6DA',
     darkColor: '#00838F',
     emoji: '🩵',
@@ -87,7 +87,7 @@ export const PLANETS = [
     id: 8,
     name: 'Saturn',
     diameter: 116460,
-    size: 87,   // Jupiter ÷ 1.5
+    radiusRatio: 0.241, 
     color: '#FFD54F',
     darkColor: '#E65100',
     emoji: '🪐',
@@ -100,7 +100,7 @@ export const PLANETS = [
     id: 9,
     name: 'Jupiter',
     diameter: 139820,
-    size: 140,   // Sun ÷ 1.1
+    radiusRatio: 0.284, // Recalculated for Sun Area = 2.5 * Jupiter Area
     color: '#FF8A65',
     darkColor: '#BF360C',
     emoji: '🟠',
@@ -113,7 +113,7 @@ export const PLANETS = [
     id: 10,
     name: 'Sun',
     diameter: 1391000,
-    size: 170,
+    radiusRatio: 0.450, // Approx 0.284 * 1.58
     color: '#FFD600',
     darkColor: '#FF6F00',
     emoji: '☀️',
@@ -149,21 +149,21 @@ export const FRICTION_AIR = 0.01;
 export const COMBO_RESET_TIME = 2500;
 
 // Star power-up
-export const STAR_RADIUS = 15;          // physics radius (px)
+export const STAR_RADIUS_RATIO = 15 / 360; 
 export const STAR_SPAWN_INTERVAL = 59;   // spawn a star every N planet drops
 
 // Black Hole power-up
-export const BLACK_HOLE_RADIUS = 30;     // physics radius (px)
+export const BLACK_HOLE_RADIUS_RATIO = 30 / 360; 
 export const BLACK_HOLE_SPAWN_INTERVAL = 29; // spawn a black hole every N planet drops
 
 // Virus Planet power-up
-export const VIRUS_RADIUS = 22;          // physics radius (px)
+export const VIRUS_RADIUS_RATIO = 22 / 360; 
 export const VIRUS_SPAWN_INTERVAL = 23;  // spawn a virus every N planet drops
 
 // Mystery Planet feature
-export const MYSTERY_PLANET_SPAWN_INTERVAL = 47; // spawn a mystery planet every N drops
-export const MYSTERY_PLANET_RADIUS = 20;         // generic mid-size disguise radius
+export const MYSTERY_PLANET_RADIUS_RATIO = 20 / 360;
 export const MYSTERY_PLANET_REVEAL_DROPS = 5;    // number of planet drops until it reveals itself
+export const MYSTERY_PLANET_SPAWN_INTERVAL = 14; // spawn a mystery planet every N drops
 
 // Shield
 export const SHIELD_MAX_LAYERS = 3;          // total shield layers granted at once

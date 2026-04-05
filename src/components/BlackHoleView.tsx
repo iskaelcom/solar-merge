@@ -8,11 +8,12 @@ const DIAMETER = 75;
 interface Props {
   x: number;
   y: number;
+  size: number;
   ghost?: boolean;
 }
 
 /** Live black hole rendered in the game area. */
-export const BlackHoleView = React.memo(({ x, y, ghost = false }: Props) => {
+export const BlackHoleView = React.memo(({ x, y, size, ghost = false }: Props) => {
   const diskRotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -54,14 +55,15 @@ export const BlackHoleView = React.memo(({ x, y, ghost = false }: Props) => {
     outputRange: ['0deg', '360deg'],
   });
 
-  const half = DIAMETER / 2;
+  const visualDiameter = size * 2.5; // Visual diameter is larger than physics radius
+  const half = visualDiameter / 2;
 
   return (
     <Animated.View
       style={{
         position: 'absolute',
-        width: DIAMETER,
-        height: DIAMETER,
+        width: visualDiameter,
+        height: visualDiameter,
         left: x - half,
         top: y - half,
         opacity: ghost ? 0.5 : 1,
@@ -69,7 +71,7 @@ export const BlackHoleView = React.memo(({ x, y, ghost = false }: Props) => {
       }}
     >
       {/* Outer radial glow */}
-      <Svg width={DIAMETER} height={DIAMETER} style={{ position: 'absolute' }}>
+      <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Defs>
           <RadialGradient id="bh_outer" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor="#000000" stopOpacity="1" />
@@ -86,27 +88,27 @@ export const BlackHoleView = React.memo(({ x, y, ghost = false }: Props) => {
       <Animated.View
         style={{
           position: 'absolute',
-          width: DIAMETER,
-          height: DIAMETER,
+          width: visualDiameter,
+          height: visualDiameter,
           transform: [{ rotate: diskRotate }],
         }}
       >
-        <Svg width={DIAMETER} height={DIAMETER}>
+        <Svg width={visualDiameter} height={visualDiameter}>
           <Circle
             cx={half}
             cy={half}
             r={half * 0.6}
             fill="none"
             stroke="#9900ff"
-            strokeWidth={2.5}
-            strokeDasharray="5 5"
+            strokeWidth={2.5 * (size / 30)}
+            strokeDasharray={`${5 * (size / 30)} ${5 * (size / 30)}`}
             strokeOpacity={ghost ? 0.4 : 0.75}
           />
         </Svg>
       </Animated.View>
 
       {/* Event horizon — pure black core */}
-      <Svg width={DIAMETER} height={DIAMETER} style={{ position: 'absolute' }}>
+      <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Circle cx={half} cy={half} r={half * 0.38} fill="#000000" />
       </Svg>
     </Animated.View>

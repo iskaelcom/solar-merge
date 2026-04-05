@@ -1,16 +1,14 @@
 import Matter from 'matter-js';
 import {
   PLANETS,
-  GAME_WIDTH,
-  GAME_HEIGHT,
   GRAVITY,
   RESTITUTION,
   FRICTION,
   FRICTION_AIR,
-  STAR_RADIUS,
-  BLACK_HOLE_RADIUS,
-  VIRUS_RADIUS,
-  MYSTERY_PLANET_RADIUS,
+  STAR_RADIUS_RATIO,
+  BLACK_HOLE_RADIUS_RATIO,
+  VIRUS_RADIUS_RATIO,
+  MYSTERY_PLANET_RADIUS_RATIO,
   DANGER_HEIGHT,
 } from './constants';
 
@@ -179,12 +177,25 @@ export class SolarPhysics {
   private sleepLockTicks: number = 0;
   width: number;
   height: number;
+  // Dynamic radii calculated in constructor
+  private radii: number[] = [];
+  private starRadius: number = 0;
+  private blackHoleRadius: number = 0;
+  private virusRadius: number = 0;
+  private mysteryRadius: number = 0;
 
-  constructor(width: number = GAME_WIDTH, height: number = GAME_HEIGHT) {
+  constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
 
-    this.spatialGrid = new SpatialGrid(120, width);
+    // Calculate dynamic radii once at start
+    this.radii = PLANETS.map(p => p.radiusRatio * width);
+    this.starRadius = STAR_RADIUS_RATIO * width;
+    this.blackHoleRadius = BLACK_HOLE_RADIUS_RATIO * width;
+    this.virusRadius = VIRUS_RADIUS_RATIO * width;
+    this.mysteryRadius = MYSTERY_PLANET_RADIUS_RATIO * width;
+
+    this.spatialGrid = new SpatialGrid(width / 3, width);
 
     this.engine = Matter.Engine.create({
       gravity: { x: 0, y: GRAVITY },
@@ -432,7 +443,7 @@ export class SolarPhysics {
   }
 
   addStar(id: string, x: number, y: number): void {
-    const body = Matter.Bodies.circle(x, y, STAR_RADIUS, {
+    const body = Matter.Bodies.circle(x, y, this.starRadius, {
       restitution: 0.5,
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
@@ -470,7 +481,7 @@ export class SolarPhysics {
   }
 
   addBlackHole(id: string, x: number, y: number): void {
-    const body = Matter.Bodies.circle(x, y, BLACK_HOLE_RADIUS, {
+    const body = Matter.Bodies.circle(x, y, this.blackHoleRadius, {
       restitution: 0.3,
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
@@ -515,7 +526,7 @@ export class SolarPhysics {
   }
 
   addVirus(id: string, x: number, y: number): void {
-    const body = Matter.Bodies.circle(x, y, VIRUS_RADIUS, {
+    const body = Matter.Bodies.circle(x, y, this.virusRadius, {
       restitution: 0.4,
       friction: FRICTION,
       frictionAir: FRICTION_AIR,
@@ -592,7 +603,7 @@ export class SolarPhysics {
 
   addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 3): void {
     const planet = PLANETS[planetId - 1];
-    const radius = planet.size * planet.hitboxRatio;
+    const radius = this.radii[planetId - 1] * planet.hitboxRatio;
 
     const body = Matter.Bodies.circle(x, y, radius, {
       restitution: RESTITUTION,
@@ -627,7 +638,7 @@ export class SolarPhysics {
   }
 
   addMysteryPlanet(id: string, truePlanetId: number, mysteryRevealDrops: number, x: number, y: number, vx = 0, vy = 3): void {
-    const radius = MYSTERY_PLANET_RADIUS; // Disguise radius
+    const radius = this.mysteryRadius; // Disguise radius
 
     const body = Matter.Bodies.circle(x, y, radius, {
       restitution: RESTITUTION,
@@ -665,8 +676,8 @@ export class SolarPhysics {
           p.planetId = p.truePlanetId!;
           
           const targetPlanet = PLANETS[p.planetId - 1];
-          const trueRadius = targetPlanet.size * targetPlanet.hitboxRatio;
-          const scaleMultiplier = trueRadius / MYSTERY_PLANET_RADIUS;
+          const trueRadius = this.radii[p.planetId - 1] * targetPlanet.hitboxRatio;
+          const scaleMultiplier = trueRadius / this.mysteryRadius;
           
           Matter.Body.scale(p.body, scaleMultiplier, scaleMultiplier);
           
@@ -686,7 +697,7 @@ export class SolarPhysics {
             id: p.id,
             x: p.body.position.x,
             y: p.body.position.y,
-            planetSize: targetPlanet.size,
+            planetSize: this.radii[p.planetId - 1],
           }));
 
           // ── INSTANT MERGE CHECK ──
@@ -814,8 +825,8 @@ export class SolarPhysics {
     if (this.planets.size === 0) return null;
 
     this.planets.forEach((p) => {
-      const planet = PLANETS[p.planetId - 1];
-      const topY = p.body.position.y - planet.size;
+      const radius = this.radii[p.planetId - 1];
+      const topY = p.body.position.y - radius;
       if (topY < minY) {
         minY = topY;
         velocityAtMinY = p.body.velocity.y;
@@ -894,8 +905,7 @@ export class SolarPhysics {
 
     this.planets.forEach((pb) => {
       const body = pb.body;
-      const planet = PLANETS[pb.planetId - 1];
-      const radius = planet.size;
+      const radius = this.radii[pb.planetId - 1];
 
       // Mark planets that have settled into the game area (below the shield line)
       if (body.position.y > DANGER_HEIGHT + 40) {

@@ -11,7 +11,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame, calculateChecksum } from '../useGame';
-import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT, WIZARD_SHRINK_SCALE, WIZARD_SHIELD_COST } from '../constants';
+import {
+  PLANETS,
+  DANGER_HEIGHT,
+  STAR_RADIUS_RATIO,
+  BLACK_HOLE_RADIUS_RATIO,
+  VIRUS_RADIUS_RATIO,
+  MYSTERY_PLANET_RADIUS_RATIO,
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  WIZARD_SHRINK_SCALE,
+  WIZARD_SHIELD_COST,
+} from '../constants';
 import { PlanetView, PlanetThumb } from './PlanetView';
 import { StarView } from './StarView';
 import { BlackHoleView } from './BlackHoleView';
@@ -71,6 +82,12 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
 
+  const pRadii = PLANETS.map(p => p.radiusRatio * gameWidth);
+  const sRadius = STAR_RADIUS_RATIO * gameWidth;
+  const bhRadius = BLACK_HOLE_RADIUS_RATIO * gameWidth;
+  const vRadius = VIRUS_RADIUS_RATIO * gameWidth;
+  const mRadius = MYSTERY_PLANET_RADIUS_RATIO * gameWidth;
+
   const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
@@ -112,12 +129,14 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
   // Clamp preview by item radius (virus / star / black hole / planet)
   const previewRadius = state.currentIsVirus
-    ? VIRUS_RADIUS
+    ? vRadius
     : state.currentIsStar
-      ? STAR_RADIUS
+      ? sRadius
       : state.currentIsBlackHole
-        ? BLACK_HOLE_RADIUS
-        : currentPlanet.size;
+        ? bhRadius
+        : state.currentIsMystery
+          ? mRadius
+          : pRadii[state.currentPlanetId - 1];
   const previewY = previewRadius + 2;
 
   // Animated value drives the drop line + ghost position WITHOUT re-renders.
@@ -350,17 +369,18 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             >
               <View style={{ transform: [{ translateX: -previewRadius }] }}>
                 {state.currentIsVirus
-                  ? <VirusPlanetView x={previewRadius} y={previewRadius} ghost />
+                  ? <VirusPlanetView x={previewRadius} y={previewRadius} size={vRadius} ghost />
                   : state.currentIsMystery
-                    ? <MysteryPlanetView x={previewRadius} y={previewRadius} ghost />
+                    ? <MysteryPlanetView x={previewRadius} y={previewRadius} size={mRadius} ghost />
                     : state.currentIsBlackHole
-                      ? <BlackHoleView x={previewRadius} y={previewRadius} ghost />
+                      ? <BlackHoleView x={previewRadius} y={previewRadius} size={bhRadius} ghost />
                       : state.currentIsStar
-                        ? <StarView x={previewRadius} y={previewRadius} ghost />
+                        ? <StarView x={previewRadius} y={previewRadius} size={sRadius} ghost />
                         : <PlanetView
                           planetId={state.currentPlanetId}
                           x={previewRadius}
                           y={previewRadius}
+                          size={pRadii[state.currentPlanetId - 1]}
                           ghost
                           scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
                         />
@@ -390,6 +410,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
                 key={p.id}
                 x={p.x}
                 y={p.y}
+                size={p.size}
                 angle={p.angle}
               />
             ) : (
@@ -399,6 +420,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
                 x={p.x}
                 y={p.y}
                 angle={p.angle}
+                size={p.size}
                 scale={p.scale}
                 isMergeSpawn={mergeSpawnSet.has(p.id)}
                 isSick={sickPlanetSet.has(p.id)}
@@ -408,17 +430,17 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
 
           {/* Star power-ups */}
           {state.stars.map((s) => (
-            <MemoizedStarView key={s.id} x={s.x} y={s.y} />
+            <MemoizedStarView key={s.id} x={s.x} y={s.y} size={s.size} />
           ))}
 
           {/* Black holes */}
           {state.blackHoles.map((bh) => (
-            <MemoizedBlackHoleView key={bh.id} x={bh.x} y={bh.y} />
+            <MemoizedBlackHoleView key={bh.id} x={bh.x} y={bh.y} size={bh.size} />
           ))}
 
           {/* Virus planets */}
           {state.viruses.map((v) => (
-            <MemoizedVirusPlanetView key={v.id} x={v.x} y={v.y} />
+            <MemoizedVirusPlanetView key={v.id} x={v.x} y={v.y} size={v.size} />
           ))}
 
           {/* Merge explosions */}

@@ -6,6 +6,7 @@ interface Props {
   planetId: number;
   x: number;
   y: number;
+  size: number;
   angle?: number;
   ghost?: boolean;
   isMergeSpawn?: boolean;
@@ -45,12 +46,12 @@ const SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
-export const PlanetView = React.memo(({ planetId, x, y, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style }: Props) => {
+export const PlanetView = React.memo(({ planetId, x, y, size, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style }: Props) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
-  const diameter = planet.size * 2;
-  const r = planet.size;
+  const diameter = size * 2;
+  const r = size;
 
   // Saturn PNG is 2:1 — rendered wider so rings show
   const isSaturn = planetId === SATURN_ID;

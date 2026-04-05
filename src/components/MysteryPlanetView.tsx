@@ -1,15 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Animated, Easing, Image } from 'react-native';
-import { MYSTERY_PLANET_RADIUS } from '../constants';
-
 interface Props {
   x: number;
   y: number;
+  size: number;
   angle?: number;
   ghost?: boolean;
 }
 
-export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, angle = 0, ghost = false }) => {
+export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, size, angle = 0, ghost = false }) => {
   const rotation = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(1)).current;
 
@@ -37,8 +36,10 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, angle = 0,
   }, [ghost, glow, rotation]);
 
   const animatedStyle = {
-      left: x - MYSTERY_PLANET_RADIUS,
-      top: y - MYSTERY_PLANET_RADIUS,
+      left: x - size,
+      top: y - size,
+      width: size * 2,
+      height: size * 2,
       transform: [
         { 
           rotate: ghost ? rotation.interpolate({ inputRange: [-1, 1], outputRange: ['-8deg', '8deg'] }) : `${(angle * 180) / Math.PI}deg`
@@ -68,14 +69,12 @@ export const MysteryPlanetThumb: React.FC<{ size: number }> = ({ size }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    width: MYSTERY_PLANET_RADIUS * 2,
-    height: MYSTERY_PLANET_RADIUS * 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   image: {
-    width: MYSTERY_PLANET_RADIUS * 2,
-    height: MYSTERY_PLANET_RADIUS * 2,
+    width: '100%',
+    height: '100%',
     resizeMode: 'contain',
   },
 });

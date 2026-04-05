@@ -4,6 +4,7 @@ export interface RenderPlanet {
   x: number;
   y: number;
   angle: number;
+  size: number; // radius in pixels
   scale?: number;
   isMystery?: boolean;
 }
@@ -22,18 +23,21 @@ export interface RenderStar {
   x: number;
   y: number;
   angle: number;
+  size: number;
 }
 
 export interface RenderBlackHole {
   id: string;
   x: number;
   y: number;
+  size: number;
 }
 
 export interface RenderVirus {
   id: string;
   x: number;
   y: number;
+  size: number;
 }
 
 export interface GameState {

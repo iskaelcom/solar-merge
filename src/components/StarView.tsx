@@ -18,11 +18,14 @@ function starPoints(cx: number, cy: number, outerR: number, innerR: number): str
 interface Props {
   x: number;
   y: number;
+  size: number;
+  angle?: number;
+  isDropped?: boolean;
   ghost?: boolean;  // true → semi-transparent drop preview
 }
 
 /** Full physics star rendered in the game area. */
-export const StarView = React.memo(({ x, y, ghost = false }: Props) => {
+export const StarView = React.memo(({ x, y, size, angle = 0, isDropped = true, ghost = false }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -59,12 +62,13 @@ export const StarView = React.memo(({ x, y, ghost = false }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const rotate = spinAnim.interpolate({
+  const rotate = angle ? `${angle}rad` : spinAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  const half = DIAMETER / 2;
+  const diameter = size * 2;
+  const half = size;
   const outerR = half - 1;
   const innerR = outerR * 0.42;
 
@@ -75,8 +79,8 @@ export const StarView = React.memo(({ x, y, ghost = false }: Props) => {
     <Animated.View
       style={{
         position: 'absolute',
-        width: DIAMETER,
-        height: DIAMETER,
+        width: diameter,
+        height: diameter,
         left: x - half,
         top: y - half,
         opacity: ghost ? 0.5 : 1,
@@ -85,7 +89,7 @@ export const StarView = React.memo(({ x, y, ghost = false }: Props) => {
     >
       {/* Outer glow (soft aura) — hidden on ghost preview */}
       {!ghost && (
-        <Svg width={DIAMETER} height={DIAMETER} style={{ position: 'absolute' }}>
+        <Svg width={diameter} height={diameter} style={{ position: 'absolute' }}>
           <Defs>
             <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
               <Stop offset="0%" stopColor="#FFD600" stopOpacity="0.55" />
@@ -97,7 +101,7 @@ export const StarView = React.memo(({ x, y, ghost = false }: Props) => {
       )}
 
       {/* Main star body */}
-      <Svg width={DIAMETER} height={DIAMETER}>
+      <Svg width={diameter} height={diameter}>
         <Polygon
           points={mainPts}
           fill="#FFD600"

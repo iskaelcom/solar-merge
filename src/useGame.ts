@@ -10,15 +10,15 @@ import {
   DROP_DELAY,
   MAX_SPAWN_LEVEL,
   COMBO_RESET_TIME,
-  STAR_RADIUS,
+  STAR_RADIUS_RATIO,
   STAR_SPAWN_INTERVAL,
-  BLACK_HOLE_RADIUS,
+  BLACK_HOLE_RADIUS_RATIO,
   BLACK_HOLE_SPAWN_INTERVAL,
-  VIRUS_RADIUS,
+  VIRUS_RADIUS_RATIO,
   VIRUS_SPAWN_INTERVAL,
-  MYSTERY_PLANET_SPAWN_INTERVAL,
-  MYSTERY_PLANET_RADIUS,
+  MYSTERY_PLANET_RADIUS_RATIO,
   MYSTERY_PLANET_REVEAL_DROPS,
+  MYSTERY_PLANET_SPAWN_INTERVAL,
   SHIELD_MAX_LAYERS,
   SHIELD_THRESHOLD_DEFAULT,
   SHIELD_THRESHOLD_MIN,
@@ -168,6 +168,12 @@ const INITIAL_STATE: GameState = {
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
+  const pRadii = PLANETS.map(p => p.radiusRatio * gameWidth);
+  const sRadius = STAR_RADIUS_RATIO * gameWidth;
+  const bhRadius = BLACK_HOLE_RADIUS_RATIO * gameWidth;
+  const vRadius = VIRUS_RADIUS_RATIO * gameWidth;
+  const mRadius = MYSTERY_PLANET_RADIUS_RATIO * gameWidth;
+
   const physicsRef = useRef<SolarPhysics | null>(null);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
@@ -254,13 +260,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // ── Sick merge: downgrade by 1 level ────────────────────────────
         const downPlanetId = planetId - 1;
         if (downPlanetId >= 1) {
-          const downSize = PLANETS[downPlanetId - 1].size;
+          const downSize = pRadii[downPlanetId - 1];
           const spawnY = Math.max(y, downSize + 10);
           engine.addPlanet(newId, downPlanetId, x, spawnY, vx, vy);
           pendingSpawnsRef.current.push({ id: newId, planetId: downPlanetId, x, y: spawnY });
           pendingMergeSpawnIdsRef.current.push(newId);
           sickPlanetIdsRef.current.add(newId); // sickness spreads to result
-          engine.applyMergeShockwave(x, y, planet.size, newId);
+          engine.applyMergeShockwave(x, y, pRadii[planetId - 1], newId);
         }
         // level 1 sick + level 1 → both vanish (downPlanetId === 0, no spawn)
 
@@ -268,9 +274,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         pendingExplosionsRef.current.push({
           id: `exp_sick_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
+          planetSize: pRadii[planetId - 1],
           color: '#AA00FF',
-          scale: Math.max(0.8, planet.size / 30),
+          scale: Math.max(0.8, pRadii[planetId - 1] / 30),
         });
 
         // Subtract score (no combo) — write through ref first
@@ -292,20 +298,20 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextPlanetId = planetId + 1;
 
         if (nextPlanetId <= PLANETS.length) {
-          const nextSize = PLANETS[nextPlanetId - 1].size;
+          const nextSize = pRadii[nextPlanetId - 1];
           const spawnY = Math.max(y, nextSize + 10);
           engine.addPlanet(newId, nextPlanetId, x, spawnY, vx, vy);
           pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetId, x, y: spawnY });
           pendingMergeSpawnIdsRef.current.push(newId);
-          engine.applyMergeShockwave(x, y, planet.size, newId);
+          engine.applyMergeShockwave(x, y, pRadii[planetId - 1], newId);
         }
 
         pendingExplosionsRef.current.push({
           id: `exp_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
+          planetSize: pRadii[planetId - 1],
           color: planet.color,
-          scale: Math.max(0.8, planet.size / 30),
+          scale: Math.max(0.8, pRadii[planetId - 1] / 30),
         });
 
         // Read & increment the secure ref — not accessible via React DevTools
@@ -370,7 +376,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // ── Healing: star cures the sick planet (same level, no score) ───
         // Physics already removed the planet — re-add it at the same level
         const healId = genId();
-        const spawnY = Math.max(y, planet.size + 10);
+        const spawnY = Math.max(y, pRadii[planetTypeId - 1] + 10);
         engine.addPlanet(healId, planetTypeId, x, spawnY);
         pendingSpawnsRef.current.push({ id: healId, planetId: planetTypeId, x, y: spawnY });
         pendingMergeSpawnIdsRef.current.push(healId);
@@ -379,9 +385,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         pendingExplosionsRef.current.push({
           id: `exp_heal_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
+          planetSize: pRadii[planetTypeId - 1],
           color: '#00E5FF',
-          scale: Math.max(0.8, planet.size / 30),
+          scale: Math.max(0.8, pRadii[planetTypeId - 1] / 30),
         });
 
         setState((prev) => ({
@@ -397,27 +403,27 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextPlanetTypeId = Math.min(planetTypeId + 1, PLANETS.length);
 
         if (planetTypeId < PLANETS.length) {
-          const nextSize = PLANETS[nextPlanetTypeId - 1].size;
+          const nextSize = pRadii[nextPlanetTypeId - 1];
           const spawnY = Math.max(y, nextSize + 10);
           engine.addPlanet(newId, nextPlanetTypeId, x, spawnY);
-          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x, y: spawnY });
+          pendingSpawnsRef.current.push({ id: newId, planetId: nextPlanetTypeId, x: x, y: spawnY });
           pendingMergeSpawnIdsRef.current.push(newId);
-          engine.applyMergeShockwave(x, spawnY, planet.size, newId);
+          engine.applyMergeShockwave(x, spawnY, pRadii[planetTypeId - 1], newId);
         }
 
         // ── Star + Sun: gravitational collapse — suck surrounding objects ──
         const isSunHit = planetTypeId === PLANETS.length;
         if (isSunHit) {
-          engine.applyBlackHoleSuction(x, y, planet.size);
+          engine.applyBlackHoleSuction(x, y, pRadii[planetTypeId - 1]);
         }
 
         // Explosion: dramatic dark-gold implosion for Sun, normal gold otherwise
         pendingExplosionsRef.current.push({
           id: `exp_star_${Date.now()}_${Math.random()}`,
           x, y,
-          planetSize: planet.size,
+          planetSize: pRadii[planetTypeId - 1],
           color: isSunHit ? '#FF6600' : '#FFD600',
-          scale: isSunHit ? Math.max(2.0, planet.size / 15) : Math.max(0.8, planet.size / 30),
+          scale: isSunHit ? Math.max(2.0, pRadii[planetTypeId - 1] / 15) : Math.max(0.8, pRadii[planetTypeId - 1] / 30),
         });
 
         setState((prev) => {
@@ -448,16 +454,16 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const planet = PLANETS[planetTypeId - 1];
 
       // Pull surrounding planets inward — they should react, not stand still
-      engine.applyBlackHoleSuction(x, y, planet.size);
+      engine.applyBlackHoleSuction(x, y, pRadii[planetTypeId - 1]);
 
       // Dark implosion explosion at the planet's position
       pendingExplosionsRef.current.push({
         id: `exp_bh_${Date.now()}_${Math.random()}`,
         x,
         y,
-        planetSize: planet.size,
+        planetSize: pRadii[planetTypeId - 1],
         color: '#6a00cc',  // dark purple vortex
-        scale: Math.max(0.6, planet.size / 40),
+        scale: Math.max(0.6, pRadii[planetTypeId - 1] / 40),
       });
 
       // Remove planet & black hole from render state (no score — black hole is a utility)
@@ -477,9 +483,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       pendingExplosionsRef.current.push({
         id: `exp_virus_${Date.now()}_${Math.random()}`,
         x, y,
-        planetSize: planet.size,
+        planetSize: pRadii[planetTypeId - 1],
         color: '#76FF03', // neon green infection burst
-        scale: Math.max(0.6, planet.size / 40),
+        scale: Math.max(0.6, pRadii[planetTypeId - 1] / 40),
       });
 
       setState((prev) => ({
@@ -501,16 +507,16 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       pendingBlackHoleSpawnsRef.current.push({ id: blackHoleId, x, y });
 
       // Strong suction — neighbouring planets get pulled toward the collapse point
-      engine.applyBlackHoleSuction(x, y, sun.size);
+      engine.applyBlackHoleSuction(x, y, pRadii[PLANETS.length - 1]);
 
       // Supernova explosion — large, golden-orange
       pendingExplosionsRef.current.push({
         id: `exp_sunbh_${Date.now()}_${Math.random()}`,
         x,
         y,
-        planetSize: sun.size,
+        planetSize: pRadii[PLANETS.length - 1],
         color: '#FF6600',
-        scale: Math.max(2.0, sun.size / 15),
+        scale: Math.max(2.0, pRadii[PLANETS.length - 1] / 15),
       });
 
       // Combo accounting (same logic as a normal merge)
@@ -618,6 +624,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             x: p.body.position.x,
             y: p.body.position.y,
             angle: p.body.angle,
+            size: pRadii[p.planetId - 1],
             scale: 1.0, 
             isMystery: p.isMystery,
           }));
@@ -706,13 +713,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
                 x: pos.x,
                 y: pos.y,
                 angle: p.body.angle,
+                size: pRadii[p.planetId - 1],
                 isMystery: p.isMystery,
               } as RenderPlanet;
             });
 
           // Add newly merged spawns
           spawns.forEach((s) => {
-            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0, isMystery: s.isMystery });
+            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0, size: pRadii[s.planetId - 1], isMystery: s.isMystery });
           });
 
           // Remove stale IDs (merged/destroyed planets) from sick + mergeSpawn lists
@@ -726,6 +734,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             x: s.body.position.x,
             y: s.body.position.y,
             angle: s.body.angle,
+            size: sRadius,
           }));
 
           // Sync black holes from physics
@@ -733,6 +742,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             id: bh.id,
             x: bh.body.position.x,
             y: bh.body.position.y,
+            size: bhRadius,
           }));
 
           // Sync viruses from physics
@@ -740,6 +750,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             id: v.id,
             x: v.body.position.x,
             y: v.body.position.y,
+            size: vRadius,
           }));
 
             // Update session diamonds based on playtime
@@ -895,6 +906,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             x: p.body.position.x,
             y: p.body.position.y,
             angle: p.body.angle,
+            size: pRadii[p.planetId - 1],
             scale: 1.0,
             isMystery: p.isMystery,
           }));
@@ -939,8 +951,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     // ── Drop a virus ───────────────────────────────────────────────────
     if (prev.currentIsVirus) {
-      const clampedX = Math.max(VIRUS_RADIUS + 2, Math.min(gameWidth - VIRUS_RADIUS - 2, x));
-      const startY = VIRUS_RADIUS + 2;
+      const clampedX = Math.max(vRadius + 2, Math.min(gameWidth - vRadius - 2, x));
+      const startY = vRadius + 2;
       const id = genId();
       physicsRef.current.addVirus(id, clampedX, startY);
       pendingVirusSpawnsRef.current.push({ id, x: clampedX, y: startY });
@@ -954,8 +966,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }
     // ── Drop a star ────────────────────────────────────────────────────
     else if (prev.currentIsStar) {
-      const clampedX = Math.max(STAR_RADIUS + 2, Math.min(gameWidth - STAR_RADIUS - 2, x));
-      const startY = STAR_RADIUS + 2;
+      const clampedX = Math.max(sRadius + 2, Math.min(gameWidth - sRadius - 2, x));
+      const startY = sRadius + 2;
       const id = genId();
       physicsRef.current.addStar(id, clampedX, startY);
       pendingStarSpawnsRef.current.push({ id, x: clampedX, y: startY });
@@ -974,8 +986,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }
     // ── Drop a black hole ──────────────────────────────────────────────
     else if (prev.currentIsBlackHole) {
-      const clampedX = Math.max(BLACK_HOLE_RADIUS + 2, Math.min(gameWidth - BLACK_HOLE_RADIUS - 2, x));
-      const startY = BLACK_HOLE_RADIUS + 2;
+      const clampedX = Math.max(bhRadius + 2, Math.min(gameWidth - bhRadius - 2, x));
+      const startY = bhRadius + 2;
       const id = genId();
       physicsRef.current.addBlackHole(id, clampedX, startY);
       pendingBlackHoleSpawnsRef.current.push({ id, x: clampedX, y: startY });
@@ -994,8 +1006,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }
     // ── Drop a mystery planet ──────────────────────────────────────────
     else if (prev.currentIsMystery) {
-      const clampedX = Math.max(MYSTERY_PLANET_RADIUS + 2, Math.min(gameWidth - MYSTERY_PLANET_RADIUS - 2, x));
-      const startY = MYSTERY_PLANET_RADIUS + 2;
+      const clampedX = Math.max(mRadius + 2, Math.min(gameWidth - mRadius - 2, x));
+      const startY = mRadius + 2;
       const id = genId();
       physicsRef.current.addMysteryPlanet(id, prev.mysteryPlanetId, MYSTERY_PLANET_REVEAL_DROPS, clampedX, startY);
 
@@ -1005,6 +1017,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         x: clampedX,
         y: startY,
         angle: 0,
+        size: pRadii[prev.mysteryPlanetId - 1],
         isMystery: true,
       };
 
@@ -1024,9 +1037,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }
     // ── Drop a normal planet ───────────────────────────────────────────
     else {
-      const planet = PLANETS[prev.currentPlanetId - 1];
-      const clampedX = Math.max(planet.size + 2, Math.min(gameWidth - planet.size - 2, x));
-      const startY = planet.size + 2;
+      const radius = pRadii[prev.currentPlanetId - 1];
+      const clampedX = Math.max(radius + 2, Math.min(gameWidth - radius - 2, x));
+      const startY = radius + 2;
 
       const id = genId();
       physicsRef.current.addPlanet(id, prev.currentPlanetId, clampedX, startY);
@@ -1037,6 +1050,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         x: clampedX,
         y: startY,
         angle: 0,
+        size: radius,
       };
 
       // Determine special injection. Priority: BH > Virus > Star > Mystery.
@@ -1183,22 +1197,26 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         x: p.body.position.x,
         y: p.body.position.y,
         angle: p.body.angle,
+        size: pRadii[p.planetId - 1],
       })),
       stars: physicsRef.current!.getAllStars().map(s => ({
         id: s.id,
         x: s.body.position.x,
         y: s.body.position.y,
         angle: s.body.angle,
+        size: sRadius,
       })),
       blackHoles: physicsRef.current!.getAllBlackHoles().map(bh => ({
         id: bh.id,
         x: bh.body.position.x,
         y: bh.body.position.y,
+        size: bhRadius,
       })),
       viruses: physicsRef.current!.getAllViruses().map(v => ({
         id: v.id,
         x: v.body.position.x,
         y: v.body.position.y,
+        size: vRadius,
       })),
     }));
 

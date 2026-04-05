@@ -8,6 +8,7 @@ const DIAMETER = 60;
 interface Props {
   x: number;
   y: number;
+  size: number;
   ghost?: boolean;
 }
 
@@ -25,7 +26,7 @@ function buildSpikes(cx: number, cy: number, coreR: number, spikeCenterR: number
 }
 
 /** Live virus planet rendered in the game area. */
-export const VirusPlanetView = React.memo(({ x, y, ghost = false }: Props) => {
+export const VirusPlanetView = React.memo(({ x, y, size, ghost = false }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -65,22 +66,23 @@ export const VirusPlanetView = React.memo(({ x, y, ghost = false }: Props) => {
     outputRange: ['0deg', '360deg'],
   });
 
-  const half = DIAMETER / 2;
-  const coreR = 16;
-  const spikeCenterR = 24;
-  const spikeR = 5.5;
+  const visualDiameter = size * 2.7;
+  const half = visualDiameter / 2;
+  const coreR = size * 0.72;
+  const spikeCenterR = size * 1.09;
+  const spikeR = size * 0.25;
   const spikes = buildSpikes(half, half, coreR, spikeCenterR);
 
-  const lEX = half - 6; // left eye x
-  const rEX = half + 6; // right eye x
-  const eY  = half - 2; // eye y
+  const lEX = half - size * 0.27; // left eye x
+  const rEX = half + size * 0.27; // right eye x
+  const eY  = half - size * 0.1; // eye y
 
   return (
     <Animated.View
       style={{
         position: 'absolute',
-        width: DIAMETER,
-        height: DIAMETER,
+        width: visualDiameter,
+        height: visualDiameter,
         left: x - half,
         top: y - half,
         opacity: ghost ? 0.5 : 1,
@@ -91,27 +93,27 @@ export const VirusPlanetView = React.memo(({ x, y, ghost = false }: Props) => {
       <Animated.View
         style={{
           position: 'absolute',
-          width: DIAMETER,
-          height: DIAMETER,
+          width: visualDiameter,
+          height: visualDiameter,
           transform: [{ rotate }],
         }}
       >
-        <Svg width={DIAMETER} height={DIAMETER}>
+        <Svg width={visualDiameter} height={visualDiameter}>
           {spikes.map((s, i) => (
             <G key={i}>
               <Line
                 x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-                stroke="#33691E" strokeWidth={2.5} strokeLinecap="round"
+                stroke="#33691E" strokeWidth={2.5 * (size / 22)} strokeLinecap="round"
               />
               <Circle cx={s.x2} cy={s.y2} r={spikeR} fill="#F9A825" opacity={ghost ? 0.6 : 0.95} />
-              <Circle cx={s.x2 - 1.5} cy={s.y2 - 1.5} r={1.8} fill="rgba(255,255,255,0.45)" />
+              <Circle cx={s.x2 - 1.5 * (size / 22)} cy={s.y2 - 1.5 * (size / 22)} r={1.8 * (size / 22)} fill="rgba(255,255,255,0.45)" />
             </G>
           ))}
         </Svg>
       </Animated.View>
 
       {/* Static core body + face */}
-      <Svg width={DIAMETER} height={DIAMETER} style={{ position: 'absolute' }}>
+      <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Defs>
           <RadialGradient id="vg_core" cx="38%" cy="32%" r="65%">
             <Stop offset="0%"   stopColor="#E6FF4D" />
@@ -123,31 +125,31 @@ export const VirusPlanetView = React.memo(({ x, y, ghost = false }: Props) => {
         {/* Core */}
         <Circle cx={half} cy={half} r={coreR} fill="url(#vg_core)" />
         {/* Shine */}
-        <Circle cx={half - 5} cy={half - 5} r={5} fill="rgba(255,255,255,0.22)" />
+        <Circle cx={half - size * 0.22} cy={half - size * 0.22} r={size * 0.22} fill="rgba(255,255,255,0.22)" />
 
         {/* Left eye */}
-        <Circle cx={lEX} cy={eY} r={4} fill="rgba(0,30,0,0.7)" />
-        <Circle cx={lEX + 0.5} cy={eY - 0.5} r={1.8} fill="#CCFF00" />
+        <Circle cx={lEX} cy={eY} r={size * 0.18} fill="rgba(0,30,0,0.7)" />
+        <Circle cx={lEX + 0.5 * (size / 22)} cy={eY - 0.5 * (size / 22)} r={size * 0.08} fill="#CCFF00" />
         {/* Left sinister lid */}
         <Path
-          d={`M${lEX - 4} ${eY - 1} Q${lEX} ${eY - 4.5} ${lEX + 4} ${eY - 1}`}
+          d={`M${lEX - size * 0.18} ${eY - size * 0.045} Q${lEX} ${eY - size * 0.2} ${lEX + size * 0.18} ${eY - size * 0.045}`}
           fill="#1B5E20"
         />
 
         {/* Right eye */}
-        <Circle cx={rEX} cy={eY} r={4} fill="rgba(0,30,0,0.7)" />
-        <Circle cx={rEX + 0.5} cy={eY - 0.5} r={1.8} fill="#CCFF00" />
+        <Circle cx={rEX} cy={eY} r={size * 0.18} fill="rgba(0,30,0,0.7)" />
+        <Circle cx={rEX + 0.5 * (size / 22)} cy={eY - 0.5 * (size / 22)} r={size * 0.08} fill="#CCFF00" />
         {/* Right sinister lid */}
         <Path
-          d={`M${rEX - 4} ${eY - 1} Q${rEX} ${eY - 4.5} ${rEX + 4} ${eY - 1}`}
+          d={`M${rEX - size * 0.18} ${eY - size * 0.045} Q${rEX} ${eY - size * 0.2} ${rEX + size * 0.18} ${eY - size * 0.045}`}
           fill="#1B5E20"
         />
 
         {/* Jagged evil grin */}
         <Path
-          d={`M${half - 7} ${half + 5} L${half - 4} ${half + 9} L${half - 1} ${half + 5} L${half + 2} ${half + 9} L${half + 5} ${half + 5} L${half + 7} ${half + 8}`}
+          d={`M${half - size * 0.32} ${half + size * 0.22} L${half - size * 0.18} ${half + size * 0.4} L${half - size * 0.045} ${half + size * 0.22} L${half + size * 0.09} ${half + size * 0.4} L${half + size * 0.22} ${half + size * 0.22} L${half + size * 0.32} ${half + size * 0.36}`}
           stroke="#1B5E20"
-          strokeWidth={2}
+          strokeWidth={2 * (size / 22)}
           fill="rgba(0,40,0,0.3)"
           strokeLinecap="round"
           strokeLinejoin="round"
