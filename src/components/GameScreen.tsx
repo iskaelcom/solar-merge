@@ -78,16 +78,30 @@ export function GameScreen() {
 }
 
 function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
-  const { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, buyAntidote, redeemCode, isDroppingRef, scoreRef, dropCountRef } = useGame(gameWidth, gameHeight);
+  const {
+    state,
+    setPointerX,
+    dropPlanet,
+    restart,
+    continueGame,
+    removeExplosion,
+    buyShrinkBonus,
+    buyShield,
+    buyAntidote,
+    redeemCode,
+    isDroppingRef,
+    scoreRef,
+    dropCountRef,
+    pRadii,
+    sRadius,
+    bhRadius,
+    vRadius,
+    mRadius,
+  } = useGame(gameWidth, gameHeight);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
 
-  const pRadii = PLANETS.map(p => p.radiusRatio * gameWidth);
-  const sRadius = STAR_RADIUS_RATIO * gameWidth;
-  const bhRadius = BLACK_HOLE_RADIUS_RATIO * gameWidth;
-  const vRadius = VIRUS_RADIUS_RATIO * gameWidth;
-  const mRadius = MYSTERY_PLANET_RADIUS_RATIO * gameWidth;
 
   const [showTutorial, setShowTutorial] = useState(false);
 

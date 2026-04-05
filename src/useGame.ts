@@ -172,13 +172,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   // ── Dynamic Planet Scaling ──────────────────────────────────────────────
   // Goal: Jupiter Area = 1/4 of total Drop Zone Area
   const totalArea = gameWidth * gameHeight;
-  const jupiterArea = totalArea / 4;
+  const jupiterArea = totalArea / 6;
   const jupiterRadius = Math.sqrt(jupiterArea / Math.PI);
-  
+
   // Ratios relative to Jupiter (calculated to maintain a smooth progression)
   // Moon, Merc, Mars, Venus, Earth, Nept, Uran, Sat, Jup, Sun
   const factors = [0.20, 0.30, 0.35, 0.45, 0.55, 0.65, 0.74, 0.86, 1.0, 1.45];
-  
+
   const pRadii = factors.map((f, i) => {
     const raw = jupiterRadius * f;
     // Cap Sun (id: 10) to fits within 99% of width
@@ -599,7 +599,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         color: '#DDA0DD', // Plum / Magical purple
         scale: 0.1,
       };
-      
+
       setState((s) => ({
         ...s,
         explosions: [...s.explosions, newExplosion],
@@ -646,7 +646,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             y: p.body.position.y,
             angle: p.body.angle,
             size: pRadii[p.planetId - 1],
-            scale: 1.0, 
+            scale: 1.0,
             isMystery: p.isMystery,
           }));
 
@@ -774,31 +774,31 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             size: vRadius,
           }));
 
-            // Update session diamonds based on playtime
-            const elapsedMs = Date.now() - startTimeRef.current;
-            const sessionDots = Math.min(
-              MAX_SESSION_DIAMONDS,
-              Math.floor(elapsedMs / 60000) * DIAMONDS_PER_MINUTE
-            );
+          // Update session diamonds based on playtime
+          const elapsedMs = Date.now() - startTimeRef.current;
+          const sessionDots = Math.min(
+            MAX_SESSION_DIAMONDS,
+            Math.floor(elapsedMs / 60000) * DIAMONDS_PER_MINUTE
+          );
 
-            const shrinkScale = prev.shrinkTimeLeft > 0 ? WIZARD_SHRINK_SCALE : 1.0;
+          const shrinkScale = prev.shrinkTimeLeft > 0 ? WIZARD_SHRINK_SCALE : 1.0;
 
-            return {
-              ...prev,
-              planets: updated.map(p => ({
-                ...p,
-                scale: (p.planetId >= 4 && prev.shrinkTimeLeft > 0) ? shrinkScale : 1.0
-              })),
-              stars: updatedStars,
-              blackHoles: updatedBlackHoles,
-              viruses: updatedViruses,
-              sickPlanetIds: cleanSickIds,
-              sessionDiamonds: sessionDots,
-              explosions: [...prev.explosions, ...newExplosions],
-              mergeSpawnIds: freshMergeIds.length > 0
-                ? [...cleanMergeSpawnIds, ...freshMergeIds]
-                : cleanMergeSpawnIds,
-            };
+          return {
+            ...prev,
+            planets: updated.map(p => ({
+              ...p,
+              scale: (p.planetId >= 4 && prev.shrinkTimeLeft > 0) ? shrinkScale : 1.0
+            })),
+            stars: updatedStars,
+            blackHoles: updatedBlackHoles,
+            viruses: updatedViruses,
+            sickPlanetIds: cleanSickIds,
+            sessionDiamonds: sessionDots,
+            explosions: [...prev.explosions, ...newExplosions],
+            mergeSpawnIds: freshMergeIds.length > 0
+              ? [...cleanMergeSpawnIds, ...freshMergeIds]
+              : cleanMergeSpawnIds,
+          };
         });
       }
 
@@ -839,7 +839,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Calculate streak tracking via local time YYYY-MM-DD
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      
+
       const yesterday = new Date(now);
       yesterday.setDate(now.getDate() - 1);
       const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
@@ -880,7 +880,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // Only set the initial planets if the board is still empty (brand new game).
         // This prevents the sequence from "resetting to 1" if storage.get() resolves mid-play.
         const isFreshGame = s.planets.length === 0 && s.dropCount === 0;
-        
+
         return {
           ...s,
           highScore: score,
@@ -919,7 +919,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         const nextTime = Math.max(0, prev.shrinkTimeLeft - 1);
         if (nextTime === 0 && prev.shrinkTimeLeft > 0) {
           physicsRef.current?.setPlanetShrink(false, 1.0);
-          
+
           // Force immediate visual synchronization of all planets to reflect full size (1.0)
           const refreshedPlanets: RenderPlanet[] = (physicsRef.current?.getAllPlanets() || []).map((p) => ({
             id: p.id,
@@ -939,14 +939,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             startLoop();
           }, 0);
 
-          return { 
-            ...prev, 
-            shrinkTimeLeft: 0, 
+          return {
+            ...prev,
+            shrinkTimeLeft: 0,
             // Do NOT reset cost here, so sequence is preserved
-            planets: refreshedPlanets 
+            planets: refreshedPlanets
           };
         }
-        
+
         return { ...prev, shrinkTimeLeft: nextTime };
       });
     }, 1000);
@@ -1272,7 +1272,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
       const nextCost = cost + WIZARD_SHRINK_COST_INCREMENT;
       const nextTime = prev.shrinkTimeLeft + WIZARD_SHRINK_DURATION;
-      
+
       return {
         ...prev,
         diamonds: newTotal,
@@ -1345,7 +1345,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       playSound('buy');
       const newRedeemed = [...stateRef.current.redeemedCodes, normalized];
       const newDiamonds = stateRef.current.diamonds + amount;
-      
+
       totalDiamondsRef.current = newDiamonds;
       storage.setDiamonds(newDiamonds);
       storage.setRedeemedCodes(newRedeemed);
@@ -1362,5 +1362,24 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return { success: false, message: 'Invalid code' };
   }, [playSound]);
 
-  return { state, setPointerX, dropPlanet, restart, continueGame, removeExplosion, buyShrinkBonus, buyShield, buyAntidote, redeemCode, isDroppingRef, scoreRef, dropCountRef };
+  return {
+    state,
+    setPointerX,
+    dropPlanet,
+    restart,
+    continueGame,
+    removeExplosion,
+    buyShrinkBonus,
+    buyShield,
+    buyAntidote,
+    redeemCode,
+    isDroppingRef,
+    scoreRef,
+    dropCountRef,
+    pRadii,
+    sRadius,
+    bhRadius,
+    vRadius,
+    mRadius,
+  };
 }
