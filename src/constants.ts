@@ -15,7 +15,7 @@ export const PLANETS = [
     id: 2,
     name: 'Mercury',
     diameter: 4879,
-    radiusRatio: 0.083, 
+    radiusRatio: 0.083,
     color: '#B0B0B8',
     darkColor: '#606068',
     emoji: '⚫',
@@ -27,7 +27,7 @@ export const PLANETS = [
     id: 3,
     name: 'Mars',
     diameter: 6779,
-    radiusRatio: 0.097, 
+    radiusRatio: 0.097,
     color: '#FF6B6B',
     darkColor: '#C0392B',
     emoji: '🔴',
@@ -39,7 +39,7 @@ export const PLANETS = [
     id: 4,
     name: 'Venus',
     diameter: 12104,
-    radiusRatio: 0.125, 
+    radiusRatio: 0.125,
     color: '#FFD93D',
     darkColor: '#E67E22',
     emoji: '⭐',
@@ -51,7 +51,7 @@ export const PLANETS = [
     id: 5,
     name: 'Earth',
     diameter: 12742,
-    radiusRatio: 0.152, 
+    radiusRatio: 0.152,
     color: '#4ECDC4',
     darkColor: '#1A6B8A',
     emoji: '🌍',
@@ -63,7 +63,7 @@ export const PLANETS = [
     id: 6,
     name: 'Neptune',
     diameter: 49244,
-    radiusRatio: 0.180, 
+    radiusRatio: 0.180,
     color: '#5C6BC0',
     darkColor: '#283593',
     emoji: '💙',
@@ -75,7 +75,7 @@ export const PLANETS = [
     id: 7,
     name: 'Uranus',
     diameter: 50724,
-    radiusRatio: 0.205, 
+    radiusRatio: 0.205,
     color: '#26C6DA',
     darkColor: '#00838F',
     emoji: '🩵',
@@ -87,7 +87,7 @@ export const PLANETS = [
     id: 8,
     name: 'Saturn',
     diameter: 116460,
-    radiusRatio: 0.241, 
+    radiusRatio: 0.241,
     color: '#FFD54F',
     darkColor: '#E65100',
     emoji: '🪐',
@@ -149,19 +149,19 @@ export const FRICTION_AIR = 0.01;
 export const COMBO_RESET_TIME = 2500;
 
 // Star power-up
-export const STAR_RADIUS_RATIO = 15 / 360; 
+export const STAR_RADIUS_RATIO = 0.15;
 export const STAR_SPAWN_INTERVAL = 59;   // spawn a star every N planet drops
 
 // Black Hole power-up
-export const BLACK_HOLE_RADIUS_RATIO = 30 / 360; 
+export const BLACK_HOLE_RADIUS_RATIO = 0.30;
 export const BLACK_HOLE_SPAWN_INTERVAL = 29; // spawn a black hole every N planet drops
 
 // Virus Planet power-up
-export const VIRUS_RADIUS_RATIO = 22 / 360; 
+export const VIRUS_RADIUS_RATIO = 0.22;
 export const VIRUS_SPAWN_INTERVAL = 23;  // spawn a virus every N planet drops
 
 // Mystery Planet feature
-export const MYSTERY_PLANET_RADIUS_RATIO = 20 / 360;
+export const MYSTERY_PLANET_RADIUS_RATIO = 0.20;
 export const MYSTERY_PLANET_REVEAL_DROPS = 5;    // number of planet drops until it reveals itself
 export const MYSTERY_PLANET_SPAWN_INTERVAL = 14; // spawn a mystery planet every N drops
 

@@ -186,14 +186,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return raw;
   });
 
-  // Scale factor for power-ups (relative to current planets' increased size)
-  // Base Jupiter radius ratio was ~0.28, now it's dynamic.
-  const jupiterScale = jupiterRadius / (0.284 * 360); // relative to base legacy Jupiter
-
-  const sRadius = STAR_RADIUS_RATIO * gameWidth * jupiterScale;
-  const bhRadius = BLACK_HOLE_RADIUS_RATIO * gameWidth * jupiterScale;
-  const vRadius = VIRUS_RADIUS_RATIO * gameWidth * jupiterScale;
-  const mRadius = MYSTERY_PLANET_RADIUS_RATIO * gameWidth * jupiterScale;
+  const sRadius = jupiterRadius * STAR_RADIUS_RATIO;
+  const bhRadius = jupiterRadius * BLACK_HOLE_RADIUS_RATIO;
+  const vRadius = jupiterRadius * VIRUS_RADIUS_RATIO;
+  const mRadius = jupiterRadius * MYSTERY_PLANET_RADIUS_RATIO;
 
   const physicsRef = useRef<SolarPhysics | null>(null);
   const rafRef = useRef<number>(0);
@@ -645,7 +641,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             x: p.body.position.x,
             y: p.body.position.y,
             angle: p.body.angle,
-            size: pRadii[p.planetId - 1],
+            size: p.isMystery ? mRadius : pRadii[p.planetId - 1],
             scale: 1.0,
             isMystery: p.isMystery,
           }));
@@ -734,14 +730,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
                 x: pos.x,
                 y: pos.y,
                 angle: p.body.angle,
-                size: pRadii[p.planetId - 1],
+                size: p.isMystery ? mRadius : pRadii[p.planetId - 1],
                 isMystery: p.isMystery,
               } as RenderPlanet;
             });
 
           // Add newly merged spawns
           spawns.forEach((s) => {
-            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0, size: pRadii[s.planetId - 1], isMystery: s.isMystery });
+            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0, size: s.isMystery ? mRadius : pRadii[s.planetId - 1], isMystery: s.isMystery });
           });
 
           // Remove stale IDs (merged/destroyed planets) from sick + mergeSpawn lists
@@ -1223,7 +1219,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         x: p.body.position.x,
         y: p.body.position.y,
         angle: p.body.angle,
-        size: pRadii[p.planetId - 1],
+        size: p.isMystery ? mRadius : pRadii[p.planetId - 1],
         scale: (p.planetId >= 4 && stateRef.current.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1,
         isMystery: p.isMystery,
       })),
