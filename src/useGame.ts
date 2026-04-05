@@ -169,11 +169,31 @@ const INITIAL_STATE: GameState = {
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
-  const pRadii = PLANETS.map(p => p.radiusRatio * gameWidth);
-  const sRadius = STAR_RADIUS_RATIO * gameWidth;
-  const bhRadius = BLACK_HOLE_RADIUS_RATIO * gameWidth;
-  const vRadius = VIRUS_RADIUS_RATIO * gameWidth;
-  const mRadius = MYSTERY_PLANET_RADIUS_RATIO * gameWidth;
+  // ── Dynamic Planet Scaling ──────────────────────────────────────────────
+  // Goal: Jupiter Area = 1/4 of total Drop Zone Area
+  const totalArea = gameWidth * gameHeight;
+  const jupiterArea = totalArea / 4;
+  const jupiterRadius = Math.sqrt(jupiterArea / Math.PI);
+  
+  // Ratios relative to Jupiter (calculated to maintain a smooth progression)
+  // Moon, Merc, Mars, Venus, Earth, Nept, Uran, Sat, Jup, Sun
+  const factors = [0.20, 0.30, 0.35, 0.45, 0.55, 0.65, 0.74, 0.86, 1.0, 1.45];
+  
+  const pRadii = factors.map((f, i) => {
+    const raw = jupiterRadius * f;
+    // Cap Sun (id: 10) to fits within 99% of width
+    if (i === 9) return Math.min(raw, gameWidth * 0.495);
+    return raw;
+  });
+
+  // Scale factor for power-ups (relative to current planets' increased size)
+  // Base Jupiter radius ratio was ~0.28, now it's dynamic.
+  const jupiterScale = jupiterRadius / (0.284 * 360); // relative to base legacy Jupiter
+
+  const sRadius = STAR_RADIUS_RATIO * gameWidth * jupiterScale;
+  const bhRadius = BLACK_HOLE_RADIUS_RATIO * gameWidth * jupiterScale;
+  const vRadius = VIRUS_RADIUS_RATIO * gameWidth * jupiterScale;
+  const mRadius = MYSTERY_PLANET_RADIUS_RATIO * gameWidth * jupiterScale;
 
   const physicsRef = useRef<SolarPhysics | null>(null);
   const rafRef = useRef<number>(0);
