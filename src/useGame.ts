@@ -673,8 +673,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           pendingVirusSpawnsRef.current = [];
           if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
           if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
-          physicsRef.current?.destroy();
-          physicsRef.current = null;
+          // physicsRef.current?.destroy(); // Optimization: Keep alive for "Continue"
+          // physicsRef.current = null;
 
           return;
         }
@@ -1183,12 +1183,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     totalDiamondsRef.current = newTotal;
     storage.setDiamonds(newTotal);
 
-    // Clear top area to give space (150px from top)
+    // Reset drop lock
+    isDroppingRef.current = false;
+
+    // Clear top area to give space (160px from top)
     physicsRef.current.clearTop(160);
 
     setState((s) => ({
       ...s,
       gameOver: false,
+      isDropping: false,
+      showCombo: false,
       diamonds: newTotal,
       // Sync state with physics after clearing
       planets: physicsRef.current!.getAllPlanets().map(p => ({
@@ -1198,6 +1203,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         y: p.body.position.y,
         angle: p.body.angle,
         size: pRadii[p.planetId - 1],
+        scale: (p.planetId >= 4 && stateRef.current.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1,
+        isMystery: p.isMystery,
       })),
       stars: physicsRef.current!.getAllStars().map(s => ({
         id: s.id,
@@ -1223,7 +1230,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     // Restart the loop
     startLoop();
     return true;
-  }, [startLoop]);
+  }, [startLoop, pRadii, sRadius, bhRadius, vRadius]);
 
   const buyShrinkBonus = useCallback(() => {
     setState((prev) => {
