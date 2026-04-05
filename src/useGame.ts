@@ -31,6 +31,7 @@ import {
   WIZARD_SHRINK_SCALE,
   WIZARD_SHIELD_COST,
   WIZARD_ANTIDOTE_COST,
+  PLANET_SIZE_FACTORS,
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
 import { REDEEM_CODES } from './constants/redeemCodes';
@@ -175,11 +176,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const jupiterArea = totalArea / 6;
   const jupiterRadius = Math.sqrt(jupiterArea / Math.PI);
 
-  // Ratios relative to Jupiter (calculated to maintain a smooth progression)
-  // Moon, Merc, Mars, Venus, Earth, Nept, Uran, Sat, Jup, Sun
-  const factors = [0.20, 0.30, 0.35, 0.45, 0.55, 0.65, 0.74, 0.86, 1.0, 1.45];
-
-  const pRadii = factors.map((f, i) => {
+  const pRadii = PLANET_SIZE_FACTORS.map((f, i) => {
     const raw = jupiterRadius * f;
     // Cap Sun (id: 10) to fits within 99% of width
     if (i === 9) return Math.min(raw, gameWidth * 0.495);

@@ -145,6 +145,9 @@ export const RESTITUTION = 0.28; // slightly more lively
 export const FRICTION = 0.1;     // even smoother for faster rolling/sliding
 export const FRICTION_AIR = 0.01;
 
+// Planet sizes relative to Jupiter (Dynamic scaling base)
+export const PLANET_SIZE_FACTORS = [0.20, 0.30, 0.35, 0.45, 0.55, 0.65, 0.74, 0.86, 1.0, 2.0];
+
 // Score combo reset time (ms)
 export const COMBO_RESET_TIME = 2500;
 
