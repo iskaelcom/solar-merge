@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame, calculateChecksum } from '../useGame';
 import { PLANETS, DANGER_HEIGHT, STAR_RADIUS, BLACK_HOLE_RADIUS, VIRUS_RADIUS, GAME_WIDTH, GAME_HEIGHT, WIZARD_SHRINK_SCALE, WIZARD_SHIELD_COST } from '../constants';
@@ -41,10 +42,12 @@ const MemoizedMysteryPlanetView = React.memo(MysteryPlanetView);
 // ── Outer shell: computes + debounces dimensions, remounts GameView on change ─
 export function GameScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  const topPad = Platform.OS === 'ios' ? 50 : 30;
-  const bannerH = Platform.OS === 'android' ? 60 : 0; // AdMob anchored adaptive banner
-  const reservedVertical = topPad + 42 + 56 + 36 + 12 + bannerH; // header + logoRow + evoBar + bottomPad + banner
+  const topPad = Math.max(insets.top, Platform.OS === 'ios' ? 50 : 30);
+  const bottomPad = Math.max(insets.bottom, 12);
+  const bannerH = Platform.OS === 'android' ? 60 : 0; // Approximate banner height
+  const reservedVertical = topPad + 42 + 56 + 36 + bottomPad + bannerH; // header + logoRow + evoBar + padding + banner
   const rawW = Math.min(screenW - WALL_THICKNESS * 2, 400);
   const rawH = Math.max(350, Math.min(
     Math.round(rawW * GAME_HEIGHT / GAME_WIDTH), // enforce natural aspect ratio
@@ -197,10 +200,20 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
     }
   }, [state.shrinkTimeLeft <= 30, state.shrinkTimeLeft > 0]);
 
+  const insets = useSafeAreaInsets();
   const isShrinkWarning = state.shrinkTimeLeft > 0 && state.shrinkTimeLeft <= 30;
 
   return (
-    <LinearGradient colors={['#0a0a2e', '#12124a', '#1a1a5e']} style={styles.root}>
+    <LinearGradient 
+      colors={['#0a0a2e', '#12124a', '#1a1a5e']} 
+      style={[
+        styles.root, 
+        { 
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 50 : 30),
+          paddingBottom: Math.max(insets.bottom, 4) 
+        }
+      ]}
+    >
       {/* ── Stars background ─────────────────────────────────── */}
       <Stars />
 
@@ -575,8 +588,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: Platform.OS === 'android' ? 0 : 12,
   },
   header: {
     flexDirection: 'row',

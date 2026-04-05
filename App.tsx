@@ -20,6 +20,7 @@ import { initSounds, startAmbientAlien } from './src/utils/SoundManager';
 import { AdMobBanner } from './src/components/AdMobBanner';
 import { PrivacyPolicyScreen } from './src/screens/PrivacyPolicyScreen';
 import { DeleteAccountScreen } from './src/screens/DeleteAccountScreen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Resolve web-only sub-routes (e.g. /solar-merge/privacy-policy)
 function getWebRoute(): string | null {
@@ -43,13 +44,14 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.gameContainer}>
-        <GameScreen />
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.gameContainer}>
+          <GameScreen />
+        </View>
       </View>
-      <AdMobBanner />
-    </View>
+    </SafeAreaProvider>
   );
 }
 
