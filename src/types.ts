@@ -18,6 +18,14 @@ export interface Explosion {
   scale: number;
 }
 
+export interface FloatingScore {
+  id: string;
+  x: number;
+  y: number;
+  score: number;
+  isNegative: boolean;
+}
+
 export interface RenderStar {
   id: string;
   x: number;
@@ -62,6 +70,7 @@ export interface GameState {
   comboDisplay: number; // UI-only; actual multiplier lives in a ref (not editable via DevTools)
   showCombo: boolean;
   explosions: Explosion[];
+  floatingScores: FloatingScore[];
   mergeSpawnIds: string[]; // IDs of planets freshly spawned from a merge (for pop animation)
   sickPlanetIds: string[]; // IDs of planets currently infected by a virus
   shieldLayers: number;    // 0 = no shield, 1-3 = active layers

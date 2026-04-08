@@ -33,7 +33,7 @@ import {
   WIZARD_ANTIDOTE_COST,
   PLANET_SIZE_FACTORS,
 } from './constants';
-import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion } from './types';
+import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion, FloatingScore } from './types';
 import { REDEEM_CODES } from './constants/redeemCodes';
 
 let idCounter = 0;
@@ -156,6 +156,7 @@ const INITIAL_STATE: GameState = {
   comboDisplay: 1,
   showCombo: false,
   explosions: [],
+  floatingScores: [],
   mergeSpawnIds: [],
   sickPlanetIds: [],
   shieldLayers: 0,
@@ -201,6 +202,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const pendingSpawnsRef = useRef<Array<{ id: string; planetId: number; x: number; y: number; isMystery?: boolean }>>([]);
   // Track explosions triggered by merges
   const pendingExplosionsRef = useRef<Explosion[]>([]);
+  const pendingFloatingScoresRef = useRef<FloatingScore[]>([]);
   // Track IDs of planets spawned from a merge (for pop animation)
   const pendingMergeSpawnIdsRef = useRef<string[]>([]);
   // Robust drop lock to prevent race conditions with multiple rapid taps
@@ -293,6 +295,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           scale: Math.max(0.8, pRadii[planetId - 1] / 30),
         });
 
+        pendingFloatingScoresRef.current.push({
+          id: `fs_sick_${Date.now()}_${Math.random()}`,
+          x, y,
+          score: planet.score,
+          isNegative: true,
+        });
+
         // Subtract score (no combo) — write through ref first
         setState((prev) => {
           const penalty = planet.score;
@@ -331,6 +340,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // Read & increment the secure ref — not accessible via React DevTools
         const combo = comboRef.current;
         const newCombo = combo + 1;
+        
+        pendingFloatingScoresRef.current.push({
+          id: `fs_merge_${Date.now()}_${Math.random()}`,
+          x, y,
+          score: planet.score * combo,
+          isNegative: false,
+        });
+
         comboRef.current = newCombo;
 
         if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
@@ -440,6 +457,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           scale: isSunHit ? Math.max(2.0, pRadii[planetTypeId - 1] / 15) : Math.max(0.8, pRadii[planetTypeId - 1] / 30),
         });
 
+        pendingFloatingScoresRef.current.push({
+          id: `fs_star_${Date.now()}_${Math.random()}`,
+          x, y,
+          score: planet.score,
+          isNegative: false,
+        });
+
         setState((prev) => {
           const earned = planet.score;
           scoreRef.current += earned;
@@ -537,6 +561,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const combo = comboRef.current;
       const newCombo = combo + 1;
       comboRef.current = newCombo;
+
+      pendingFloatingScoresRef.current.push({
+        id: `fs_sun_${Date.now()}_${Math.random()}`,
+        x,
+        y,
+        score: sun.score * 2 * combo,
+        isNegative: false,
+      });
 
       if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
       comboTimerRef.current = setTimeout(() => {
@@ -681,6 +713,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           // Immediately free all physics + pending queues so CPU/memory drops to zero
           pendingSpawnsRef.current = [];
           pendingExplosionsRef.current = [];
+          pendingFloatingScoresRef.current = [];
           pendingMergeSpawnIdsRef.current = [];
           pendingStarSpawnsRef.current = [];
           pendingBlackHoleSpawnsRef.current = [];
@@ -697,6 +730,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       // Collect pending spawns, explosions, merge spawn IDs, star/BH/virus spawns
       const spawns = pendingSpawnsRef.current.splice(0);
       const newExplosions = pendingExplosionsRef.current.splice(0);
+      const newFloatingScores = pendingFloatingScoresRef.current.splice(0);
       const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
       const starSpawns = pendingStarSpawnsRef.current.splice(0);
       const bhSpawns = pendingBlackHoleSpawnsRef.current.splice(0);
@@ -708,7 +742,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       const allViruses = physicsRef.current.getAllViruses();
 
       // Skip React state updates if the physics world is stable and no new events happened.
-      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || freshMergeIds.length > 0
+      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || newFloatingScores.length > 0 || freshMergeIds.length > 0
         || starSpawns.length > 0 || bhSpawns.length > 0 || virusSpawns.length > 0;
       const isSceneActive = physicsRef.current.hasActiveBodies();
 
@@ -788,6 +822,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             sickPlanetIds: cleanSickIds,
             sessionDiamonds: sessionDots,
             explosions: [...prev.explosions, ...newExplosions],
+            floatingScores: [...prev.floatingScores, ...newFloatingScores],
             mergeSpawnIds: freshMergeIds.length > 0
               ? [...cleanMergeSpawnIds, ...freshMergeIds]
               : cleanMergeSpawnIds,
@@ -1130,6 +1165,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     }));
   }, []);
 
+  const removeFloatingScore = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      floatingScores: prev.floatingScores.filter((f) => f.id !== id),
+    }));
+  }, []);
+
   const restart = useCallback(() => {
     isDroppingRef.current = false;
     startTimeRef.current = Date.now();
@@ -1362,6 +1404,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     restart,
     continueGame,
     removeExplosion,
+    removeFloatingScore,
     buyShrinkBonus,
     buyShield,
     buyAntidote,

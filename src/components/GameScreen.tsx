@@ -32,6 +32,7 @@ import { MysteryPlanetView } from './MysteryPlanetView';
 import { GameOverModal } from './GameOverModal';
 import { GameLogo } from './GameLogo';
 import { ExplosionEffect } from './ExplosionEffect';
+import { FloatingScoreEffect } from './FloatingScoreEffect';
 import { TutorialOverlay, isTutorialSeen } from './TutorialOverlay';
 import { LeaderboardModal } from './LeaderboardModal';
 import { SettingsModal } from './SettingsModal';
@@ -85,6 +86,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
     restart,
     continueGame,
     removeExplosion,
+    removeFloatingScore,
     buyShrinkBonus,
     buyShield,
     buyAntidote,
@@ -468,6 +470,18 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
               color={exp.color}
               scale={exp.scale}
               onDone={() => removeExplosion(exp.id)}
+            />
+          ))}
+
+          {/* Floating scores */}
+          {state.floatingScores?.map((fs) => (
+            <FloatingScoreEffect
+              key={fs.id}
+              x={fs.x}
+              y={fs.y}
+              score={fs.score}
+              isNegative={fs.isNegative}
+              onDone={() => removeFloatingScore(fs.id)}
             />
           ))}
 
