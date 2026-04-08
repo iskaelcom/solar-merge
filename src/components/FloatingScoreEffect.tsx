@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Text, StyleSheet } from 'react-native';
+import { Animated, Text, StyleSheet, View } from 'react-native';
 
 interface FloatingScoreEffectProps {
   x: number;
@@ -16,45 +16,55 @@ export const FloatingScoreEffect: React.FC<FloatingScoreEffectProps> = ({
   isNegative,
   onDone,
 }) => {
+  const VISIBLE_DURATION_MS = 800;
+  const FLOAT_UP_DURATION_MS = 800;
+  const FADE_OUT_DURATION_MS = 600;
+
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
-    Animated.parallel([
+    Animated.sequence([
       Animated.timing(translateY, {
         toValue: -50,
-        duration: 800,
+        duration: FLOAT_UP_DURATION_MS,
         useNativeDriver: true,
       }),
+      Animated.delay(VISIBLE_DURATION_MS),
       Animated.timing(opacity, {
         toValue: 0,
-        duration: 800,
+        duration: FADE_OUT_DURATION_MS,
         useNativeDriver: true,
       }),
     ]).start(() => {
-      onDone();
+      onDoneRef.current();
     });
-  }, [opacity, translateY, onDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scoreText = isNegative ? `-${Math.abs(score)}` : `+${score}`;
 
   return (
-    <Animated.View
+    <View
+      style={{ position: 'absolute', left: x, top: y, width: 0, height: 0, overflow: 'visible', zIndex: 9999, elevation: 9999 }}
       pointerEvents="none"
-      style={[
-        styles.container,
-        {
-          left: x,
-          top: y,
-          transform: [{ translateY }, { translateX: -50 }],
-          opacity,
-        },
-      ]}
     >
-      <Text style={[styles.text, isNegative ? styles.textNegative : styles.textPositive]}>
-        {scoreText}
-      </Text>
-    </Animated.View>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            transform: [{ translateY }, { translateX: -50 }],
+            opacity,
+          },
+        ]}
+      >
+        <Text style={[styles.text, isNegative ? styles.textNegative : styles.textPositive]}>
+          {scoreText}
+        </Text>
+      </Animated.View>
+    </View>
   );
 };
 
