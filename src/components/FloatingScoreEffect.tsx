@@ -16,9 +16,7 @@ export const FloatingScoreEffect: React.FC<FloatingScoreEffectProps> = ({
   isNegative,
   onDone,
 }) => {
-  const VISIBLE_DURATION_MS = 800;
-  const FLOAT_UP_DURATION_MS = 800;
-  const FADE_OUT_DURATION_MS = 600;
+  const FLOAT_AND_FADE_DURATION_MS = 1800;
 
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
@@ -26,16 +24,15 @@ export const FloatingScoreEffect: React.FC<FloatingScoreEffectProps> = ({
   onDoneRef.current = onDone;
 
   useEffect(() => {
-    Animated.sequence([
+    Animated.parallel([
       Animated.timing(translateY, {
         toValue: -50,
-        duration: FLOAT_UP_DURATION_MS,
+        duration: FLOAT_AND_FADE_DURATION_MS,
         useNativeDriver: true,
       }),
-      Animated.delay(VISIBLE_DURATION_MS),
       Animated.timing(opacity, {
         toValue: 0,
-        duration: FADE_OUT_DURATION_MS,
+        duration: FLOAT_AND_FADE_DURATION_MS,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -87,7 +84,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   textPositive: {
-    color: '#00E5FF',
+    color: '#FFD600',
   },
   textNegative: {
     color: '#FF3D00',
