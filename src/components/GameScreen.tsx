@@ -38,6 +38,7 @@ import { LeaderboardModal } from './LeaderboardModal';
 import { SettingsModal } from './SettingsModal';
 import { StreakRewardModal } from './StreakRewardModal';
 import { WizardModal } from './WizardModal';
+import { FreeDiamondModal } from './FreeDiamondModal';
 import { useAuth } from '../hooks/useAuth';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
@@ -91,6 +92,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
     buyShield,
     buyAntidote,
     redeemCode,
+    claimFreeDiamond,
     isDroppingRef,
     scoreRef,
     dropCountRef,
@@ -116,6 +118,7 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
   const [showSettings, setShowSettings] = useState(false);
   const [showStreakReward, setShowStreakReward] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showFreeDiamond, setShowFreeDiamond] = useState(false);
 
   useEffect(() => {
     if (state.streakReward !== null && !showTutorial) {
@@ -507,6 +510,17 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             </View>
             {state.shrinkTimeLeft > 0 && <View style={styles.wizardActiveDot} />}
           </TouchableOpacity>
+
+          {/* Floating Free Diamond Button */}
+          <TouchableOpacity
+            style={[styles.wizardBtn, { left: gameWidth - 45, top: 105 }]}
+            onPress={() => setShowFreeDiamond(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.wizardInner}>
+              <Text style={styles.wizardEmoji}>🎁</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -585,6 +599,13 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
         sickCount={state.sickPlanetIds.length}
         antidoteCost={WIZARD_ANTIDOTE_COST}
         onBuyAntidote={buyAntidote}
+      />
+
+      <FreeDiamondModal
+        visible={showFreeDiamond}
+        onClose={() => setShowFreeDiamond(false)}
+        freeGiftsClaimed={state.freeGiftsClaimed}
+        onClaim={claimFreeDiamond}
       />
     </LinearGradient>
   );

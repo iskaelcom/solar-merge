@@ -82,4 +82,5 @@ export interface GameState {
   shrinkTimeLeft: number;      // seconds left for the shrink bonus
   shrinkCost: number;          // current cost for the shrink bonus
   redeemedCodes: string[];     // list of codes already used by the player
+  freeGiftsClaimed: string[];  // list of free gift task IDs already claimed
 }

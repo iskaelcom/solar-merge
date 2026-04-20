@@ -45,6 +45,7 @@ const STREAK_KEY = 'solar-merge-streak';
 const LAST_STREAK_DATE_KEY = 'solar-merge-last-streak-date';
 const SHRINK_STATE_KEY = 'solar-merge-shrink-state';
 const REDEEMED_CODES_KEY = 'solar-merge-redeemed-codes';
+const FREE_GIFTS_KEY = 'solar-merge-free-gifts';
 
 const SALT = 'sm-v2-secure';
 
@@ -71,7 +72,7 @@ const getStreakReward = (streak: number): number => {
 };
 
 const storage = {
-  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null; redeemedCodes: string[] }> => {
+  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null; redeemedCodes: string[]; freeGiftsClaimed: string[] }> => {
     try {
       const [scoreVal, diamondsVal, streakVal, lastDateVal, redeemedCodesVal] = await Promise.all([
         AsyncStorage.getItem(HIGH_SCORE_KEY),
@@ -79,6 +80,7 @@ const storage = {
         AsyncStorage.getItem(STREAK_KEY),
         AsyncStorage.getItem(LAST_STREAK_DATE_KEY),
         AsyncStorage.getItem(REDEEMED_CODES_KEY),
+        AsyncStorage.getItem(FREE_GIFTS_KEY),
       ]);
 
       let scoreData = { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
@@ -95,9 +97,10 @@ const storage = {
         streak: streakVal ? parseInt(streakVal, 10) : 0,
         lastStreakDate: lastDateVal,
         redeemedCodes: redeemedCodesVal ? JSON.parse(redeemedCodesVal) : [],
+        freeGiftsClaimed: freeGiftsVal ? JSON.parse(freeGiftsVal) : [],
       };
     } catch { }
-    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0, streak: 0, lastStreakDate: null, redeemedCodes: [] };
+    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0, streak: 0, lastStreakDate: null, redeemedCodes: [], freeGiftsClaimed: [] };
   },
   setScore: async (score: number, dropCount: number) => {
     try {
@@ -121,6 +124,11 @@ const storage = {
   setRedeemedCodes: async (codes: string[]) => {
     try {
       await AsyncStorage.setItem(REDEEMED_CODES_KEY, JSON.stringify(codes));
+    } catch { }
+  },
+  setFreeGiftsClaimed: async (gifts: string[]) => {
+    try {
+      await AsyncStorage.setItem(FREE_GIFTS_KEY, JSON.stringify(gifts));
     } catch { }
   },
 };
@@ -168,6 +176,7 @@ const INITIAL_STATE: GameState = {
   shrinkTimeLeft: 0,
   shrinkCost: WIZARD_SHRINK_BASE_COST,
   redeemedCodes: [],
+  freeGiftsClaimed: [],
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -860,7 +869,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     const next = getFromBag(current);
 
     // ─── Streak & Score Init ───────────────────────────────────────────
-    storage.get().then(({ score, diamonds, streak: sStreak, lastStreakDate: sDate, redeemedCodes: sCodes }) => {
+    storage.get().then(({ score, diamonds, streak: sStreak, lastStreakDate: sDate, redeemedCodes: sCodes, freeGiftsClaimed: sGifts }) => {
       scoreRef.current = 0;
       dropCountRef.current = 0;
 
@@ -917,6 +926,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           lastStreakDate: finalDate || todayStr,
           streakReward: rewardGranted,
           redeemedCodes: sCodes || [],
+          freeGiftsClaimed: sGifts || [],
           currentPlanetId: isFreshGame ? current : s.currentPlanetId,
           nextPlanetId: isFreshGame ? next : s.nextPlanetId,
           // Reset shrink on reload as requested
@@ -1397,6 +1407,26 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return { success: false, message: 'Invalid code' };
   }, [playSound]);
 
+  const claimFreeDiamond = useCallback((taskId: string, amount: number) => {
+    if (stateRef.current.freeGiftsClaimed.includes(taskId)) return false;
+
+    playSound('buy');
+    const newGifts = [...stateRef.current.freeGiftsClaimed, taskId];
+    const newDiamonds = stateRef.current.diamonds + amount;
+
+    totalDiamondsRef.current = newDiamonds;
+    storage.setDiamonds(newDiamonds);
+    storage.setFreeGiftsClaimed(newGifts);
+
+    setState(prev => ({
+      ...prev,
+      diamonds: newDiamonds,
+      freeGiftsClaimed: newGifts,
+    }));
+
+    return true;
+  }, [playSound]);
+
   return {
     state,
     setPointerX,
@@ -1409,6 +1439,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     buyShield,
     buyAntidote,
     redeemCode,
+    claimFreeDiamond,
     isDroppingRef,
     scoreRef,
     dropCountRef,
