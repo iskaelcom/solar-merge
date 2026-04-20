@@ -205,12 +205,12 @@ const s = StyleSheet.create({
     marginBottom: 2,
     gap: 8,
   },
-  taskIcon: { fontSize: 18, width: 22 },
+  taskIcon: { fontSize: 18, width: 30, textAlign: 'center' },
   taskLabel: { color: '#e0e0f0', fontSize: 15, fontWeight: '700' },
   taskDesc: {
     color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 11,
-    paddingLeft: 30, // aligned with icon width (22) + gap (8)
+    paddingLeft: 38, // aligned with icon width (30) + gap (8)
   },
   claimButton: {
     backgroundColor: '#00E5FF',
