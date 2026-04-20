@@ -74,7 +74,7 @@ const getStreakReward = (streak: number): number => {
 const storage = {
   get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null; redeemedCodes: string[]; freeGiftsClaimed: string[] }> => {
     try {
-      const [scoreVal, diamondsVal, streakVal, lastDateVal, redeemedCodesVal] = await Promise.all([
+      const [scoreVal, diamondsVal, streakVal, lastDateVal, redeemedCodesVal, freeGiftsVal] = await Promise.all([
         AsyncStorage.getItem(HIGH_SCORE_KEY),
         AsyncStorage.getItem(DIAMONDS_KEY),
         AsyncStorage.getItem(STREAK_KEY),
