@@ -17,7 +17,7 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, 
 
   // Use the pre-baked PNG asset
   const source = require('../../assets/planets/mystery.png');
-  const { translateX, translateY, rotate } = usePhysicsTransform({
+  const { positionRef, translateX, translateY, rotate } = usePhysicsTransform({
     id,
     x,
     y,
@@ -60,7 +60,7 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, 
     : rotate;
 
   return (
-    <Animated.View style={[styles.container, positionStyle]}>
+    <Animated.View ref={positionRef} style={[styles.container, positionStyle]}>
       <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: displayRotate }] }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: glow }] }]}>
           <Image source={source} style={styles.image} />

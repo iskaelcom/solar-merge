@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Animated } from 'react-native';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import { Animated, Platform } from 'react-native';
 
 export type BodyTransformUpdater = (x: number, y: number, angle: number) => void;
 export type RegisterBodyTransform = (
@@ -34,14 +34,32 @@ export function usePhysicsTransform({
   const translateX = useRef(new Animated.Value(x - offsetX)).current;
   const translateY = useRef(new Animated.Value(y - offsetY)).current;
   const rotation = useRef(new Animated.Value(angle)).current;
+  const positionRef = useRef<any>(null);
 
   const updater = useMemo<BodyTransformUpdater>(() => (nextX, nextY, nextAngle) => {
-    translateX.setValue(nextX - offsetX);
-    translateY.setValue(nextY - offsetY);
+    const nextTranslateX = nextX - offsetX;
+    const nextTranslateY = nextY - offsetY;
+    translateX.setValue(nextTranslateX);
+    translateY.setValue(nextTranslateY);
     rotation.setValue(nextAngle);
+
+    // React Native Web's Animated subscription can miss imperative setValue
+    // updates when no Animated timing is driving the value. Write the outer
+    // translation straight to the DOM compositor; inner rotation/scale layers
+    // remain managed by Animated.
+    if (Platform.OS === 'web') {
+      const node = positionRef.current;
+      if (node?.style) {
+        node.style.transform = `translate3d(${nextTranslateX}px, ${nextTranslateY}px, 0)`;
+      } else if (node?.setNativeProps) {
+        node.setNativeProps({
+          style: { transform: `translate3d(${nextTranslateX}px, ${nextTranslateY}px, 0)` },
+        });
+      }
+    }
   }, [offsetX, offsetY, rotation, translateX, translateY]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!id || !registerTransform) return;
     updater(x, y, angle);
     return registerTransform(id, updater);
@@ -57,6 +75,7 @@ export function usePhysicsTransform({
   });
 
   return {
+    positionRef,
     translateX,
     translateY,
     positionStyle: {

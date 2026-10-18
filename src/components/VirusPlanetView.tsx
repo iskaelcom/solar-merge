@@ -34,7 +34,7 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const visualDiameter = size * 2.7;
   const half = visualDiameter / 2;
-  const { translateX, translateY } = usePhysicsTransform({
+  const { positionRef, translateX, translateY } = usePhysicsTransform({
     id,
     x,
     y,
@@ -90,6 +90,7 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
 
   return (
     <Animated.View
+      ref={positionRef}
       style={{
         position: 'absolute',
         width: visualDiameter,

@@ -31,7 +31,7 @@ interface Props {
 export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = true, ghost = false, registerTransform }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const { translateX, translateY, rotate: physicsRotate } = usePhysicsTransform({
+  const { positionRef, translateX, translateY, rotate: physicsRotate } = usePhysicsTransform({
     id,
     x,
     y,
@@ -89,6 +89,7 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
 
   return (
     <Animated.View
+      ref={positionRef}
       style={{
         position: 'absolute',
         width: diameter,

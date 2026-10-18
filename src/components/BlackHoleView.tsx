@@ -21,7 +21,7 @@ export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, regist
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const visualDiameter = size * 2.5;
   const half = visualDiameter / 2;
-  const { translateX, translateY } = usePhysicsTransform({
+  const { positionRef, translateX, translateY } = usePhysicsTransform({
     id,
     x,
     y,
@@ -70,6 +70,7 @@ export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, regist
 
   return (
     <Animated.View
+      ref={positionRef}
       style={{
         position: 'absolute',
         width: visualDiameter,

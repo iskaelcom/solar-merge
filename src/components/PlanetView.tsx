@@ -61,7 +61,7 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
   const imgW = isSaturn ? diameter * 2 : diameter;
   const imgH = diameter;
   const leftExtra = isSaturn ? r : 0;
-  const { positionStyle, rotate } = usePhysicsTransform({
+  const { positionRef, positionStyle, rotate } = usePhysicsTransform({
     id,
     x,
     y,
@@ -96,7 +96,8 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
   }, []);
 
   return (
-    <View
+    <Animated.View
+      ref={positionRef}
       style={[
         styles.container,
         {
@@ -152,7 +153,7 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
           />
         )}
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 });
 
