@@ -35,6 +35,7 @@ import {
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion, FloatingScore } from './types';
 import { REDEEM_CODES } from './constants/redeemCodes';
+import { BodyTransformUpdater, RegisterBodyTransform } from './hooks/usePhysicsTransform';
 
 let idCounter = 0;
 const genId = () => `p_${++idCounter}`;
@@ -232,6 +233,35 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const dropsSinceLastMergeRef = useRef<number>(0);
   const startTimeRef = useRef<number>(Date.now());
   const totalDiamondsRef = useRef<number>(0);
+  const bodyTransformsRef = useRef<Map<string, BodyTransformUpdater>>(new Map());
+
+  const registerBodyTransform = useCallback<RegisterBodyTransform>((id, updater) => {
+    bodyTransformsRef.current.set(id, updater);
+    return () => {
+      if (bodyTransformsRef.current.get(id) === updater) {
+        bodyTransformsRef.current.delete(id);
+      }
+    };
+  }, []);
+
+  const syncBodyTransforms = useCallback(() => {
+    const physics = physicsRef.current;
+    if (!physics) return;
+    const registry = bodyTransformsRef.current;
+
+    for (const p of physics.getAllPlanets()) {
+      registry.get(p.id)?.(p.body.position.x, p.body.position.y, p.body.angle);
+    }
+    for (const s of physics.getAllStars()) {
+      registry.get(s.id)?.(s.body.position.x, s.body.position.y, s.body.angle);
+    }
+    for (const bh of physics.getAllBlackHoles()) {
+      registry.get(bh.id)?.(bh.body.position.x, bh.body.position.y, bh.body.angle);
+    }
+    for (const v of physics.getAllViruses()) {
+      registry.get(v.id)?.(v.body.position.x, v.body.position.y, v.body.angle);
+    }
+  }, []);
 
   const refillBag = useCallback(() => {
     bagRef.current = shuffle(Array.from({ length: MAX_SPAWN_LEVEL }, (_, i) => i + 1));
@@ -625,6 +655,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
     engine.onMysteryReveal(({ id, x, y, planetSize }) => {
       playSound('buy');
+      const revealed = engine.getPlanet(id);
       const newExplosion: Explosion = {
         id: `reveal_${id}_${Date.now()}`,
         x,
@@ -636,6 +667,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
       setState((s) => ({
         ...s,
+        planets: s.planets.map((p) => p.id === id ? {
+          ...p,
+          planetId: revealed?.planetId ?? p.planetId,
+          x,
+          y,
+          angle: revealed?.body.angle ?? p.angle,
+          size: planetSize,
+          scale: (revealed?.planetId ?? p.planetId) >= 4 && s.shrinkTimeLeft > 0
+            ? WIZARD_SHRINK_SCALE
+            : 1,
+          isMystery: false,
+        } : p),
         explosions: [...s.explosions, newExplosion],
         mergeSpawnIds: [...s.mergeSpawnIds, id],
       }));
@@ -662,6 +705,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       lastTimeRef.current = time;
 
       physicsRef.current.step(delta);
+      syncBodyTransforms();
 
       // Collect positions
       const allPlanets = physicsRef.current.getAllPlanets();
@@ -736,33 +780,35 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         }
       }
 
-      // Collect pending spawns, explosions, merge spawn IDs, star/BH/virus spawns
-      const spawns = pendingSpawnsRef.current.splice(0);
-      const newExplosions = pendingExplosionsRef.current.splice(0);
-      const newFloatingScores = pendingFloatingScoresRef.current.splice(0);
-      const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
-      const starSpawns = pendingStarSpawnsRef.current.splice(0);
-      const bhSpawns = pendingBlackHoleSpawnsRef.current.splice(0);
-      const virusSpawns = pendingVirusSpawnsRef.current.splice(0);
-
-      // Sync positions from physics (source of truth)
-      const allStars = physicsRef.current.getAllStars();
-      const allBlackHoles = physicsRef.current.getAllBlackHoles();
-      const allViruses = physicsRef.current.getAllViruses();
-
-      // Skip React state updates if the physics world is stable and no new events happened.
-      const hasEvents = spawns.length > 0 || newExplosions.length > 0 || newFloatingScores.length > 0 || freshMergeIds.length > 0
-        || starSpawns.length > 0 || bhSpawns.length > 0 || virusSpawns.length > 0;
+      // React only receives structural/gameplay events. High-frequency positions
+      // have already been sent directly to the registered Animated values.
+      const hasEvents = pendingSpawnsRef.current.length > 0
+        || pendingExplosionsRef.current.length > 0
+        || pendingFloatingScoresRef.current.length > 0
+        || pendingMergeSpawnIdsRef.current.length > 0
+        || pendingStarSpawnsRef.current.length > 0
+        || pendingBlackHoleSpawnsRef.current.length > 0
+        || pendingVirusSpawnsRef.current.length > 0;
       const isSceneActive = physicsRef.current.hasActiveBodies();
 
-      if (hasEvents || isSceneActive || stateRef.current.gameOver) {
+      if (hasEvents) {
+        const newExplosions = pendingExplosionsRef.current.splice(0);
+        const newFloatingScores = pendingFloatingScoresRef.current.splice(0);
+        const freshMergeIds = pendingMergeSpawnIdsRef.current.splice(0);
+        pendingSpawnsRef.current.length = 0;
+        pendingStarSpawnsRef.current.length = 0;
+        pendingBlackHoleSpawnsRef.current.length = 0;
+        pendingVirusSpawnsRef.current.length = 0;
+
+        const allStars = physicsRef.current.getAllStars();
+        const allBlackHoles = physicsRef.current.getAllBlackHoles();
+        const allViruses = physicsRef.current.getAllViruses();
+
         setState((prev) => {
           if (prev.gameOver) return prev;
 
-          const spawnIdSet = spawns.length > 0 ? new Set(spawns.map((s) => s.id)) : null;
-          const updated: RenderPlanet[] = allPlanets
-            .filter((p) => spawnIdSet === null || !spawnIdSet.has(p.id)) // O(1) lookup
-            .map((p) => {
+          const shrinkScale = prev.shrinkTimeLeft > 0 ? WIZARD_SHRINK_SCALE : 1.0;
+          const updated: RenderPlanet[] = allPlanets.map((p) => {
               const pos = p.body.position;
               return {
                 id: p.id,
@@ -771,14 +817,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
                 y: pos.y,
                 angle: p.body.angle,
                 size: p.isMystery ? mRadius : pRadii[p.planetId - 1],
+                scale: p.planetId >= 4 ? shrinkScale : 1.0,
                 isMystery: p.isMystery,
               } as RenderPlanet;
             });
-
-          // Add newly merged spawns
-          spawns.forEach((s) => {
-            updated.push({ id: s.id, planetId: s.planetId, x: s.x, y: s.y, angle: 0, size: s.isMystery ? mRadius : pRadii[s.planetId - 1], isMystery: s.isMystery });
-          });
 
           // Remove stale IDs (merged/destroyed planets) from sick + mergeSpawn lists
           const livePlanetIdSet = new Set(updated.map((p) => p.id));
@@ -810,26 +852,13 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             size: vRadius,
           }));
 
-          // Update session diamonds based on playtime
-          const elapsedMs = Date.now() - startTimeRef.current;
-          const sessionDots = Math.min(
-            MAX_SESSION_DIAMONDS,
-            Math.floor(elapsedMs / 60000) * DIAMONDS_PER_MINUTE
-          );
-
-          const shrinkScale = prev.shrinkTimeLeft > 0 ? WIZARD_SHRINK_SCALE : 1.0;
-
           return {
             ...prev,
-            planets: updated.map(p => ({
-              ...p,
-              scale: (p.planetId >= 4 && prev.shrinkTimeLeft > 0) ? shrinkScale : 1.0
-            })),
+            planets: updated,
             stars: updatedStars,
             blackHoles: updatedBlackHoles,
             viruses: updatedViruses,
             sickPlanetIds: cleanSickIds,
-            sessionDiamonds: sessionDots,
             explosions: [...prev.explosions, ...newExplosions],
             floatingScores: [...prev.floatingScores, ...newFloatingScores],
             mergeSpawnIds: freshMergeIds.length > 0
@@ -837,17 +866,17 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
               : cleanMergeSpawnIds,
           };
         });
-      }
 
-      // Clear merge spawn IDs after pop animation finishes (~900ms)
-      if (freshMergeIds.length > 0) {
-        const freshMergeIdSet = new Set(freshMergeIds);
-        setTimeout(() => {
-          setState((prev) => ({
-            ...prev,
-            mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIdSet.has(id)),
-          }));
-        }, 900);
+        // Clear merge spawn IDs after pop animation finishes (~900ms)
+        if (freshMergeIds.length > 0) {
+          const freshMergeIdSet = new Set(freshMergeIds);
+          setTimeout(() => {
+            setState((prev) => ({
+              ...prev,
+              mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIdSet.has(id)),
+            }));
+          }, 900);
+        }
       }
 
       // Pause loop when scene is fully idle — restarts automatically on next drop
@@ -860,7 +889,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     };
 
     rafRef.current = requestAnimationFrame(loop);
-  }, []);
+  }, [syncBodyTransforms]);
 
   // ─── Init on mount ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -992,6 +1021,23 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return () => clearInterval(timer);
   }, [state.shrinkTimeLeft > 0]); // restart when bonus starts or restarts
 
+  // Time-based rewards do not belong in the high-frequency physics frame.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setState((prev) => {
+        if (prev.gameOver) return prev;
+        const nextSessionDiamonds = Math.min(
+          MAX_SESSION_DIAMONDS,
+          Math.floor((Date.now() - startTimeRef.current) / 60000) * DIAMONDS_PER_MINUTE,
+        );
+        return nextSessionDiamonds === prev.sessionDiamonds
+          ? prev
+          : { ...prev, sessionDiamonds: nextSessionDiamonds };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // ─── Actions ──────────────────────────────────────────────────────────────
   const setPointerX = useCallback((x: number) => {
     setState((prev) => {
@@ -1110,6 +1156,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         y: startY,
         angle: 0,
         size: radius,
+        scale: (prev.currentPlanetId >= 4 && prev.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1,
       };
 
       // Determine special injection. Priority: BH > Virus > Star > Mystery.
@@ -1323,6 +1370,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         diamonds: newTotal,
         shrinkTimeLeft: nextTime,
         shrinkCost: nextCost,
+        planets: prev.planets.map((p) => p.planetId >= 4 ? { ...p, scale: WIZARD_SHRINK_SCALE } : p),
       };
     });
   }, [playSound, startLoop]);
@@ -1440,6 +1488,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     buyAntidote,
     redeemCode,
     claimFreeDiamond,
+    registerBodyTransform,
     isDroppingRef,
     scoreRef,
     dropCountRef,

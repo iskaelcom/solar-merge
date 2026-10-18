@@ -1,21 +1,34 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
 
 // Visual diameter is larger than physics radius (30) to show the glow aura
 const DIAMETER = 75;
 
 interface Props {
+  id?: string;
   x: number;
   y: number;
   size: number;
   ghost?: boolean;
+  registerTransform?: RegisterBodyTransform;
 }
 
 /** Live black hole rendered in the game area. */
-export const BlackHoleView = React.memo(({ x, y, size, ghost = false }: Props) => {
+export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, registerTransform }: Props) => {
   const diskRotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const visualDiameter = size * 2.5;
+  const half = visualDiameter / 2;
+  const { translateX, translateY } = usePhysicsTransform({
+    id,
+    x,
+    y,
+    offsetX: half,
+    offsetY: half,
+    registerTransform,
+  });
 
   useEffect(() => {
     // Slow rotation for the accretion disk ring
@@ -55,21 +68,19 @@ export const BlackHoleView = React.memo(({ x, y, size, ghost = false }: Props) =
     outputRange: ['0deg', '360deg'],
   });
 
-  const visualDiameter = size * 2.5; // Visual diameter is larger than physics radius
-  const half = visualDiameter / 2;
-
   return (
     <Animated.View
       style={{
         position: 'absolute',
         width: visualDiameter,
         height: visualDiameter,
-        left: x - half,
-        top: y - half,
+        left: 0,
+        top: 0,
         opacity: ghost ? 0.5 : 1,
-        transform: [{ scale: pulseAnim }],
+        transform: [{ translateX }, { translateY }],
       }}
     >
+      <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ scale: pulseAnim }] }}>
       {/* Outer radial glow */}
       <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Defs>
@@ -111,6 +122,7 @@ export const BlackHoleView = React.memo(({ x, y, size, ghost = false }: Props) =
       <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Circle cx={half} cy={half} r={half * 0.38} fill="#000000" />
       </Svg>
+      </Animated.View>
     </Animated.View>
   );
 });

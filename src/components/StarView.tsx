@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import Svg, { Polygon, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
 
 const DIAMETER = 34; // visual diameter (physics radius = 15, a bit larger for visual flair)
 
@@ -16,18 +17,29 @@ function starPoints(cx: number, cy: number, outerR: number, innerR: number): str
 }
 
 interface Props {
+  id?: string;
   x: number;
   y: number;
   size: number;
   angle?: number;
   isDropped?: boolean;
   ghost?: boolean;  // true → semi-transparent drop preview
+  registerTransform?: RegisterBodyTransform;
 }
 
 /** Full physics star rendered in the game area. */
-export const StarView = React.memo(({ x, y, size, angle = 0, isDropped = true, ghost = false }: Props) => {
+export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = true, ghost = false, registerTransform }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const { translateX, translateY, rotate: physicsRotate } = usePhysicsTransform({
+    id,
+    x,
+    y,
+    angle,
+    offsetX: size,
+    offsetY: size,
+    registerTransform,
+  });
 
   useEffect(() => {
     // Continuous clockwise spin
@@ -62,10 +74,10 @@ export const StarView = React.memo(({ x, y, size, angle = 0, isDropped = true, g
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const rotate = angle ? `${angle}rad` : spinAnim.interpolate({
+  const rotate = ghost ? spinAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
-  });
+  }) : physicsRotate;
 
   const diameter = size * 2;
   const half = size;
@@ -81,12 +93,14 @@ export const StarView = React.memo(({ x, y, size, angle = 0, isDropped = true, g
         position: 'absolute',
         width: diameter,
         height: diameter,
-        left: x - half,
-        top: y - half,
+        left: 0,
+        top: 0,
         opacity: ghost ? 0.5 : 1,
-        transform: [{ rotate }, { scale: pulseAnim }],
+        transform: [{ translateX }, { translateY }],
       }}
     >
+      <Animated.View style={[{ width: diameter, height: diameter, transform: [{ rotate }] }]}>
+      <Animated.View style={[{ width: diameter, height: diameter, transform: [{ scale: pulseAnim }] }]}>
       {/* Outer glow (soft aura) — hidden on ghost preview */}
       {!ghost && (
         <Svg width={diameter} height={diameter} style={{ position: 'absolute' }}>
@@ -110,6 +124,8 @@ export const StarView = React.memo(({ x, y, size, angle = 0, isDropped = true, g
           strokeLinejoin="round"
         />
       </Svg>
+      </Animated.View>
+      </Animated.View>
     </Animated.View>
   );
 });

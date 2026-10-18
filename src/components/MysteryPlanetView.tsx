@@ -1,19 +1,31 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Animated, Easing, Image } from 'react-native';
+import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
 interface Props {
+  id?: string;
   x: number;
   y: number;
   size: number;
   angle?: number;
   ghost?: boolean;
+  registerTransform?: RegisterBodyTransform;
 }
 
-export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, size, angle = 0, ghost = false }) => {
+export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, angle = 0, ghost = false, registerTransform }) => {
   const rotation = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(1)).current;
 
   // Use the pre-baked PNG asset
   const source = require('../../assets/planets/mystery.png');
+  const { translateX, translateY, rotate } = usePhysicsTransform({
+    id,
+    x,
+    y,
+    angle,
+    offsetX: size,
+    offsetY: size,
+    registerTransform,
+  });
 
   useEffect(() => {
     // Continuous subtle breathing glow
@@ -35,23 +47,25 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ x, y, size, angl
     }
   }, [ghost, glow, rotation]);
 
-  const animatedStyle = {
-      left: x - size,
-      top: y - size,
+  const positionStyle = {
+      left: 0,
+      top: 0,
       width: size * 2,
       height: size * 2,
-      transform: [
-        { 
-          rotate: ghost ? rotation.interpolate({ inputRange: [-1, 1], outputRange: ['-8deg', '8deg'] }) : `${(angle * 180) / Math.PI}deg`
-        },
-        { scale: glow }
-      ],
+      transform: [{ translateX }, { translateY }],
       opacity: ghost ? 0.6 : 1,
   };
+  const displayRotate = ghost
+    ? rotation.interpolate({ inputRange: [-1, 1], outputRange: ['-8deg', '8deg'] })
+    : rotate;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
-      <Animated.Image source={source} style={styles.image} />
+    <Animated.View style={[styles.container, positionStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: displayRotate }] }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: glow }] }]}>
+          <Image source={source} style={styles.image} />
+        </Animated.View>
+      </Animated.View>
     </Animated.View>
   );
 });

@@ -1,15 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import Svg, { Circle, Line, Path, Defs, RadialGradient, Stop, G } from 'react-native-svg';
+import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
 
 // Visual diameter — larger than physics radius (22) to show spikes
 const DIAMETER = 60;
 
 interface Props {
+  id?: string;
   x: number;
   y: number;
   size: number;
   ghost?: boolean;
+  registerTransform?: RegisterBodyTransform;
 }
 
 // Pre-compute 8 spike positions on a circle
@@ -26,9 +29,19 @@ function buildSpikes(cx: number, cy: number, coreR: number, spikeCenterR: number
 }
 
 /** Live virus planet rendered in the game area. */
-export const VirusPlanetView = React.memo(({ x, y, size, ghost = false }: Props) => {
+export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, registerTransform }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const visualDiameter = size * 2.7;
+  const half = visualDiameter / 2;
+  const { translateX, translateY } = usePhysicsTransform({
+    id,
+    x,
+    y,
+    offsetX: half,
+    offsetY: half,
+    registerTransform,
+  });
 
   useEffect(() => {
     Animated.loop(
@@ -66,8 +79,6 @@ export const VirusPlanetView = React.memo(({ x, y, size, ghost = false }: Props)
     outputRange: ['0deg', '360deg'],
   });
 
-  const visualDiameter = size * 2.7;
-  const half = visualDiameter / 2;
   const coreR = size * 0.72;
   const spikeCenterR = size * 1.09;
   const spikeR = size * 0.25;
@@ -83,12 +94,13 @@ export const VirusPlanetView = React.memo(({ x, y, size, ghost = false }: Props)
         position: 'absolute',
         width: visualDiameter,
         height: visualDiameter,
-        left: x - half,
-        top: y - half,
+        left: 0,
+        top: 0,
         opacity: ghost ? 0.5 : 1,
-        transform: [{ scale: pulseAnim }],
+        transform: [{ translateX }, { translateY }],
       }}
     >
+      <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ scale: pulseAnim }] }}>
       {/* Rotating spike layer */}
       <Animated.View
         style={{
@@ -155,6 +167,7 @@ export const VirusPlanetView = React.memo(({ x, y, size, ghost = false }: Props)
           strokeLinejoin="round"
         />
       </Svg>
+      </Animated.View>
     </Animated.View>
   );
 });

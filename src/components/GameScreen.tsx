@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -53,7 +53,7 @@ const MemoizedBlackHoleView = React.memo(BlackHoleView);
 const MemoizedVirusPlanetView = React.memo(VirusPlanetView);
 const MemoizedMysteryPlanetView = React.memo(MysteryPlanetView);
 
-// ── Outer shell: computes + debounces dimensions, remounts GameView on change ─
+// ── Outer shell: applies viewport dimensions only between active sessions ───
 export function GameScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -71,15 +71,30 @@ export function GameScreen() {
 
   // Debounce so rapid resize doesn't spam remounts (300 ms settle time)
   const [dims, setDims] = useState({ w: rawW, h: rawH });
+  const [sessionActive, setSessionActive] = useState(false);
   useEffect(() => {
+    // Keep the physics coordinate system stable for the whole active session.
+    // Pending viewport changes are applied after restart/when the board is empty.
+    if (sessionActive) return;
     const t = setTimeout(() => setDims({ w: rawW, h: rawH }), 300);
     return () => clearTimeout(t);
-  }, [rawW, rawH]);
+  }, [rawW, rawH, sessionActive]);
 
-  return <GameView key={`${dims.w}x${dims.h}`} gameWidth={dims.w} gameHeight={dims.h} />;
+  const handleSessionActiveChange = useCallback((active: boolean) => {
+    setSessionActive(active);
+  }, []);
+
+  return (
+    <GameView
+      key={`${dims.w}x${dims.h}`}
+      gameWidth={dims.w}
+      gameHeight={dims.h}
+      onSessionActiveChange={handleSessionActiveChange}
+    />
+  );
 }
 
-function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: number }) {
+function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth: number; gameHeight: number; onSessionActiveChange: (active: boolean) => void }) {
   const {
     state,
     setPointerX,
@@ -101,7 +116,19 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
     bhRadius,
     vRadius,
     mRadius,
+    registerBodyTransform,
   } = useGame(gameWidth, gameHeight);
+
+  const sessionActive = state.dropCount > 0
+    || state.planets.length > 0
+    || state.stars.length > 0
+    || state.blackHoles.length > 0
+    || state.viruses.length > 0
+    || state.gameOver;
+
+  useEffect(() => {
+    onSessionActiveChange(sessionActive);
+  }, [onSessionActiveChange, sessionActive]);
 
   const gameAreaRef = useRef<View>(null);
   const layoutXRef = useRef(0);
@@ -428,14 +455,17 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
             p.isMystery ? (
               <MemoizedMysteryPlanetView
                 key={p.id}
+                id={p.id}
                 x={p.x}
                 y={p.y}
                 size={p.size}
                 angle={p.angle}
+                registerTransform={registerBodyTransform}
               />
             ) : (
               <MemoizedPlanetView
                 key={p.id}
+                id={p.id}
                 planetId={p.planetId}
                 x={p.x}
                 y={p.y}
@@ -444,23 +474,24 @@ function GameView({ gameWidth, gameHeight }: { gameWidth: number; gameHeight: nu
                 scale={p.scale}
                 isMergeSpawn={mergeSpawnSet.has(p.id)}
                 isSick={sickPlanetSet.has(p.id)}
+                registerTransform={registerBodyTransform}
               />
             )
           ))}
 
           {/* Star power-ups */}
           {state.stars.map((s) => (
-            <MemoizedStarView key={s.id} x={s.x} y={s.y} size={s.size} />
+            <MemoizedStarView key={s.id} id={s.id} x={s.x} y={s.y} angle={s.angle} size={s.size} registerTransform={registerBodyTransform} />
           ))}
 
           {/* Black holes */}
           {state.blackHoles.map((bh) => (
-            <MemoizedBlackHoleView key={bh.id} x={bh.x} y={bh.y} size={bh.size} />
+            <MemoizedBlackHoleView key={bh.id} id={bh.id} x={bh.x} y={bh.y} size={bh.size} registerTransform={registerBodyTransform} />
           ))}
 
           {/* Virus planets */}
           {state.viruses.map((v) => (
-            <MemoizedVirusPlanetView key={v.id} x={v.x} y={v.y} size={v.size} />
+            <MemoizedVirusPlanetView key={v.id} id={v.id} x={v.x} y={v.y} size={v.size} registerTransform={registerBodyTransform} />
           ))}
 
           {/* Merge explosions */}

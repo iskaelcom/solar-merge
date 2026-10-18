@@ -55,21 +55,21 @@ React state hanya menyimpan data yang memang perlu menyebabkan render deklaratif
 
 ### P0 — Keluarkan posisi dari `GameState`
 
-- [ ] Pisahkan descriptor body dari nilai transform dinamis.
-- [ ] React state menyimpan `id`, tipe, ukuran, status mystery/sick, dan properti struktural lainnya.
-- [ ] Simpan `x`, `y`, dan `angle` dalam transform handle/store yang dapat diperbarui tanpa `setState()` parent.
-- [ ] Buat registry berdasarkan ID agar game loop dapat memperbarui transform body secara langsung.
-- [ ] Tambah/hapus registry hanya ketika body dibuat, merge, diserap, atau dihancurkan.
-- [ ] Terapkan pola yang sama untuk planet, star, black hole, virus, dan mystery planet.
+- [x] Pisahkan descriptor body dari nilai transform dinamis.
+- [x] React state menyimpan `id`, tipe, ukuran, status mystery/sick, dan properti struktural lainnya.
+- [x] Simpan `x`, `y`, dan `angle` dalam transform handle/store yang dapat diperbarui tanpa `setState()` parent.
+- [x] Buat registry berdasarkan ID agar game loop dapat memperbarui transform body secara langsung.
+- [x] Tambah/hapus registry hanya ketika body dibuat, merge, diserap, atau dihancurkan.
+- [x] Terapkan pola yang sama untuk planet, star, black hole, virus, dan mystery planet.
 
 Hasil yang diharapkan: HUD dan daftar komponen tidak ikut render hanya karena body bergerak.
 
 ### P0 — Gunakan transform untuk pergerakan
 
-- [ ] Ganti update posisi `left/top` per frame dengan `translateX/translateY`.
-- [ ] Gabungkan translasi, rotasi, dan scale dalam satu animated style.
-- [ ] Pertahankan `width`, `height`, dan posisi dasar komponen selama masa hidup body.
-- [ ] Pastikan Saturn tetap memperhitungkan lebar ring tanpa mengubah layout per frame.
+- [x] Ganti update posisi `left/top` per frame dengan `translateX/translateY`.
+- [x] Gabungkan translasi, rotasi, dan scale dalam satu animated transform pipeline.
+- [x] Pertahankan `width`, `height`, dan posisi dasar komponen selama masa hidup body.
+- [x] Pastikan Saturn tetap memperhitungkan lebar ring tanpa mengubah layout per frame.
 
 Contoh bentuk transform:
 
@@ -84,12 +84,12 @@ transform: [
 
 ### P0 — Hindari alokasi per frame
 
-- [ ] Jangan membuat ulang seluruh `RenderPlanet[]` pada setiap frame.
-- [ ] Jangan menjalankan `updated.map(...spread)` kedua hanya untuk memasukkan `scale`.
-- [ ] Bersihkan `sickPlanetIds` dan `mergeSpawnIds` hanya saat terjadi add/remove/merge.
-- [ ] Buat `Set` ID hanya saat daftar ID berubah, bukan pada setiap posisi berubah.
-- [ ] Hitung `sessionDiamonds` pada timer satu detik atau ketika sesi selesai, bukan setiap physics frame.
-- [ ] Pertahankan cache `getAllPlanets/getAllStars/...` yang sudah ada di physics.
+- [x] Jangan membuat ulang seluruh `RenderPlanet[]` pada setiap frame.
+- [x] Jangan menjalankan `updated.map(...spread)` kedua hanya untuk memasukkan `scale`.
+- [x] Bersihkan `sickPlanetIds` dan `mergeSpawnIds` hanya saat terjadi add/remove/merge.
+- [x] Buat `Set` ID hanya saat daftar ID berubah, bukan pada setiap posisi berubah.
+- [x] Hitung `sessionDiamonds` pada timer satu detik atau ketika sesi selesai, bukan setiap physics frame.
+- [x] Pertahankan cache `getAllPlanets/getAllStars/...` yang sudah ada di physics.
 
 ### P1 — Fixed timestep dan batas update 60 Hz
 

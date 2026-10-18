@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, Image, StyleSheet } from 'react-native';
 import { PLANETS } from '../constants';
+import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
 
 interface Props {
+  id?: string;
   planetId: number;
   x: number;
   y: number;
@@ -13,6 +15,7 @@ interface Props {
   isSick?: boolean;
   scale?: number;
   style?: object;
+  registerTransform?: RegisterBodyTransform;
 }
 
 const SATURN_ID = 8;
@@ -46,7 +49,7 @@ const SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
-export const PlanetView = React.memo(({ planetId, x, y, size, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style }: Props) => {
+export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style, registerTransform }: Props) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
@@ -58,6 +61,15 @@ export const PlanetView = React.memo(({ planetId, x, y, size, angle = 0, ghost =
   const imgW = isSaturn ? diameter * 2 : diameter;
   const imgH = diameter;
   const leftExtra = isSaturn ? r : 0;
+  const { positionStyle, rotate } = usePhysicsTransform({
+    id,
+    x,
+    y,
+    angle,
+    offsetX: r + leftExtra,
+    offsetY: r,
+    registerTransform,
+  });
 
   // Spring "pop" only for merge-spawned planets
   const scaleAnim = useRef(new Animated.Value(isMergeSpawn ? 0.1 : 1)).current;
@@ -90,10 +102,11 @@ export const PlanetView = React.memo(({ planetId, x, y, size, angle = 0, ghost =
         {
           width: imgW,
           height: imgH,
-          left: x - r - leftExtra,
-          top: y - r,
+          left: 0,
+          top: 0,
           opacity: ghost ? 0.5 : 1,
         },
+        positionStyle,
         style,
       ]}
     >
@@ -110,7 +123,7 @@ export const PlanetView = React.memo(({ planetId, x, y, size, angle = 0, ghost =
           style={{
             width: imgW,
             height: imgH,
-            transform: [{ rotate: `${angle}rad` }],
+            transform: [{ rotate }],
           }}
         >
           <Image
