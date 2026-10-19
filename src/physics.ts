@@ -178,6 +178,7 @@ export class SolarPhysics {
   private shieldActive: boolean = false;
   private shieldPassedPlanetIds: Set<string> = new Set();
   private shieldRecentlyHitIds: Set<string> = new Set();
+  private shieldDebounceTimers: Set<ReturnType<typeof setTimeout>> = new Set();
   private shieldHitCallbacks: Array<() => void> = [];
   // Wizard bonuses
   private shrinkActive: boolean = false;
@@ -931,7 +932,11 @@ export class SolarPhysics {
       if (body.position.y - radius < DANGER_HEIGHT && body.velocity.y < -0.5) {
         // Debounce: ignore this planet for 600 ms after a hit
         this.shieldRecentlyHitIds.add(pb.id);
-        setTimeout(() => this.shieldRecentlyHitIds.delete(pb.id), 600);
+        const timer = setTimeout(() => {
+          this.shieldRecentlyHitIds.delete(pb.id);
+          this.shieldDebounceTimers.delete(timer);
+        }, 600);
+        this.shieldDebounceTimers.add(timer);
 
         // Bounce the planet back downward
         Matter.Body.setVelocity(body, {
@@ -967,6 +972,9 @@ export class SolarPhysics {
   }
 
   reset(): void {
+    Matter.Events.off(this.engine, 'collisionStart');
+    this.shieldDebounceTimers.forEach(clearTimeout);
+    this.shieldDebounceTimers.clear();
     Matter.Engine.clear(this.engine);
     this.planets.clear();
     this.stars.clear();
@@ -997,6 +1005,9 @@ export class SolarPhysics {
   }
 
   destroy(): void {
+    Matter.Events.off(this.engine, 'collisionStart');
+    this.shieldDebounceTimers.forEach(clearTimeout);
+    this.shieldDebounceTimers.clear();
     Matter.World.clear(this.engine.world, false);
     Matter.Engine.clear(this.engine);
     this.planets.clear();
@@ -1017,11 +1028,16 @@ export class SolarPhysics {
     this.pendingBlackHoleRemovalIds.clear();
     this.pendingVirusRemovalIds.clear();
     this.deferredOps = [];
+    this.shieldActive = false;
+    this.shieldPassedPlanetIds.clear();
+    this.shieldRecentlyHitIds.clear();
     this.mergeCallbacks = [];
     this.starUpgradeCallbacks = [];
     this.blackHoleSuckCallbacks = [];
     this.virusInfectCallbacks = [];
     this.sunMergeCallbacks = [];
+    this.shieldHitCallbacks = [];
+    this.mysteryRevealCallbacks = [];
   }
 
   /**

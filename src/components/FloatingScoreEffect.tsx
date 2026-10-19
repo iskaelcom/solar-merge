@@ -24,7 +24,7 @@ export const FloatingScoreEffect: React.FC<FloatingScoreEffectProps> = ({
   onDoneRef.current = onDone;
 
   useEffect(() => {
-    Animated.parallel([
+    const animation = Animated.parallel([
       Animated.timing(translateY, {
         toValue: -50,
         duration: FLOAT_AND_FADE_DURATION_MS,
@@ -35,9 +35,11 @@ export const FloatingScoreEffect: React.FC<FloatingScoreEffectProps> = ({
         duration: FLOAT_AND_FADE_DURATION_MS,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      onDoneRef.current();
+    ]);
+    animation.start(({ finished }) => {
+      if (finished) onDoneRef.current();
     });
+    return () => animation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

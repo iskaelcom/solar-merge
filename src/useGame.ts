@@ -252,6 +252,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const lastTimeRef = useRef<number>(0);
   const comboTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const comboTimerShowRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mergeSpawnTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   // Combo multiplier lives in a ref — invisible to React DevTools, cannot be tampered via state
   const comboRef = useRef<number>(1);
   // Actual score lives in a ref — display-only copy goes to state, tampering state has no effect
@@ -822,6 +825,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           pendingVirusSpawnsRef.current = [];
           if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
           if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+          if (dropTimerRef.current) clearTimeout(dropTimerRef.current);
+          mergeSpawnTimersRef.current.forEach(clearTimeout);
+          mergeSpawnTimersRef.current.clear();
+          comboTimerRef.current = null;
+          comboTimerShowRef.current = null;
+          dropTimerRef.current = null;
           // physicsRef.current?.destroy(); // Optimization: Keep alive for "Continue"
           // physicsRef.current = null;
 
@@ -919,12 +928,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         // Clear merge spawn IDs after pop animation finishes (~900ms)
         if (freshMergeIds.length > 0) {
           const freshMergeIdSet = new Set(freshMergeIds);
-          setTimeout(() => {
+          const timer = setTimeout(() => {
+            mergeSpawnTimersRef.current.delete(timer);
             setState((prev) => ({
               ...prev,
               mergeSpawnIds: prev.mergeSpawnIds.filter((id) => !freshMergeIdSet.has(id)),
             }));
           }, 900);
+          mergeSpawnTimersRef.current.add(timer);
         }
       }
 
@@ -1105,6 +1116,11 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
       physicsRef.current?.destroy();
       if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
       if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+      if (dropTimerRef.current) clearTimeout(dropTimerRef.current);
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      mergeSpawnTimersRef.current.forEach(clearTimeout);
+      mergeSpawnTimersRef.current.clear();
+      bodyTransformsRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1339,7 +1355,9 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     // Wake the RAF loop in case it was paused while the scene was idle
     startLoop();
 
-    setTimeout(() => {
+    if (dropTimerRef.current) clearTimeout(dropTimerRef.current);
+    dropTimerRef.current = setTimeout(() => {
+      dropTimerRef.current = null;
       // Clear the combo banner when the player gets control back — banner
       // should only show during the settling phase, not while aiming.
       isDroppingRef.current = false;
@@ -1369,10 +1387,12 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     cancelAnimationFrame(rafRef.current);
     pendingSpawnsRef.current = [];
     pendingExplosionsRef.current = [];
+    pendingFloatingScoresRef.current = [];
     pendingMergeSpawnIdsRef.current = [];
     pendingStarSpawnsRef.current = [];
     pendingBlackHoleSpawnsRef.current = [];
     pendingVirusSpawnsRef.current = [];
+    bodyTransformsRef.current.clear();
     dropCountRef.current = 0;
     sickPlanetIdsRef.current.clear();
     shieldLayersRef.current = 0;
@@ -1380,6 +1400,14 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     dropsSinceLastMergeRef.current = 0;
     physicsRef.current?.setShieldActive(false);
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
+    if (comboTimerShowRef.current) clearTimeout(comboTimerShowRef.current);
+    if (dropTimerRef.current) clearTimeout(dropTimerRef.current);
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    mergeSpawnTimersRef.current.forEach(clearTimeout);
+    mergeSpawnTimersRef.current.clear();
+    comboTimerRef.current = null;
+    comboTimerShowRef.current = null;
+    dropTimerRef.current = null;
     comboRef.current = 1;
     scoreRef.current = 0;
 
@@ -1419,7 +1447,8 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     });
 
     // Re-init physics then restart loop
-    setTimeout(() => {
+    restartTimerRef.current = setTimeout(() => {
+      restartTimerRef.current = null;
       initPhysics();
       startLoop();
     }, 50);

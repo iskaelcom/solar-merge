@@ -50,7 +50,7 @@ export function ExplosionEffect({ x, y, color, scale, onDone }: Props) {
 
   useEffect(() => {
     const easeOut = Easing.out(Easing.quad);
-    Animated.parallel([
+    const animation = Animated.parallel([
       Animated.timing(flashProg,  { toValue: 1, duration: 220, easing: easeOut, useNativeDriver: true }),
       Animated.timing(ringProg,   { toValue: 1, duration: 400, easing: easeOut, useNativeDriver: true }),
       ...debrisProgs.map((p) =>
@@ -59,7 +59,11 @@ export function ExplosionEffect({ x, y, color, scale, onDone }: Props) {
       ...sparkleProgs.map((p) =>
         Animated.timing(p, { toValue: 1, duration: 200, easing: easeOut, useNativeDriver: true })
       ),
-    ]).start(() => onDoneRef.current());
+    ]);
+    animation.start(({ finished }) => {
+      if (finished) onDoneRef.current();
+    });
+    return () => animation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

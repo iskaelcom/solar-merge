@@ -43,18 +43,19 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
 
   useEffect(() => {
     // Continuous clockwise spin
-    Animated.loop(
+    const spin = Animated.loop(
       Animated.timing(spinAnim, {
         toValue: 1,
         duration: 1600,
         easing: Easing.linear,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    spin.start();
 
     // Gentle pulse: scale 1.0 → 1.18 → 1.0 (only for live stars, not preview)
-    if (!ghost) {
-      Animated.loop(
+    const pulse = !ghost
+      ? Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.18,
@@ -69,8 +70,13 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
             useNativeDriver: true,
           }),
         ])
-      ).start();
-    }
+      )
+      : null;
+    pulse?.start();
+    return () => {
+      spin.stop();
+      pulse?.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -136,14 +142,16 @@ export const StarThumb = React.memo(({ size = 36 }: { size?: number }) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.timing(spinAnim, {
         toValue: 1,
         duration: 2200,
         easing: Easing.linear,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

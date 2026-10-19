@@ -29,22 +29,27 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, 
 
   useEffect(() => {
     // Continuous subtle breathing glow
-    Animated.loop(
+    const glowAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, { toValue: 1.15, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         Animated.timing(glow, { toValue: 1.0, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
       ])
-    ).start();
+    );
+    glowAnimation.start();
 
-    if (ghost) {
-      // Gentle floating rotation for the preview ghost
-      Animated.loop(
+    const rotationAnimation = ghost
+      ? Animated.loop(
         Animated.sequence([
           Animated.timing(rotation, { toValue: -1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(rotation, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
         ])
-      ).start();
-    }
+      )
+      : null;
+    rotationAnimation?.start();
+    return () => {
+      glowAnimation.stop();
+      rotationAnimation?.stop();
+    };
   }, [ghost, glow, rotation]);
 
   const positionStyle = {

@@ -44,17 +44,18 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
   });
 
   useEffect(() => {
-    Animated.loop(
+    const spin = Animated.loop(
       Animated.timing(spinAnim, {
         toValue: 1,
         duration: 4000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    spin.start();
 
-    if (!ghost) {
-      Animated.loop(
+    const pulse = !ghost
+      ? Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.08,
@@ -69,8 +70,13 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
             useNativeDriver: true,
           }),
         ])
-      ).start();
-    }
+      )
+      : null;
+    pulse?.start();
+    return () => {
+      spin.stop();
+      pulse?.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -178,14 +184,16 @@ export const VirusPlanetThumb = React.memo(({ size = 36 }: { size?: number }) =>
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
         duration: 4000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

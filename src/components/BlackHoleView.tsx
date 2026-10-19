@@ -32,18 +32,19 @@ export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, regist
 
   useEffect(() => {
     // Slow rotation for the accretion disk ring
-    Animated.loop(
+    const rotation = Animated.loop(
       Animated.timing(diskRotateAnim, {
         toValue: 1,
         duration: 2800,
         easing: Easing.linear,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    rotation.start();
 
     // Subtle ominous pulse (only for live, not ghost preview)
-    if (!ghost) {
-      Animated.loop(
+    const pulse = !ghost
+      ? Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.1,
@@ -58,8 +59,13 @@ export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, regist
             useNativeDriver: true,
           }),
         ])
-      ).start();
-    }
+      )
+      : null;
+    pulse?.start();
+    return () => {
+      rotation.stop();
+      pulse?.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -133,14 +139,16 @@ export const BlackHoleThumb = React.memo(({ size = 36 }: { size?: number }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
         duration: 3500,
         easing: Easing.linear,
         useNativeDriver: true,
       })
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

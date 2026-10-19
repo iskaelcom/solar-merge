@@ -76,22 +76,26 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
   const bonusScaleAnim = useRef(new Animated.Value(scale)).current;
 
   useEffect(() => {
-    Animated.spring(bonusScaleAnim, {
+    const animation = Animated.spring(bonusScaleAnim, {
       toValue: scale,
       friction: 8,
       tension: 40,
       useNativeDriver: true,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
   }, [scale]);
 
   useEffect(() => {
     if (!isMergeSpawn) return;
-    Animated.spring(scaleAnim, {
+    const animation = Animated.spring(scaleAnim, {
       toValue: 1,
       friction: 3,
       tension: 280,
       useNativeDriver: true,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
