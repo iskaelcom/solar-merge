@@ -9,6 +9,7 @@ const BLACK_HOLE_SOURCES = {
   pixel: require('../../assets/skins/pixel/blackhole.png'),
   candy: require('../../assets/skins/candy/blackhole.png'),
   mecha: require('../../assets/skins/mecha/blackhole.png'),
+  pastel: require('../../assets/skins/pastel/blackhole.png'),
 } as const;
 
 // Visual diameter is larger than physics radius (30) to show the glow aura

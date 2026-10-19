@@ -9,6 +9,7 @@ const STAR_SOURCES = {
   pixel: require('../../assets/skins/pixel/star.png'),
   candy: require('../../assets/skins/candy/star.png'),
   mecha: require('../../assets/skins/mecha/star.png'),
+  pastel: require('../../assets/skins/pastel/star.png'),
 } as const;
 
 const DIAMETER = 34; // visual diameter (physics radius = 15, a bit larger for visual flair)

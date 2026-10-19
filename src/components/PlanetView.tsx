@@ -154,12 +154,39 @@ const MECHA_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/skins/mecha/sick/sun.png'),
 };
 
+const PASTEL_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/pastel/moon.png'),
+  2: require('../../assets/skins/pastel/mercury.png'),
+  3: require('../../assets/skins/pastel/mars.png'),
+  4: require('../../assets/skins/pastel/venus.png'),
+  5: require('../../assets/skins/pastel/earth.png'),
+  6: require('../../assets/skins/pastel/neptune.png'),
+  7: require('../../assets/skins/pastel/uranus.png'),
+  8: require('../../assets/skins/pastel/saturn.png'),
+  9: require('../../assets/skins/pastel/jupiter.png'),
+  10: require('../../assets/skins/pastel/sun.png'),
+};
+
+const PASTEL_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/pastel/sick/moon.png'),
+  2: require('../../assets/skins/pastel/sick/mercury.png'),
+  3: require('../../assets/skins/pastel/sick/mars.png'),
+  4: require('../../assets/skins/pastel/sick/venus.png'),
+  5: require('../../assets/skins/pastel/sick/earth.png'),
+  6: require('../../assets/skins/pastel/sick/neptune.png'),
+  7: require('../../assets/skins/pastel/sick/uranus.png'),
+  8: require('../../assets/skins/pastel/sick/saturn.png'),
+  9: require('../../assets/skins/pastel/sick/jupiter.png'),
+  10: require('../../assets/skins/pastel/sick/sun.png'),
+};
+
 const PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: PLANET_IMAGES,
   neon: NEON_PLANET_IMAGES,
   pixel: PIXEL_PLANET_IMAGES,
   candy: CANDY_PLANET_IMAGES,
   mecha: MECHA_PLANET_IMAGES,
+  pastel: PASTEL_PLANET_IMAGES,
 };
 
 const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
@@ -168,6 +195,7 @@ const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<ty
   pixel: PIXEL_SICK_PLANET_IMAGES,
   candy: CANDY_SICK_PLANET_IMAGES,
   mecha: MECHA_SICK_PLANET_IMAGES,
+  pastel: PASTEL_SICK_PLANET_IMAGES,
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */

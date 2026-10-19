@@ -84,7 +84,7 @@ Dokumen ini berisi daftar tugas optimasi teknis, perbaikan bug, peningkatan *gam
     - [ ] *Celestial Magic* — kristal, rune, aura magis, serta Mystery Planet berbentuk bola ramalan.
     - [ ] *Lava Apocalypse* — permukaan retak, magma menyala, asap, dan ekspresi agresif.
     - [ ] *Ocean Worlds* — ombak, gelembung, dan karang; Black Hole menjadi pusaran air dan Virus menjadi makhluk laut beracun.
-    - [ ] *Cute Pastel* — warna lembut, bentuk membulat, ekspresi chibi, dan pipi kemerahan.
+    - [x] *Cute Pastel* — warna lembut, bentuk membulat, ekspresi chibi, dan pipi kemerahan.
     - [ ] *Ancient Gods* — ornamen emas, batu kuno, mahkota, dan simbol mitologi.
     - [ ] *Haunted Galaxy* — hantu lucu, tengkorak, jahitan, kabut hijau, dan mata menyala; cocok untuk event Halloween.
     - [ ] *Steampunk Orbit* — tembaga, roda gigi, pipa, dan cincin Saturnus berbentuk mesin.
