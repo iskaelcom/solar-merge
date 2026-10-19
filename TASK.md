@@ -78,6 +78,18 @@ Dokumen ini berisi daftar tugas optimasi teknis, perbaikan bug, peningkatan *gam
   - [ ] Tambahkan daftar misi harian (contoh: *"Merge 2 Jupiter"*, *"Capai 6x Combo"*, *"Sembuhkan 3 planet sakit"*) dengan hadiah *Diamond*.
 - [x] **Toko Skin Planet & Tema Galaksi**
   - [x] Gunakan *Diamond* untuk membuka variasi tampilan planet (misal: *Neon Cyber*, *Pixel Space*, *Realistic NASA*) dan tema latar belakang nebula.
+  - [ ] **Roadmap Skin Planet Berikutnya**
+    - [ ] *Candy Galaxy* — planet berbentuk permen, jelly, donat, dan cokelat; direkomendasikan sebagai skin berikutnya karena paling kontras dengan Classic, Neon, dan Pixel.
+    - [ ] *Mecha Cosmos* — badan robot, panel logam, baut, dan ekspresi digital; cocok sebagai skin premium.
+    - [ ] *Celestial Magic* — kristal, rune, aura magis, serta Mystery Planet berbentuk bola ramalan.
+    - [ ] *Lava Apocalypse* — permukaan retak, magma menyala, asap, dan ekspresi agresif.
+    - [ ] *Ocean Worlds* — ombak, gelembung, dan karang; Black Hole menjadi pusaran air dan Virus menjadi makhluk laut beracun.
+    - [ ] *Cute Pastel* — warna lembut, bentuk membulat, ekspresi chibi, dan pipi kemerahan.
+    - [ ] *Ancient Gods* — ornamen emas, batu kuno, mahkota, dan simbol mitologi.
+    - [ ] *Haunted Galaxy* — hantu lucu, tengkorak, jahitan, kabut hijau, dan mata menyala; cocok untuk event Halloween.
+    - [ ] *Steampunk Orbit* — tembaga, roda gigi, pipa, dan cincin Saturnus berbentuk mesin.
+    - [ ] *Paper Craft* — tampilan seperti potongan kertas atau stiker dengan bayangan bertingkat.
+    - [ ] Setiap skin baru harus mencakup planet normal, varian sakit, Mystery Planet, Virus, Black Hole, dan Star dengan satu bahasa visual yang konsisten.
 - [ ] **Mode Permainan Baru**
   - [ ] *Time Attack (2 Menit):* Kecepatan drop lebih singkat, kejar skor tertinggi sebelum waktu habis.
   - [ ] *Daily Seed Challenge:* Urutan planet menggunakan *seeded PRNG* yang sama untuk semua pemain setiap harinya, lengkap dengan *tab leaderboard* harian.
