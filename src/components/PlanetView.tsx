@@ -102,16 +102,44 @@ const PIXEL_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/skins/pixel/sick/sun.png'),
 };
 
+const CANDY_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/candy/moon.png'),
+  2: require('../../assets/skins/candy/mercury.png'),
+  3: require('../../assets/skins/candy/mars.png'),
+  4: require('../../assets/skins/candy/venus.png'),
+  5: require('../../assets/skins/candy/earth.png'),
+  6: require('../../assets/skins/candy/neptune.png'),
+  7: require('../../assets/skins/candy/uranus.png'),
+  8: require('../../assets/skins/candy/saturn.png'),
+  9: require('../../assets/skins/candy/jupiter.png'),
+  10: require('../../assets/skins/candy/sun.png'),
+};
+
+const CANDY_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/candy/sick/moon.png'),
+  2: require('../../assets/skins/candy/sick/mercury.png'),
+  3: require('../../assets/skins/candy/sick/mars.png'),
+  4: require('../../assets/skins/candy/sick/venus.png'),
+  5: require('../../assets/skins/candy/sick/earth.png'),
+  6: require('../../assets/skins/candy/sick/neptune.png'),
+  7: require('../../assets/skins/candy/sick/uranus.png'),
+  8: require('../../assets/skins/candy/sick/saturn.png'),
+  9: require('../../assets/skins/candy/sick/jupiter.png'),
+  10: require('../../assets/skins/candy/sick/sun.png'),
+};
+
 const PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: PLANET_IMAGES,
   neon: NEON_PLANET_IMAGES,
   pixel: PIXEL_PLANET_IMAGES,
+  candy: CANDY_PLANET_IMAGES,
 };
 
 const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: SICK_PLANET_IMAGES,
   neon: NEON_SICK_PLANET_IMAGES,
   pixel: PIXEL_SICK_PLANET_IMAGES,
+  candy: CANDY_SICK_PLANET_IMAGES,
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
