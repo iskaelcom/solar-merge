@@ -14,6 +14,7 @@ const VIRUS_SOURCES = {
 
 // Visual diameter — larger than physics radius (22) to show spikes
 const DIAMETER = 60;
+const PASTEL_SPECIAL_VISUAL_SCALE = 1.09;
 
 interface Props {
   id?: string;
@@ -119,7 +120,7 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
     >
       <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ scale: pulseAnim }] }}>
       {skinId !== 'classic' ? (
-        <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ rotate }] }}>
+        <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ rotate }, { scale: skinId === 'pastel' ? PASTEL_SPECIAL_VISUAL_SCALE : 1 }] }}>
           <Image source={VIRUS_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: visualDiameter, height: visualDiameter }} />
         </Animated.View>
       ) : <>
@@ -227,7 +228,7 @@ export const VirusPlanetThumb = React.memo(({ size = 36, skinId = 'classic' }: {
   return (
     <View style={{ width: size, height: size }}>
       {skinId !== 'classic' ? (
-        <Animated.View style={{ width: size, height: size, transform: [{ rotate }] }}>
+        <Animated.View style={{ width: size, height: size, transform: [{ rotate }, { scale: skinId === 'pastel' ? PASTEL_SPECIAL_VISUAL_SCALE : 1 }] }}>
           <Image source={VIRUS_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: size, height: size }} />
         </Animated.View>
       ) : <>

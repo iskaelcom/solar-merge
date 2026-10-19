@@ -11,6 +11,7 @@ const MYSTERY_SOURCES = {
   mecha: require('../../assets/skins/mecha/mystery.png'),
   pastel: require('../../assets/skins/pastel/mystery.png'),
 } as const;
+const PASTEL_SPECIAL_VISUAL_SCALE = 1.09;
 interface Props {
   id?: string;
   x: number;
@@ -79,7 +80,7 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, 
     <Animated.View ref={positionRef} style={[styles.container, positionStyle]}>
       <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: displayRotate }] }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: glow }] }]}>
-          <Image source={source} style={styles.image} />
+          <Image source={source} style={[styles.image, { transform: [{ scale: skinId === 'pastel' ? PASTEL_SPECIAL_VISUAL_SCALE : 1 }] }]} />
         </Animated.View>
       </Animated.View>
     </Animated.View>
@@ -91,7 +92,7 @@ export const MysteryPlanetThumb: React.FC<{ size: number; skinId?: PlanetSkinId 
   return (
     <Image 
       source={source} 
-      style={{ width: size, height: size, resizeMode: 'contain' }} 
+      style={{ width: size, height: size, resizeMode: 'contain', transform: [{ scale: skinId === 'pastel' ? PASTEL_SPECIAL_VISUAL_SCALE : 1 }] }}
     />
   );
 };

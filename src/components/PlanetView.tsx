@@ -21,6 +21,7 @@ interface Props {
 }
 
 const SATURN_ID = 8;
+const PASTEL_PLANET_VISUAL_SCALE = 1.055;
 
 // Static PNG requires — bundled at build time, zero runtime SVG overhead
 const PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
@@ -278,7 +279,10 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
           style={{
             width: imgW,
             height: imgH,
-            transform: [{ rotate }],
+            transform: [
+              { rotate },
+              { scale: skinId === 'pastel' ? PASTEL_PLANET_VISUAL_SCALE : 1 },
+            ],
           }}
         >
           <Image
@@ -325,7 +329,11 @@ export const PlanetThumb = React.memo(({ planetId, size = 40, skinId = 'classic'
     <View style={{ width: thumbW, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Image
         source={PLANET_SKIN_IMAGES[skinId][planetId]}
-        style={{ width: thumbW, height: size }}
+        style={{
+          width: thumbW,
+          height: size,
+          transform: [{ scale: skinId === 'pastel' ? PASTEL_PLANET_VISUAL_SCALE : 1 }],
+        }}
         resizeMode="contain"
         fadeDuration={0}
       />

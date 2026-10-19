@@ -13,6 +13,7 @@ const STAR_SOURCES = {
 } as const;
 
 const DIAMETER = 34; // visual diameter (physics radius = 15, a bit larger for visual flair)
+const PASTEL_SPECIAL_VISUAL_SCALE = 1.09;
 
 /** Compute points string for a 5-pointed star centered at (cx, cy). */
 function starPoints(cx: number, cy: number, outerR: number, innerR: number): string {
@@ -119,7 +120,7 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
       <Animated.View style={[{ width: diameter, height: diameter, transform: [{ rotate }] }]}>
       <Animated.View style={[{ width: diameter, height: diameter, transform: [{ scale: pulseAnim }] }]}>
       {skinId !== 'classic' ? (
-        <Image source={STAR_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: diameter, height: diameter }} />
+        <Image source={STAR_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: diameter, height: diameter, transform: [{ scale: skinId === 'pastel' ? PASTEL_SPECIAL_VISUAL_SCALE : 1 }] }} />
       ) : <>
       {/* Outer glow (soft aura) — hidden on ghost preview */}
       {!ghost && (
@@ -185,7 +186,7 @@ export const StarThumb = React.memo(({ size = 36, skinId = 'classic' }: { size?:
     >
       <View style={{ width: size, height: size }}>
         {skinId !== 'classic' ? (
-          <Image source={STAR_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: size, height: size }} />
+          <Image source={STAR_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: size, height: size, transform: [{ scale: skinId === 'pastel' ? PASTEL_SPECIAL_VISUAL_SCALE : 1 }] }} />
         ) : <Svg width={size} height={size}>
           <Polygon
             points={pts}
