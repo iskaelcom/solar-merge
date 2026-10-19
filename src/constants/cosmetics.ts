@@ -1,4 +1,4 @@
-export type PlanetSkinId = 'classic' | 'neon';
+export type PlanetSkinId = 'classic' | 'neon' | 'pixel';
 export type GalaxyThemeId = 'deep-space' | 'nebula' | 'aurora';
 
 export interface PlanetSkinDefinition {
@@ -34,6 +34,13 @@ export const PLANET_SKINS: readonly PlanetSkinDefinition[] = [
     name: 'Neon Nova',
     description: 'Glossy planets with electric arcade glow.',
     price: 150,
+    previewPlanetId: 5,
+  },
+  {
+    id: 'pixel',
+    name: 'Pixel Cosmos',
+    description: 'Crisp 16-bit planets from a retro galaxy.',
+    price: 250,
     previewPlanetId: 5,
   },
 ];

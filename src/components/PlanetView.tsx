@@ -76,14 +76,42 @@ const NEON_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/skins/neon/sick/sun.png'),
 };
 
+const PIXEL_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/pixel/moon.png'),
+  2: require('../../assets/skins/pixel/mercury.png'),
+  3: require('../../assets/skins/pixel/mars.png'),
+  4: require('../../assets/skins/pixel/venus.png'),
+  5: require('../../assets/skins/pixel/earth.png'),
+  6: require('../../assets/skins/pixel/neptune.png'),
+  7: require('../../assets/skins/pixel/uranus.png'),
+  8: require('../../assets/skins/pixel/saturn.png'),
+  9: require('../../assets/skins/pixel/jupiter.png'),
+  10: require('../../assets/skins/pixel/sun.png'),
+};
+
+const PIXEL_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/pixel/sick/moon.png'),
+  2: require('../../assets/skins/pixel/sick/mercury.png'),
+  3: require('../../assets/skins/pixel/sick/mars.png'),
+  4: require('../../assets/skins/pixel/sick/venus.png'),
+  5: require('../../assets/skins/pixel/sick/earth.png'),
+  6: require('../../assets/skins/pixel/sick/neptune.png'),
+  7: require('../../assets/skins/pixel/sick/uranus.png'),
+  8: require('../../assets/skins/pixel/sick/saturn.png'),
+  9: require('../../assets/skins/pixel/sick/jupiter.png'),
+  10: require('../../assets/skins/pixel/sick/sun.png'),
+};
+
 const PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: PLANET_IMAGES,
   neon: NEON_PLANET_IMAGES,
+  pixel: PIXEL_PLANET_IMAGES,
 };
 
 const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: SICK_PLANET_IMAGES,
   neon: NEON_SICK_PLANET_IMAGES,
+  pixel: PIXEL_SICK_PLANET_IMAGES,
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */

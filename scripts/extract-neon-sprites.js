@@ -5,6 +5,7 @@ const fs = require('fs/promises');
 const defaultInput = path.join(__dirname, '..', 'assets', 'skins', 'neon', 'neon-sheet.png');
 const input = process.argv[2] ? path.resolve(process.argv[2]) : defaultInput;
 const outputDir = process.argv[3] ? path.resolve(process.argv[3]) : path.dirname(input);
+const pixelMode = process.argv.includes('--pixel');
 const names = ['moon', 'mercury', 'mars', 'venus', 'earth', 'neptune', 'uranus', 'saturn', 'jupiter', 'sun'];
 
 async function main() {
@@ -94,7 +95,11 @@ async function main() {
     }
 
     await sharp(pixels, { raw: { width: cropWidth, height: cropHeight, channels: 4 } })
-      .resize(400, 400, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize(400, 400, {
+        fit: 'contain',
+        kernel: pixelMode ? sharp.kernel.nearest : sharp.kernel.lanczos3,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toFile(outputPath);
   }));
