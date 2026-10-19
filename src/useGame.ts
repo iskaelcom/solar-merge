@@ -48,7 +48,9 @@ import {
 import { BodyTransformUpdater, RegisterBodyTransform } from './hooks/usePhysicsTransform';
 
 let idCounter = 0;
-const genId = () => `p_${++idCounter}`;
+// Include wall-clock time so IDs cannot collide with bodies restored from a
+// previous app launch, where the in-memory counter starts again from zero.
+const genId = () => `p_${Date.now().toString(36)}_${++idCounter}`;
 
 const HIGH_SCORE_KEY = 'solar-merge-highscore';
 const DIAMONDS_KEY = 'solar-merge-diamonds';

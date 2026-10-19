@@ -452,6 +452,9 @@ export class SolarPhysics {
   }
 
   addStar(id: string, x: number, y: number, angle?: number): void {
+    // A duplicate logical ID must never leave the previous Matter body in the
+    // world as an invisible collider.
+    if (this.stars.has(id)) this.removeStar(id);
     const body = Matter.Bodies.circle(x, y, this.starRadius, {
       restitution: 0.5,
       friction: FRICTION,
@@ -491,6 +494,7 @@ export class SolarPhysics {
   }
 
   addBlackHole(id: string, x: number, y: number): void {
+    if (this.blackHoles.has(id)) this.removeBlackHole(id);
     const body = Matter.Bodies.circle(x, y, this.blackHoleRadius, {
       restitution: 0.3,
       friction: FRICTION,
@@ -536,6 +540,7 @@ export class SolarPhysics {
   }
 
   addVirus(id: string, x: number, y: number): void {
+    if (this.viruses.has(id)) this.removeVirus(id);
     const body = Matter.Bodies.circle(x, y, this.virusRadius, {
       restitution: 0.4,
       friction: FRICTION,
@@ -612,6 +617,7 @@ export class SolarPhysics {
   }
 
   addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 3, angle?: number): void {
+    if (this.planets.has(id)) this.removePlanet(id);
     const planet = PLANETS[planetId - 1];
     const radius = this.radii[planetId - 1] * planet.hitboxRatio;
 
@@ -649,6 +655,7 @@ export class SolarPhysics {
   }
 
   addMysteryPlanet(id: string, truePlanetId: number, mysteryRevealDrops: number, x: number, y: number, vx = 0, vy = 3, angle?: number): void {
+    if (this.planets.has(id)) this.removePlanet(id);
     const radius = this.mysteryRadius; // Disguise radius
 
     const body = Matter.Bodies.circle(x, y, radius, {
