@@ -44,6 +44,8 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import { showInterstitialAd } from '../utils/InterstitialAdManager';
 import { formatCompactNumber } from '../utils/format';
 import { AdMobBanner } from './AdMobBanner';
+import { CosmeticShopModal } from './CosmeticShopModal';
+import { getGalaxyTheme, PlanetSkinId } from '../constants/cosmetics';
 
 const WALL_THICKNESS = 6;
 
@@ -108,6 +110,10 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
     buyAntidote,
     redeemCode,
     claimFreeDiamond,
+    purchasePlanetSkin,
+    equipPlanetSkin,
+    purchaseGalaxyTheme,
+    equipGalaxyTheme,
     isDroppingRef,
     scoreRef,
     dropCountRef,
@@ -146,6 +152,8 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
   const [showStreakReward, setShowStreakReward] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showFreeDiamond, setShowFreeDiamond] = useState(false);
+  const [showCosmeticShop, setShowCosmeticShop] = useState(false);
+  const galaxyTheme = getGalaxyTheme(state.equippedGalaxyTheme);
 
   useEffect(() => {
     if (state.streakReward !== null && !showTutorial) {
@@ -272,7 +280,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
 
   return (
     <LinearGradient
-      colors={['#0a0a2e', '#12124a', '#1a1a5e']}
+      colors={[...galaxyTheme.gradient]}
       style={[
         styles.root,
         {
@@ -281,7 +289,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
       ]}
     >
       {/* ── Stars background ─────────────────────────────────── */}
-      <Stars />
+      <Stars color={galaxyTheme.starColor} />
 
       {/* ── Row 1: ⚙️ | BEST | SCORE | 🏆 ──────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
@@ -338,7 +346,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
 
           <View style={styles.nextBox}>
             <Text style={styles.nextLabel}>Next</Text>
-            <PlanetThumb planetId={afterPlanetId} size={28} />
+            <PlanetThumb planetId={afterPlanetId} size={28} skinId={state.equippedPlanetSkin} />
           </View>
         </View>
       </View>
@@ -351,16 +359,16 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
         ]}
       >
         {/* Left wall */}
-        <View style={[styles.wall, styles.leftWall, { height: gameHeight + WALL_THICKNESS }]} />
+        <View style={[styles.wall, styles.leftWall, { height: gameHeight + WALL_THICKNESS, backgroundColor: galaxyTheme.wallColor }]} />
         {/* Right wall */}
-        <View style={[styles.wall, styles.rightWall, { height: gameHeight + WALL_THICKNESS }]} />
+        <View style={[styles.wall, styles.rightWall, { height: gameHeight + WALL_THICKNESS, backgroundColor: galaxyTheme.wallColor }]} />
         {/* Floor */}
-        <View style={[styles.floor, { width: gameWidth + WALL_THICKNESS * 2 }]} />
+        <View style={[styles.floor, { width: gameWidth + WALL_THICKNESS * 2, backgroundColor: galaxyTheme.wallColor }]} />
 
         {/* Play area */}
         <View
           ref={gameAreaRef}
-          style={[styles.gameArea, { width: gameWidth, height: gameHeight }]}
+          style={[styles.gameArea, { width: gameWidth, height: gameHeight, backgroundColor: galaxyTheme.boardColor }]}
           onLayout={() => {
             gameAreaRef.current?.measure((_x, _y, _w, _h, pageX) => {
               if (pageX != null) layoutXRef.current = pageX;
@@ -429,6 +437,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
                           y={previewRadius}
                           size={pRadii[state.currentPlanetId - 1]}
                           ghost
+                          skinId={state.equippedPlanetSkin}
                           scale={(state.currentPlanetId >= 4 && state.shrinkTimeLeft > 0) ? WIZARD_SHRINK_SCALE : 1}
                         />
                 }
@@ -474,6 +483,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
                 scale={p.scale}
                 isMergeSpawn={mergeSpawnSet.has(p.id)}
                 isSick={sickPlanetSet.has(p.id)}
+                skinId={state.equippedPlanetSkin}
                 registerTransform={registerBodyTransform}
               />
             )
@@ -552,11 +562,21 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
               <Text style={styles.wizardEmoji}>🎁</Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.wizardBtn, { left: gameWidth - 45, top: 165 }]}
+            onPress={() => setShowCosmeticShop(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.wizardInner}>
+              <Text style={styles.wizardEmoji}>🛍️</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* ── Planet evolution guide ────────────────────────────── */}
-      <EvolutionBar />
+      <EvolutionBar skinId={state.equippedPlanetSkin} />
 
       {/* ── Banner Ad ─────────────────────────────────────────── */}
       <AdMobBanner />
@@ -638,12 +658,26 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
         freeGiftsClaimed={state.freeGiftsClaimed}
         onClaim={claimFreeDiamond}
       />
+
+      <CosmeticShopModal
+        visible={showCosmeticShop}
+        onClose={() => setShowCosmeticShop(false)}
+        diamonds={state.diamonds}
+        ownedPlanetSkins={state.ownedPlanetSkins}
+        equippedPlanetSkin={state.equippedPlanetSkin}
+        ownedGalaxyThemes={state.ownedGalaxyThemes}
+        equippedGalaxyTheme={state.equippedGalaxyTheme}
+        onPurchasePlanetSkin={purchasePlanetSkin}
+        onEquipPlanetSkin={equipPlanetSkin}
+        onPurchaseGalaxyTheme={purchaseGalaxyTheme}
+        onEquipGalaxyTheme={equipGalaxyTheme}
+      />
     </LinearGradient>
   );
 }
 
 // ── Stars decoration ──────────────────────────────────────────────────────────
-const Stars = React.memo(() => {
+const Stars = React.memo(({ color }: { color: string }) => {
   const stars = React.useMemo(
     () =>
       Array.from({ length: 40 }, (_, i) => ({
@@ -668,7 +702,7 @@ const Stars = React.memo(() => {
             width: s.size,
             height: s.size,
             borderRadius: s.size / 2,
-            backgroundColor: '#fff',
+            backgroundColor: color,
             opacity: s.opacity,
           }}
         />
@@ -678,12 +712,12 @@ const Stars = React.memo(() => {
 });
 
 // ── Evolution progress bar at bottom ─────────────────────────────────────────
-const EvolutionBar = React.memo(() => {
+const EvolutionBar = React.memo(({ skinId }: { skinId: PlanetSkinId }) => {
   return (
     <View style={styles.evoBar}>
       {PLANETS.map((p, i) => (
         <View key={p.id} style={styles.evoItem}>
-          <PlanetThumb planetId={p.id} size={18} />
+          <PlanetThumb planetId={p.id} size={18} skinId={skinId} />
           {i < PLANETS.length - 1 && <Text style={styles.evoArrow}>›</Text>}
         </View>
       ))}

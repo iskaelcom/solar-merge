@@ -83,4 +83,8 @@ export interface GameState {
   shrinkCost: number;          // current cost for the shrink bonus
   redeemedCodes: string[];     // list of codes already used by the player
   freeGiftsClaimed: string[];  // list of free gift task IDs already claimed
+  ownedPlanetSkins: import('./constants/cosmetics').PlanetSkinId[];
+  equippedPlanetSkin: import('./constants/cosmetics').PlanetSkinId;
+  ownedGalaxyThemes: import('./constants/cosmetics').GalaxyThemeId[];
+  equippedGalaxyTheme: import('./constants/cosmetics').GalaxyThemeId;
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, View, Image, StyleSheet } from 'react-native';
 import { PLANETS } from '../constants';
 import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
+import { PlanetSkinId } from '../constants/cosmetics';
 
 interface Props {
   id?: string;
@@ -16,6 +17,7 @@ interface Props {
   scale?: number;
   style?: object;
   registerTransform?: RegisterBodyTransform;
+  skinId?: PlanetSkinId;
 }
 
 const SATURN_ID = 8;
@@ -48,8 +50,26 @@ const SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/planets/sun-sick.png'),
 };
 
+const NEON_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/neon/moon.png'),
+  2: require('../../assets/skins/neon/mercury.png'),
+  3: require('../../assets/skins/neon/mars.png'),
+  4: require('../../assets/skins/neon/venus.png'),
+  5: require('../../assets/skins/neon/earth.png'),
+  6: require('../../assets/skins/neon/neptune.png'),
+  7: require('../../assets/skins/neon/uranus.png'),
+  8: require('../../assets/skins/neon/saturn.png'),
+  9: require('../../assets/skins/neon/jupiter.png'),
+  10: require('../../assets/skins/neon/sun.png'),
+};
+
+const PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
+  classic: PLANET_IMAGES,
+  neon: NEON_PLANET_IMAGES,
+};
+
 /** A planet rendered as an absolutely-positioned PNG image. */
-export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style, registerTransform }: Props) => {
+export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, ghost = false, isMergeSpawn = false, isSick = false, scale = 1, style, registerTransform, skinId = 'classic' }: Props) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
@@ -57,7 +77,7 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
   const r = size;
 
   // Saturn PNG is 2:1 — rendered wider so rings show
-  const isSaturn = planetId === SATURN_ID;
+  const isSaturn = planetId === SATURN_ID && skinId === 'classic';
   const imgW = isSaturn ? diameter * 2 : diameter;
   const imgH = diameter;
   const leftExtra = isSaturn ? r : 0;
@@ -132,7 +152,9 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
           }}
         >
           <Image
-            source={isSick ? SICK_PLANET_IMAGES[planetId] : PLANET_IMAGES[planetId]}
+            source={isSick && skinId === 'classic'
+              ? SICK_PLANET_IMAGES[planetId]
+              : PLANET_SKIN_IMAGES[skinId][planetId]}
             style={{ width: imgW, height: imgH }}
             resizeMode="contain"
             fadeDuration={0}
@@ -162,17 +184,17 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
 });
 
 /** Small inline planet thumbnail (for next-planet preview / evo bar) */
-export const PlanetThumb = React.memo(({ planetId, size = 40 }: { planetId: number; size?: number }) => {
+export const PlanetThumb = React.memo(({ planetId, size = 40, skinId = 'classic' }: { planetId: number; size?: number; skinId?: PlanetSkinId }) => {
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
-  const isSaturn = planetId === SATURN_ID;
+  const isSaturn = planetId === SATURN_ID && skinId === 'classic';
   const thumbW = isSaturn ? size * 1.8 : size;
 
   return (
     <View style={{ width: thumbW, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Image
-        source={PLANET_IMAGES[planetId]}
+        source={PLANET_SKIN_IMAGES[skinId][planetId]}
         style={{ width: thumbW, height: size }}
         resizeMode="contain"
         fadeDuration={0}

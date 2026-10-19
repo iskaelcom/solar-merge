@@ -35,6 +35,16 @@ import {
 } from './constants';
 import { GameState, RenderPlanet, RenderStar, RenderBlackHole, RenderVirus, Explosion, FloatingScore } from './types';
 import { REDEEM_CODES } from './constants/redeemCodes';
+import {
+  DEFAULT_GALAXY_THEME,
+  DEFAULT_PLANET_SKIN,
+  GALAXY_THEMES,
+  GalaxyThemeId,
+  isGalaxyThemeId,
+  isPlanetSkinId,
+  PLANET_SKINS,
+  PlanetSkinId,
+} from './constants/cosmetics';
 import { BodyTransformUpdater, RegisterBodyTransform } from './hooks/usePhysicsTransform';
 
 let idCounter = 0;
@@ -48,6 +58,10 @@ const SHRINK_STATE_KEY = 'solar-merge-shrink-state';
 const REDEEMED_CODES_KEY = 'solar-merge-redeemed-codes';
 const FREE_GIFTS_KEY = 'solar-merge-free-gifts';
 const ACTIVE_SESSION_KEY = 'solar-merge-active-session';
+const OWNED_PLANET_SKINS_KEY = 'solar-merge-owned-planet-skins';
+const EQUIPPED_PLANET_SKIN_KEY = 'solar-merge-equipped-planet-skin';
+const OWNED_GALAXY_THEMES_KEY = 'solar-merge-owned-galaxy-themes';
+const EQUIPPED_GALAXY_THEME_KEY = 'solar-merge-equipped-galaxy-theme';
 
 const SALT = 'sm-v2-secure';
 
@@ -91,16 +105,50 @@ const getStreakReward = (streak: number): number => {
 };
 
 const storage = {
-  get: async (): Promise<{ score: number; dropCount: number; checksum: string; diamonds: number; streak: number; lastStreakDate: string | null; redeemedCodes: string[]; freeGiftsClaimed: string[] }> => {
+  get: async (): Promise<{
+    score: number;
+    dropCount: number;
+    checksum: string;
+    diamonds: number;
+    streak: number;
+    lastStreakDate: string | null;
+    redeemedCodes: string[];
+    freeGiftsClaimed: string[];
+    ownedPlanetSkins: PlanetSkinId[];
+    equippedPlanetSkin: PlanetSkinId;
+    ownedGalaxyThemes: GalaxyThemeId[];
+    equippedGalaxyTheme: GalaxyThemeId;
+  }> => {
     try {
-      const [scoreVal, diamondsVal, streakVal, lastDateVal, redeemedCodesVal, freeGiftsVal] = await Promise.all([
+      const [scoreVal, diamondsVal, streakVal, lastDateVal, redeemedCodesVal, freeGiftsVal, ownedSkinsVal, equippedSkinVal, ownedThemesVal, equippedThemeVal] = await Promise.all([
         AsyncStorage.getItem(HIGH_SCORE_KEY),
         AsyncStorage.getItem(DIAMONDS_KEY),
         AsyncStorage.getItem(STREAK_KEY),
         AsyncStorage.getItem(LAST_STREAK_DATE_KEY),
         AsyncStorage.getItem(REDEEMED_CODES_KEY),
         AsyncStorage.getItem(FREE_GIFTS_KEY),
+        AsyncStorage.getItem(OWNED_PLANET_SKINS_KEY),
+        AsyncStorage.getItem(EQUIPPED_PLANET_SKIN_KEY),
+        AsyncStorage.getItem(OWNED_GALAXY_THEMES_KEY),
+        AsyncStorage.getItem(EQUIPPED_GALAXY_THEME_KEY),
       ]);
+
+      const parsedSkins = ownedSkinsVal ? JSON.parse(ownedSkinsVal) : [];
+      const ownedPlanetSkins = Array.from(new Set<PlanetSkinId>([
+        DEFAULT_PLANET_SKIN,
+        ...(Array.isArray(parsedSkins) ? parsedSkins.filter(isPlanetSkinId) : []),
+      ]));
+      const parsedThemes = ownedThemesVal ? JSON.parse(ownedThemesVal) : [];
+      const ownedGalaxyThemes = Array.from(new Set<GalaxyThemeId>([
+        DEFAULT_GALAXY_THEME,
+        ...(Array.isArray(parsedThemes) ? parsedThemes.filter(isGalaxyThemeId) : []),
+      ]));
+      const equippedPlanetSkin = isPlanetSkinId(equippedSkinVal) && ownedPlanetSkins.includes(equippedSkinVal)
+        ? equippedSkinVal
+        : DEFAULT_PLANET_SKIN;
+      const equippedGalaxyTheme = isGalaxyThemeId(equippedThemeVal) && ownedGalaxyThemes.includes(equippedThemeVal)
+        ? equippedThemeVal
+        : DEFAULT_GALAXY_THEME;
 
       let scoreData = { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0) };
       if (scoreVal) {
@@ -117,9 +165,26 @@ const storage = {
         lastStreakDate: lastDateVal,
         redeemedCodes: redeemedCodesVal ? JSON.parse(redeemedCodesVal) : [],
         freeGiftsClaimed: freeGiftsVal ? JSON.parse(freeGiftsVal) : [],
+        ownedPlanetSkins,
+        equippedPlanetSkin,
+        ownedGalaxyThemes,
+        equippedGalaxyTheme,
       };
     } catch { }
-    return { score: 0, dropCount: 0, checksum: calculateChecksum(0, 0), diamonds: 0, streak: 0, lastStreakDate: null, redeemedCodes: [], freeGiftsClaimed: [] };
+    return {
+      score: 0,
+      dropCount: 0,
+      checksum: calculateChecksum(0, 0),
+      diamonds: 0,
+      streak: 0,
+      lastStreakDate: null,
+      redeemedCodes: [],
+      freeGiftsClaimed: [],
+      ownedPlanetSkins: [DEFAULT_PLANET_SKIN],
+      equippedPlanetSkin: DEFAULT_PLANET_SKIN,
+      ownedGalaxyThemes: [DEFAULT_GALAXY_THEME],
+      equippedGalaxyTheme: DEFAULT_GALAXY_THEME,
+    };
   },
   setScore: async (score: number, dropCount: number) => {
     try {
@@ -180,6 +245,23 @@ const storage = {
       await AsyncStorage.removeItem(ACTIVE_SESSION_KEY);
     } catch { }
   },
+  setCosmetics: async (
+    diamonds: number,
+    ownedPlanetSkins: PlanetSkinId[],
+    equippedPlanetSkin: PlanetSkinId,
+    ownedGalaxyThemes: GalaxyThemeId[],
+    equippedGalaxyTheme: GalaxyThemeId,
+  ) => {
+    try {
+      await AsyncStorage.multiSet([
+        [DIAMONDS_KEY, diamonds.toString()],
+        [OWNED_PLANET_SKINS_KEY, JSON.stringify(ownedPlanetSkins)],
+        [EQUIPPED_PLANET_SKIN_KEY, equippedPlanetSkin],
+        [OWNED_GALAXY_THEMES_KEY, JSON.stringify(ownedGalaxyThemes)],
+        [EQUIPPED_GALAXY_THEME_KEY, equippedGalaxyTheme],
+      ]);
+    } catch { }
+  },
 };
 
 const shuffle = (array: number[]) => {
@@ -226,6 +308,10 @@ const INITIAL_STATE: GameState = {
   shrinkCost: WIZARD_SHRINK_BASE_COST,
   redeemedCodes: [],
   freeGiftsClaimed: [],
+  ownedPlanetSkins: [DEFAULT_PLANET_SKIN],
+  equippedPlanetSkin: DEFAULT_PLANET_SKIN,
+  ownedGalaxyThemes: [DEFAULT_GALAXY_THEME],
+  equippedGalaxyTheme: DEFAULT_GALAXY_THEME,
 };
 
 export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAME_HEIGHT) {
@@ -284,6 +370,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   const dropsSinceLastMergeRef = useRef<number>(0);
   const startTimeRef = useRef<number>(Date.now());
   const totalDiamondsRef = useRef<number>(0);
+  const cosmeticPurchaseLockRef = useRef<Set<string>>(new Set());
   const bodyTransformsRef = useRef<Map<string, BodyTransformUpdater>>(new Map());
 
   const registerBodyTransform = useCallback<RegisterBodyTransform>((id, updater) => {
@@ -1004,7 +1091,18 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     // ─── Streak & Score Init ───────────────────────────────────────────
     Promise.all([storage.get(), storage.getActiveSession()]).then(([persisted, activeSession]) => {
       if (cancelled) return;
-      const { score, diamonds, streak: sStreak, lastStreakDate: sDate, redeemedCodes: sCodes, freeGiftsClaimed: sGifts } = persisted;
+      const {
+        score,
+        diamonds,
+        streak: sStreak,
+        lastStreakDate: sDate,
+        redeemedCodes: sCodes,
+        freeGiftsClaimed: sGifts,
+        ownedPlanetSkins,
+        equippedPlanetSkin,
+        ownedGalaxyThemes,
+        equippedGalaxyTheme,
+      } = persisted;
       scoreRef.current = activeSession?.score ?? 0;
       dropCountRef.current = activeSession?.dropCount ?? 0;
 
@@ -1090,6 +1188,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           streakReward: rewardGranted,
           redeemedCodes: sCodes || [],
           freeGiftsClaimed: sGifts || [],
+          ownedPlanetSkins,
+          equippedPlanetSkin,
+          ownedGalaxyThemes,
+          equippedGalaxyTheme,
           ...(activeSession ? {
             planets: activeSession.planets,
             stars: activeSession.stars,
@@ -1426,6 +1528,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         lastStreakDate: prev.lastStreakDate,
         redeemedCodes: prev.redeemedCodes,
         freeGiftsClaimed: prev.freeGiftsClaimed,
+        ownedPlanetSkins: prev.ownedPlanetSkins,
+        equippedPlanetSkin: prev.equippedPlanetSkin,
+        ownedGalaxyThemes: prev.ownedGalaxyThemes,
+        equippedGalaxyTheme: prev.equippedGalaxyTheme,
         sessionDiamonds: 0,
         currentPlanetId: current,
         nextPlanetId: next,
@@ -1641,6 +1747,98 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     return true;
   }, [playSound]);
 
+  const purchasePlanetSkin = useCallback((skinId: PlanetSkinId) => {
+    const item = PLANET_SKINS.find((skin) => skin.id === skinId);
+    const current = stateRef.current;
+    const lockKey = `skin:${skinId}`;
+    if (!item || current.ownedPlanetSkins.includes(skinId) || cosmeticPurchaseLockRef.current.has(lockKey)) return false;
+    if (totalDiamondsRef.current < item.price) {
+      playSound('error');
+      return false;
+    }
+
+    cosmeticPurchaseLockRef.current.add(lockKey);
+    const nextDiamonds = totalDiamondsRef.current - item.price;
+    const nextOwned = [...current.ownedPlanetSkins, skinId];
+    totalDiamondsRef.current = nextDiamonds;
+    setState((prev) => ({
+      ...prev,
+      diamonds: nextDiamonds,
+      ownedPlanetSkins: nextOwned,
+      equippedPlanetSkin: skinId,
+    }));
+    storage.setCosmetics(
+      nextDiamonds,
+      nextOwned,
+      skinId,
+      current.ownedGalaxyThemes,
+      current.equippedGalaxyTheme,
+    ).finally(() => cosmeticPurchaseLockRef.current.delete(lockKey));
+    playSound('buy');
+    return true;
+  }, []);
+
+  const equipPlanetSkin = useCallback((skinId: PlanetSkinId) => {
+    const current = stateRef.current;
+    if (!current.ownedPlanetSkins.includes(skinId) || current.equippedPlanetSkin === skinId) return false;
+    setState((prev) => ({ ...prev, equippedPlanetSkin: skinId }));
+    storage.setCosmetics(
+      current.diamonds,
+      current.ownedPlanetSkins,
+      skinId,
+      current.ownedGalaxyThemes,
+      current.equippedGalaxyTheme,
+    );
+    playSound('buy');
+    return true;
+  }, []);
+
+  const purchaseGalaxyTheme = useCallback((themeId: GalaxyThemeId) => {
+    const item = GALAXY_THEMES.find((theme) => theme.id === themeId);
+    const current = stateRef.current;
+    const lockKey = `theme:${themeId}`;
+    if (!item || current.ownedGalaxyThemes.includes(themeId) || cosmeticPurchaseLockRef.current.has(lockKey)) return false;
+    if (totalDiamondsRef.current < item.price) {
+      playSound('error');
+      return false;
+    }
+
+    cosmeticPurchaseLockRef.current.add(lockKey);
+    const nextDiamonds = totalDiamondsRef.current - item.price;
+    const nextOwned = [...current.ownedGalaxyThemes, themeId];
+    totalDiamondsRef.current = nextDiamonds;
+    setState((prev) => ({
+      ...prev,
+      diamonds: nextDiamonds,
+      ownedGalaxyThemes: nextOwned,
+      equippedGalaxyTheme: themeId,
+    }));
+    storage.setCosmetics(
+      nextDiamonds,
+      current.ownedPlanetSkins,
+      current.equippedPlanetSkin,
+      nextOwned,
+      themeId,
+    ).finally(() => cosmeticPurchaseLockRef.current.delete(lockKey));
+    playSound('buy');
+    return true;
+  }, []);
+
+  const equipGalaxyTheme = useCallback((themeId: GalaxyThemeId) => {
+    const current = stateRef.current;
+    if (!current.ownedGalaxyThemes.includes(themeId) || current.equippedGalaxyTheme === themeId) return false;
+    setState((prev) => ({ ...prev, equippedGalaxyTheme: themeId }));
+    storage.setCosmetics(
+      current.diamonds,
+      current.ownedPlanetSkins,
+      current.equippedPlanetSkin,
+      current.ownedGalaxyThemes,
+      themeId,
+    );
+    playSound('buy');
+    return true;
+  }, []);
+
   return {
     state,
     setPointerX,
@@ -1654,6 +1852,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     buyAntidote,
     redeemCode,
     claimFreeDiamond,
+    purchasePlanetSkin,
+    equipPlanetSkin,
+    purchaseGalaxyTheme,
+    equipGalaxyTheme,
     registerBodyTransform,
     isDroppingRef,
     scoreRef,

@@ -76,8 +76,8 @@ Dokumen ini berisi daftar tugas optimasi teknis, perbaikan bug, peningkatan *gam
 ### C. Meta-Game, Retensi & Mode Permainan
 - [ ] **Sistem Misi Harian (Daily Quests) & Achievements**
   - [ ] Tambahkan daftar misi harian (contoh: *"Merge 2 Jupiter"*, *"Capai 6x Combo"*, *"Sembuhkan 3 planet sakit"*) dengan hadiah *Diamond*.
-- [ ] **Toko Skin Planet & Tema Galaksi**
-  - [ ] Gunakan *Diamond* untuk membuka variasi tampilan planet (misal: *Neon Cyber*, *Pixel Space*, *Realistic NASA*) dan tema latar belakang nebula.
+- [x] **Toko Skin Planet & Tema Galaksi**
+  - [x] Gunakan *Diamond* untuk membuka variasi tampilan planet (misal: *Neon Cyber*, *Pixel Space*, *Realistic NASA*) dan tema latar belakang nebula.
 - [ ] **Mode Permainan Baru**
   - [ ] *Time Attack (2 Menit):* Kecepatan drop lebih singkat, kejar skor tertinggi sebelum waktu habis.
   - [ ] *Daily Seed Challenge:* Urutan planet menggunakan *seeded PRNG* yang sama untuk semua pemain setiap harinya, lengkap dengan *tab leaderboard* harian.
