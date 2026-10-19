@@ -19,6 +19,9 @@ import { PlanetThumb } from './PlanetView';
 
 const THEME_PREVIEW_IMAGES: Partial<Record<GalaxyThemeId, ReturnType<typeof require>>> = {
   'starlit-milky-way': require('../../assets/themes/starlit-milky-way.png'),
+  'pastel-dreamscape': require('../../assets/themes/pastel-dreamscape.png'),
+  'mecha-space-station': require('../../assets/themes/mecha-space-station.png'),
+  'candy-wonderland': require('../../assets/themes/candy-wonderland.png'),
 };
 
 interface Props {

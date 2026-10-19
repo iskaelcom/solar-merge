@@ -1,5 +1,12 @@
 export type PlanetSkinId = 'classic' | 'neon' | 'pixel' | 'candy' | 'mecha' | 'pastel';
-export type GalaxyThemeId = 'deep-space' | 'nebula' | 'aurora' | 'starlit-milky-way';
+export type GalaxyThemeId =
+  | 'deep-space'
+  | 'nebula'
+  | 'aurora'
+  | 'starlit-milky-way'
+  | 'pastel-dreamscape'
+  | 'mecha-space-station'
+  | 'candy-wonderland';
 
 export interface PlanetSkinDefinition {
   id: PlanetSkinId;
@@ -110,6 +117,39 @@ export const GALAXY_THEMES: readonly GalaxyThemeDefinition[] = [
     accentColor: '#D9B8FF',
     boardColor: 'rgba(2,5,18,0.70)',
     wallColor: '#8E9BFF',
+  },
+  {
+    id: 'pastel-dreamscape',
+    name: 'Pastel Dreamscape',
+    description: 'Soft cosmic clouds drift through a sparkling pastel sky.',
+    price: 400,
+    gradient: ['#77B8F5', '#B8A4E8', '#F6B9D3'],
+    starColor: '#FFF7FC',
+    accentColor: '#F4A9D1',
+    boardColor: 'rgba(42,35,92,0.58)',
+    wallColor: '#D4B9FF',
+  },
+  {
+    id: 'mecha-space-station',
+    name: 'Mecha Space Station',
+    description: 'A precision-built orbital deck lit by cyan holograms.',
+    price: 500,
+    gradient: ['#07111C', '#112A3A', '#183A4C'],
+    starColor: '#C7F8FF',
+    accentColor: '#23DFFF',
+    boardColor: 'rgba(3,14,24,0.70)',
+    wallColor: '#20CDEB',
+  },
+  {
+    id: 'candy-wonderland',
+    name: 'Candy Wonderland',
+    description: 'A sugar-crystal nebula sprinkled with candy-colored stars.',
+    price: 600,
+    gradient: ['#371064', '#A53AAE', '#F58FC5'],
+    starColor: '#FFF3C4',
+    accentColor: '#71F1E2',
+    boardColor: 'rgba(55,12,82,0.64)',
+    wallColor: '#FF8DCE',
   },
 ];
 

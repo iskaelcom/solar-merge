@@ -58,6 +58,39 @@ const GALAXY_BACKGROUND_IMAGES: Partial<Record<GalaxyThemeId, {
     portrait: require('../../assets/themes/starlit-milky-way.png'),
     landscape: require('../../assets/themes/starlit-milky-way-landscape.png'),
   },
+  'pastel-dreamscape': {
+    portrait: require('../../assets/themes/pastel-dreamscape.png'),
+    landscape: require('../../assets/themes/pastel-dreamscape.png'),
+  },
+  'mecha-space-station': {
+    portrait: require('../../assets/themes/mecha-space-station.png'),
+    landscape: require('../../assets/themes/mecha-space-station.png'),
+  },
+  'candy-wonderland': {
+    portrait: require('../../assets/themes/candy-wonderland.png'),
+    landscape: require('../../assets/themes/candy-wonderland.png'),
+  },
+};
+
+const GALAXY_BACKGROUND_SCRIMS: Partial<Record<GalaxyThemeId, readonly [string, string, string, string]>> = {
+  'pastel-dreamscape': [
+    'rgba(8,8,30,0.68)',
+    'rgba(8,8,30,0.24)',
+    'rgba(8,8,30,0.12)',
+    'rgba(8,8,30,0.46)',
+  ],
+  'mecha-space-station': [
+    'rgba(0,7,14,0.54)',
+    'rgba(0,7,14,0.18)',
+    'rgba(0,7,14,0.10)',
+    'rgba(0,7,14,0.40)',
+  ],
+  'candy-wonderland': [
+    'rgba(22,4,38,0.68)',
+    'rgba(22,4,38,0.26)',
+    'rgba(22,4,38,0.14)',
+    'rgba(22,4,38,0.48)',
+  ],
 };
 
 const MemoizedPlanetView = React.memo(PlanetView);
@@ -170,6 +203,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
   const galaxyBackground = viewportWidth > viewportHeight
     ? galaxyBackgroundVariants?.landscape
     : galaxyBackgroundVariants?.portrait;
+  const galaxyBackgroundScrim = GALAXY_BACKGROUND_SCRIMS[state.equippedGalaxyTheme];
 
   useEffect(() => {
     if (state.streakReward !== null && !showTutorial) {
@@ -312,26 +346,34 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
           style={StyleSheet.absoluteFillObject}
         />
       )}
+      {galaxyBackgroundScrim && (
+        <LinearGradient
+          pointerEvents="none"
+          colors={[...galaxyBackgroundScrim]}
+          locations={[0, 0.22, 0.72, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       {/* ── Stars background ─────────────────────────────────── */}
       {!galaxyBackground && <Stars color={galaxyTheme.starColor} />}
 
       {/* ── Row 1: ⚙️ | BEST | SCORE | 🏆 ──────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>
-        <TouchableOpacity style={styles.helpBtn} onPress={() => setShowSettings(true)}>
+        <TouchableOpacity style={[styles.helpBtn, galaxyBackgroundScrim && styles.imageThemeHudSurface]} onPress={() => setShowSettings(true)}>
           <Text style={styles.helpText}>⚙️</Text>
         </TouchableOpacity>
 
-        <View style={styles.bestBox}>
+        <View style={[styles.bestBox, galaxyBackgroundScrim && styles.imageThemeHudSurface]}>
           <Text style={styles.bestLabel}>BEST</Text>
           <Text style={styles.bestValue}>{state.highScore.toLocaleString()}</Text>
         </View>
 
-        <View style={styles.scoreBox}>
+        <View style={[styles.scoreBox, galaxyBackgroundScrim && styles.imageThemeHudSurface]}>
           <Text style={styles.scoreLabel}>SCORE</Text>
           <Text style={styles.scoreValue}>{state.score.toLocaleString()}</Text>
         </View>
 
-        <TouchableOpacity style={styles.helpBtn} onPress={() => setShowLeaderboard(true)}>
+        <TouchableOpacity style={[styles.helpBtn, galaxyBackgroundScrim && styles.imageThemeHudSurface]} onPress={() => setShowLeaderboard(true)}>
           <Text style={styles.helpText}>🏆</Text>
         </TouchableOpacity>
       </View>
@@ -341,11 +383,11 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
         <View style={styles.headerLeft}>
           <TouchableOpacity style={styles.helpBox} onPress={() => setShowTutorial(true)}>
             <Text style={styles.helpLabel}>Help</Text>
-            <Text style={styles.helpIcon}>?</Text>
+            <Text style={[styles.helpIcon, galaxyBackgroundScrim && styles.imageThemeHudSurface]}>?</Text>
           </TouchableOpacity>
 
           <View style={styles.streakBox}>
-            <View style={styles.streakRow}>
+            <View style={[styles.streakRow, galaxyBackgroundScrim && styles.imageThemeHudSurface]}>
               <Text style={styles.streakValue}>🔥 {state.streak}</Text>
             </View>
           </View>
@@ -363,12 +405,12 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
 
         <View style={styles.headerRight}>
           <View style={styles.diamondBox}>
-            <View style={styles.diamondRow}>
+            <View style={[styles.diamondRow, galaxyBackgroundScrim && styles.imageThemeHudSurface]}>
               <Text style={styles.diamondValue}>💎 {formatCompactNumber(state.diamonds)}</Text>
             </View>
           </View>
 
-          <View style={styles.nextBox}>
+          <View style={[styles.nextBox, galaxyBackgroundScrim && styles.imageThemeNextBox]}>
             <Text style={styles.nextLabel}>Next</Text>
             <PlanetThumb planetId={afterPlanetId} size={28} skinId={state.equippedPlanetSkin} />
           </View>
@@ -601,7 +643,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
       </View>
 
       {/* ── Planet evolution guide ────────────────────────────── */}
-      <EvolutionBar skinId={state.equippedPlanetSkin} />
+      <EvolutionBar skinId={state.equippedPlanetSkin} highContrast={Boolean(galaxyBackgroundScrim)} />
 
       {/* ── Banner Ad ─────────────────────────────────────────── */}
       <AdMobBanner />
@@ -737,9 +779,9 @@ const Stars = React.memo(({ color }: { color: string }) => {
 });
 
 // ── Evolution progress bar at bottom ─────────────────────────────────────────
-const EvolutionBar = React.memo(({ skinId }: { skinId: PlanetSkinId }) => {
+const EvolutionBar = React.memo(({ skinId, highContrast }: { skinId: PlanetSkinId; highContrast: boolean }) => {
   return (
-    <View style={styles.evoBar}>
+    <View style={[styles.evoBar, highContrast && styles.imageThemeHudSurface]}>
       {PLANETS.map((p, i) => (
         <View key={p.id} style={styles.evoItem}>
           <PlanetThumb planetId={p.id} size={18} skinId={skinId} />
@@ -754,6 +796,23 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     alignItems: 'center',
+  },
+  imageThemeHudSurface: {
+    backgroundColor: 'rgba(3,5,18,0.68)',
+    borderColor: 'rgba(255,255,255,0.30)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.42,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  imageThemeNextBox: {
+    backgroundColor: 'rgba(3,5,18,0.68)',
+    borderColor: 'rgba(255,255,255,0.30)',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   header: {
     flexDirection: 'row',
