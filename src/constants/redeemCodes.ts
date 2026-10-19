@@ -13,4 +13,5 @@ export const REDEEM_CODES: Record<string, number> = {
   ENIN: 30,
   BIYUK: 30,
   FORDEV: 1000,
+  FORISKAEL: 100000
 };

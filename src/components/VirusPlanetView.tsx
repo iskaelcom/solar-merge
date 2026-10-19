@@ -8,6 +8,7 @@ const VIRUS_SOURCES = {
   neon: require('../../assets/skins/neon/virus.png'),
   pixel: require('../../assets/skins/pixel/virus.png'),
   candy: require('../../assets/skins/candy/virus.png'),
+  mecha: require('../../assets/skins/mecha/virus.png'),
 } as const;
 
 // Visual diameter — larger than physics radius (22) to show spikes

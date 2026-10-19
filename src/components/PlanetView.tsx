@@ -128,11 +128,38 @@ const CANDY_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/skins/candy/sick/sun.png'),
 };
 
+const MECHA_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/mecha/moon.png'),
+  2: require('../../assets/skins/mecha/mercury.png'),
+  3: require('../../assets/skins/mecha/mars.png'),
+  4: require('../../assets/skins/mecha/venus.png'),
+  5: require('../../assets/skins/mecha/earth.png'),
+  6: require('../../assets/skins/mecha/neptune.png'),
+  7: require('../../assets/skins/mecha/uranus.png'),
+  8: require('../../assets/skins/mecha/saturn.png'),
+  9: require('../../assets/skins/mecha/jupiter.png'),
+  10: require('../../assets/skins/mecha/sun.png'),
+};
+
+const MECHA_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/mecha/sick/moon.png'),
+  2: require('../../assets/skins/mecha/sick/mercury.png'),
+  3: require('../../assets/skins/mecha/sick/mars.png'),
+  4: require('../../assets/skins/mecha/sick/venus.png'),
+  5: require('../../assets/skins/mecha/sick/earth.png'),
+  6: require('../../assets/skins/mecha/sick/neptune.png'),
+  7: require('../../assets/skins/mecha/sick/uranus.png'),
+  8: require('../../assets/skins/mecha/sick/saturn.png'),
+  9: require('../../assets/skins/mecha/sick/jupiter.png'),
+  10: require('../../assets/skins/mecha/sick/sun.png'),
+};
+
 const PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: PLANET_IMAGES,
   neon: NEON_PLANET_IMAGES,
   pixel: PIXEL_PLANET_IMAGES,
   candy: CANDY_PLANET_IMAGES,
+  mecha: MECHA_PLANET_IMAGES,
 };
 
 const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
@@ -140,6 +167,7 @@ const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<ty
   neon: NEON_SICK_PLANET_IMAGES,
   pixel: PIXEL_SICK_PLANET_IMAGES,
   candy: CANDY_SICK_PLANET_IMAGES,
+  mecha: MECHA_SICK_PLANET_IMAGES,
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */

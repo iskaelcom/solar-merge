@@ -8,6 +8,7 @@ const MYSTERY_SOURCES = {
   neon: require('../../assets/skins/neon/mystery.png'),
   pixel: require('../../assets/skins/pixel/mystery.png'),
   candy: require('../../assets/skins/candy/mystery.png'),
+  mecha: require('../../assets/skins/mecha/mystery.png'),
 } as const;
 interface Props {
   id?: string;

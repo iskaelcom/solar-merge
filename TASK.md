@@ -80,7 +80,7 @@ Dokumen ini berisi daftar tugas optimasi teknis, perbaikan bug, peningkatan *gam
   - [x] Gunakan *Diamond* untuk membuka variasi tampilan planet (misal: *Neon Cyber*, *Pixel Space*, *Realistic NASA*) dan tema latar belakang nebula.
   - [ ] **Roadmap Skin Planet Berikutnya**
     - [x] *Candy Galaxy* — planet berbentuk permen, jelly, donat, dan cokelat; mencakup planet normal, varian sakit, dan seluruh objek spesial.
-    - [ ] *Mecha Cosmos* — badan robot, panel logam, baut, dan ekspresi digital; cocok sebagai skin premium.
+    - [x] *Mecha Cosmos* — badan robot, panel logam, baut, dan ekspresi digital; cocok sebagai skin premium.
     - [ ] *Celestial Magic* — kristal, rune, aura magis, serta Mystery Planet berbentuk bola ramalan.
     - [ ] *Lava Apocalypse* — permukaan retak, magma menyala, asap, dan ekspresi agresif.
     - [ ] *Ocean Worlds* — ombak, gelembung, dan karang; Black Hole menjadi pusaran air dan Virus menjadi makhluk laut beracun.
