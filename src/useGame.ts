@@ -47,8 +47,26 @@ const LAST_STREAK_DATE_KEY = 'solar-merge-last-streak-date';
 const SHRINK_STATE_KEY = 'solar-merge-shrink-state';
 const REDEEMED_CODES_KEY = 'solar-merge-redeemed-codes';
 const FREE_GIFTS_KEY = 'solar-merge-free-gifts';
+const ACTIVE_SESSION_KEY = 'solar-merge-active-session';
 
 const SALT = 'sm-v2-secure';
+
+type ActiveSession = Omit<Pick<GameState,
+  | 'planets'
+  | 'stars'
+  | 'blackHoles'
+  | 'viruses'
+  | 'score'
+  | 'dropCount'
+  | 'sickPlanetIds'
+  | 'shieldLayers'
+  | 'shrinkTimeLeft'
+>, 'planets'> & {
+  planets: Array<RenderPlanet & {
+    truePlanetId?: number;
+    mysteryRevealDrops?: number;
+  }>;
+};
 
 export const calculateChecksum = (score: number, dropCount: number): string => {
   const str = `${score}:${dropCount}:${SALT}`;
@@ -130,6 +148,36 @@ const storage = {
   setFreeGiftsClaimed: async (gifts: string[]) => {
     try {
       await AsyncStorage.setItem(FREE_GIFTS_KEY, JSON.stringify(gifts));
+    } catch { }
+  },
+  getActiveSession: async (): Promise<ActiveSession | null> => {
+    try {
+      const value = await AsyncStorage.getItem(ACTIVE_SESSION_KEY);
+      if (!value) return null;
+      const session = JSON.parse(value) as ActiveSession;
+      if (
+        !Array.isArray(session.planets)
+        || !Array.isArray(session.stars)
+        || !Array.isArray(session.blackHoles)
+        || !Array.isArray(session.viruses)
+        || !Array.isArray(session.sickPlanetIds)
+        || !Number.isFinite(session.score)
+        || !Number.isFinite(session.dropCount)
+        || !Number.isFinite(session.shieldLayers)
+        || !Number.isFinite(session.shrinkTimeLeft)
+      ) return null;
+      return session;
+    } catch { }
+    return null;
+  },
+  setActiveSession: async (session: ActiveSession) => {
+    try {
+      await AsyncStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(session));
+    } catch { }
+  },
+  clearActiveSession: async () => {
+    try {
+      await AsyncStorage.removeItem(ACTIVE_SESSION_KEY);
     } catch { }
   },
 };
@@ -760,6 +808,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
             };
           });
           playSound('gameover');
+          storage.clearActiveSession();
           loopActiveRef.current = false;
           cancelAnimationFrame(rafRef.current);
 
@@ -881,6 +930,48 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
 
       // Pause loop when scene is fully idle — restarts automatically on next drop
       if (!hasEvents && !isSceneActive && !stateRef.current.gameOver) {
+        const physics = physicsRef.current;
+        const currentState = stateRef.current;
+        const shrinkScale = currentState.shrinkTimeLeft > 0 ? WIZARD_SHRINK_SCALE : 1;
+        const livePlanetIds = new Set(physics.getAllPlanets().map((p) => p.id));
+        storage.setActiveSession({
+          planets: physics.getAllPlanets().map((p) => ({
+            id: p.id,
+            planetId: p.planetId,
+            x: p.body.position.x,
+            y: p.body.position.y,
+            angle: p.body.angle,
+            size: p.isMystery ? mRadius : pRadii[p.planetId - 1],
+            scale: p.planetId >= 4 ? shrinkScale : 1,
+            isMystery: p.isMystery,
+            truePlanetId: p.truePlanetId,
+            mysteryRevealDrops: p.mysteryRevealDrops,
+          })),
+          stars: physics.getAllStars().map((s) => ({
+            id: s.id,
+            x: s.body.position.x,
+            y: s.body.position.y,
+            angle: s.body.angle,
+            size: sRadius,
+          })),
+          blackHoles: physics.getAllBlackHoles().map((bh) => ({
+            id: bh.id,
+            x: bh.body.position.x,
+            y: bh.body.position.y,
+            size: bhRadius,
+          })),
+          viruses: physics.getAllViruses().map((v) => ({
+            id: v.id,
+            x: v.body.position.x,
+            y: v.body.position.y,
+            size: vRadius,
+          })),
+          score: scoreRef.current,
+          dropCount: dropCountRef.current,
+          sickPlanetIds: currentState.sickPlanetIds.filter((id) => livePlanetIds.has(id)),
+          shieldLayers: shieldLayersRef.current,
+          shrinkTimeLeft: currentState.shrinkTimeLeft,
+        });
         loopActiveRef.current = false;
         return;
       }
@@ -889,18 +980,22 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
     };
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [syncBodyTransforms]);
+  }, [syncBodyTransforms, mRadius, pRadii, sRadius, bhRadius, vRadius]);
 
   // ─── Init on mount ────────────────────────────────────────────────────────
   useEffect(() => {
+    let cancelled = false;
     refillBag();
     const current = getFromBag();
     const next = getFromBag(current);
+    initPhysics();
 
     // ─── Streak & Score Init ───────────────────────────────────────────
-    storage.get().then(({ score, diamonds, streak: sStreak, lastStreakDate: sDate, redeemedCodes: sCodes, freeGiftsClaimed: sGifts }) => {
-      scoreRef.current = 0;
-      dropCountRef.current = 0;
+    Promise.all([storage.get(), storage.getActiveSession()]).then(([persisted, activeSession]) => {
+      if (cancelled) return;
+      const { score, diamonds, streak: sStreak, lastStreakDate: sDate, redeemedCodes: sCodes, freeGiftsClaimed: sGifts } = persisted;
+      scoreRef.current = activeSession?.score ?? 0;
+      dropCountRef.current = activeSession?.dropCount ?? 0;
 
       // Calculate streak tracking via local time YYYY-MM-DD
       const now = new Date();
@@ -942,6 +1037,34 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         totalDiamondsRef.current = diamonds;
       }
 
+      if (activeSession && physicsRef.current) {
+        const physics = physicsRef.current;
+        const shrinkActive = activeSession.shrinkTimeLeft > 0;
+        physics.setPlanetShrink(shrinkActive, shrinkActive ? WIZARD_SHRINK_SCALE : 1);
+        activeSession.planets.forEach((p) => {
+          if (p.isMystery) {
+            physics.addMysteryPlanet(
+              p.id,
+              p.truePlanetId ?? p.planetId,
+              p.mysteryRevealDrops ?? MYSTERY_PLANET_REVEAL_DROPS,
+              p.x,
+              p.y,
+              0,
+              0,
+              p.angle,
+            );
+          } else {
+            physics.addPlanet(p.id, p.planetId, p.x, p.y, 0, 0, p.angle);
+          }
+        });
+        activeSession.stars.forEach((s) => physics.addStar(s.id, s.x, s.y, s.angle));
+        activeSession.blackHoles.forEach((bh) => physics.addBlackHole(bh.id, bh.x, bh.y));
+        activeSession.viruses.forEach((v) => physics.addVirus(v.id, v.x, v.y));
+        sickPlanetIdsRef.current = new Set(activeSession.sickPlanetIds);
+        shieldLayersRef.current = activeSession.shieldLayers;
+        physics.setShieldActive(activeSession.shieldLayers > 0);
+      }
+
       setState(s => {
         // Only set the initial planets if the board is still empty (brand new game).
         // This prevents the sequence from "resetting to 1" if storage.get() resolves mid-play.
@@ -956,19 +1079,28 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
           streakReward: rewardGranted,
           redeemedCodes: sCodes || [],
           freeGiftsClaimed: sGifts || [],
+          ...(activeSession ? {
+            planets: activeSession.planets,
+            stars: activeSession.stars,
+            blackHoles: activeSession.blackHoles,
+            viruses: activeSession.viruses,
+            score: activeSession.score,
+            dropCount: activeSession.dropCount,
+            checksum: calculateChecksum(activeSession.score, activeSession.dropCount),
+            sickPlanetIds: activeSession.sickPlanetIds,
+            shieldLayers: activeSession.shieldLayers,
+            shrinkTimeLeft: activeSession.shrinkTimeLeft,
+          } : {}),
           currentPlanetId: isFreshGame ? current : s.currentPlanetId,
           nextPlanetId: isFreshGame ? next : s.nextPlanetId,
-          // Reset shrink on reload as requested
-          shrinkTimeLeft: 0,
           shrinkCost: WIZARD_SHRINK_BASE_COST,
         };
       });
+      startLoop();
     });
 
-    initPhysics();
-    startLoop();
-
     return () => {
+      cancelled = true;
       cancelAnimationFrame(rafRef.current);
       physicsRef.current?.destroy();
       if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
@@ -1230,6 +1362,7 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
   }, []);
 
   const restart = useCallback(() => {
+    storage.clearActiveSession();
     isDroppingRef.current = false;
     startTimeRef.current = Date.now();
     loopActiveRef.current = false;
@@ -1261,6 +1394,10 @@ export function useGame(gameWidth: number = GAME_WIDTH, gameHeight: number = GAM
         ...INITIAL_STATE,
         highScore: Math.max(prev.highScore, prev.score),
         diamonds: prev.diamonds,
+        streak: prev.streak,
+        lastStreakDate: prev.lastStreakDate,
+        redeemedCodes: prev.redeemedCodes,
+        freeGiftsClaimed: prev.freeGiftsClaimed,
         sessionDiamonds: 0,
         currentPlanetId: current,
         nextPlanetId: next,

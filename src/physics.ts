@@ -450,7 +450,7 @@ export class SolarPhysics {
     return this.bodyIdToPlanet.get(bodyId);
   }
 
-  addStar(id: string, x: number, y: number): void {
+  addStar(id: string, x: number, y: number, angle?: number): void {
     const body = Matter.Bodies.circle(x, y, this.starRadius, {
       restitution: 0.5,
       friction: FRICTION,
@@ -461,6 +461,7 @@ export class SolarPhysics {
     });
     // Dampen rotation 2× so stars spin slowly instead of flipping wildly
     Matter.Body.setInertia(body, body.inertia * 2);
+    if (angle !== undefined) Matter.Body.setAngle(body, angle);
     const entry: StarPhysicsBody = { id, body };
     this.stars.set(id, entry);
     this.bodyIdToStar.set(body.id, entry);
@@ -609,7 +610,7 @@ export class SolarPhysics {
     });
   }
 
-  addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 3): void {
+  addPlanet(id: string, planetId: number, x: number, y: number, vx = 0, vy = 3, angle?: number): void {
     const planet = PLANETS[planetId - 1];
     const radius = this.radii[planetId - 1] * planet.hitboxRatio;
 
@@ -626,6 +627,7 @@ export class SolarPhysics {
     });
     // Dampen rotation 2× — planets still spin naturally but won't flip wildly on collision
     Matter.Body.setInertia(body, body.inertia * 2);
+    if (angle !== undefined) Matter.Body.setAngle(body, angle);
 
     const entry: PhysicsPlanet = { id, planetId, body };
     this.planets.set(id, entry);
@@ -645,7 +647,7 @@ export class SolarPhysics {
     if ((body as any).isSleeping) (body as any).isSleeping = false;
   }
 
-  addMysteryPlanet(id: string, truePlanetId: number, mysteryRevealDrops: number, x: number, y: number, vx = 0, vy = 3): void {
+  addMysteryPlanet(id: string, truePlanetId: number, mysteryRevealDrops: number, x: number, y: number, vx = 0, vy = 3, angle?: number): void {
     const radius = this.mysteryRadius; // Disguise radius
 
     const body = Matter.Bodies.circle(x, y, radius, {
@@ -661,6 +663,7 @@ export class SolarPhysics {
     });
     // Dampen rotation 2×
     Matter.Body.setInertia(body, body.inertia * 2);
+    if (angle !== undefined) Matter.Body.setAngle(body, angle);
 
     const entry: PhysicsPlanet = { id, planetId: 1, isMystery: true, truePlanetId, mysteryRevealDrops, body };
     this.planets.set(id, entry);

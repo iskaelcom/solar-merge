@@ -14,11 +14,11 @@ Dokumen ini berisi daftar tugas optimasi teknis, perbaikan bug, peningkatan *gam
   - [ ] Ubah mekanisme `<GameView key={`${dims.w}x${dims.h}`} />` agar perubahan kecil pada dimensi layar (misal saat bar navigasi sistem muncul/hilang) tidak meng-*unmount* dan me-reset permainan yang sedang berjalan.
 
 ### B. Perbaikan Bug State & Persistensi Data
-- [ ] **Fix State Reset pada `restart()` (`src/useGame.ts`)**
-  - [ ] Pertahankan nilai `streak`, `lastStreakDate`, `redeemedCodes`, dan `freeGiftsClaimed` dari state sebelumnya (`prev`) saat fungsi `restart()` dipanggil, agar tampilan 🔥 Streak di header dan data klaim tidak kembali ke nilai awal.
-- [ ] **Fitur Auto-Save Sesi Permainan Aktif (`src/useGame.ts`)**
-  - [ ] Simpan snapshot papan permainan (`planets`, `stars`, `blackHoles`, `viruses`, `score`, `dropCount`, `sickPlanetIds`, `shieldLayers`, `shrinkTimeLeft`) ke `AsyncStorage` setiap kali scene menjadi *idle* (`!isSceneActive`).
-  - [ ] Muat kembali state permainan yang belum *Game Over* saat aplikasi dibuka kembali.
+- [x] **Fix State Reset pada `restart()` (`src/useGame.ts`)**
+  - [x] Pertahankan nilai `streak`, `lastStreakDate`, `redeemedCodes`, dan `freeGiftsClaimed` dari state sebelumnya (`prev`) saat fungsi `restart()` dipanggil, agar tampilan 🔥 Streak di header dan data klaim tidak kembali ke nilai awal.
+- [x] **Fitur Auto-Save Sesi Permainan Aktif (`src/useGame.ts`)**
+  - [x] Simpan snapshot papan permainan (`planets`, `stars`, `blackHoles`, `viruses`, `score`, `dropCount`, `sickPlanetIds`, `shieldLayers`, `shrinkTimeLeft`) ke `AsyncStorage` setiap kali scene menjadi *idle* (`!isSceneActive`).
+  - [x] Muat kembali state permainan yang belum *Game Over* saat aplikasi dibuka kembali.
 
 ### C. Optimasi Audio & Ukuran Aplikasi
 - [ ] **Kompresi Aset Audio (`assets/sounds/` & `src/utils/SoundManager.native.ts`)**
