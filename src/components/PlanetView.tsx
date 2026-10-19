@@ -63,9 +63,27 @@ const NEON_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
   10: require('../../assets/skins/neon/sun.png'),
 };
 
+const NEON_SICK_PLANET_IMAGES: Record<number, ReturnType<typeof require>> = {
+  1: require('../../assets/skins/neon/sick/moon.png'),
+  2: require('../../assets/skins/neon/sick/mercury.png'),
+  3: require('../../assets/skins/neon/sick/mars.png'),
+  4: require('../../assets/skins/neon/sick/venus.png'),
+  5: require('../../assets/skins/neon/sick/earth.png'),
+  6: require('../../assets/skins/neon/sick/neptune.png'),
+  7: require('../../assets/skins/neon/sick/uranus.png'),
+  8: require('../../assets/skins/neon/sick/saturn.png'),
+  9: require('../../assets/skins/neon/sick/jupiter.png'),
+  10: require('../../assets/skins/neon/sick/sun.png'),
+};
+
 const PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
   classic: PLANET_IMAGES,
   neon: NEON_PLANET_IMAGES,
+};
+
+const SICK_PLANET_SKIN_IMAGES: Record<PlanetSkinId, Record<number, ReturnType<typeof require>>> = {
+  classic: SICK_PLANET_IMAGES,
+  neon: NEON_SICK_PLANET_IMAGES,
 };
 
 /** A planet rendered as an absolutely-positioned PNG image. */
@@ -152,8 +170,8 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
           }}
         >
           <Image
-            source={isSick && skinId === 'classic'
-              ? SICK_PLANET_IMAGES[planetId]
+            source={isSick
+              ? SICK_PLANET_SKIN_IMAGES[skinId][planetId]
               : PLANET_SKIN_IMAGES[skinId][planetId]}
             style={{ width: imgW, height: imgH }}
             resizeMode="contain"

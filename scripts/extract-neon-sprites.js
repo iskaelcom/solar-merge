@@ -1,11 +1,14 @@
 const sharp = require('sharp');
 const path = require('path');
+const fs = require('fs/promises');
 
-const input = path.join(__dirname, '..', 'assets', 'skins', 'neon', 'neon-sheet.png');
-const outputDir = path.dirname(input);
+const defaultInput = path.join(__dirname, '..', 'assets', 'skins', 'neon', 'neon-sheet.png');
+const input = process.argv[2] ? path.resolve(process.argv[2]) : defaultInput;
+const outputDir = process.argv[3] ? path.resolve(process.argv[3]) : path.dirname(input);
 const names = ['moon', 'mercury', 'mars', 'venus', 'earth', 'neptune', 'uranus', 'saturn', 'jupiter', 'sun'];
 
 async function main() {
+  await fs.mkdir(outputDir, { recursive: true });
   const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width, height, channels } = info;
   const labels = new Int32Array(width * height);
