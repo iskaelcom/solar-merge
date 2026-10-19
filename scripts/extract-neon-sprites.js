@@ -66,6 +66,15 @@ async function main() {
   }
 
   await Promise.all(sprites.map(async (component, spriteIndex) => {
+    const outputPath = path.join(outputDir, `${names[spriteIndex]}.png`);
+    // Saturn uses a bespoke 2:1 asset, matching the classic 800×400 sprite.
+    // Preserve it when re-extracting the square-cell sheet.
+    if (names[spriteIndex] === 'saturn') {
+      try {
+        await fs.access(outputPath);
+        return;
+      } catch { }
+    }
     const left = Math.max(0, component.minX - 8);
     const top = Math.max(0, component.minY - 8);
     const right = Math.min(width - 1, component.maxX + 8);
@@ -87,7 +96,7 @@ async function main() {
     await sharp(pixels, { raw: { width: cropWidth, height: cropHeight, channels: 4 } })
       .resize(400, 400, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png({ compressionLevel: 9, adaptiveFiltering: true })
-      .toFile(path.join(outputDir, `${names[spriteIndex]}.png`));
+      .toFile(outputPath);
   }));
 }
 

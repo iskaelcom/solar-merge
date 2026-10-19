@@ -95,7 +95,7 @@ export const PlanetView = React.memo(({ id, planetId, x, y, size, angle = 0, gho
   const r = size;
 
   // Saturn PNG is 2:1 — rendered wider so rings show
-  const isSaturn = planetId === SATURN_ID && skinId === 'classic';
+  const isSaturn = planetId === SATURN_ID;
   const imgW = isSaturn ? diameter * 2 : diameter;
   const imgH = diameter;
   const leftExtra = isSaturn ? r : 0;
@@ -206,7 +206,7 @@ export const PlanetThumb = React.memo(({ planetId, size = 40, skinId = 'classic'
   const planet = PLANETS[planetId - 1];
   if (!planet) return null;
 
-  const isSaturn = planetId === SATURN_ID && skinId === 'classic';
+  const isSaturn = planetId === SATURN_ID;
   const thumbW = isSaturn ? size * 1.8 : size;
 
   return (
