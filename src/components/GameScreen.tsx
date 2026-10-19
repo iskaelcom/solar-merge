@@ -7,6 +7,7 @@ import {
   Platform,
   TouchableOpacity,
   Animated,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,9 +46,19 @@ import { showInterstitialAd } from '../utils/InterstitialAdManager';
 import { formatCompactNumber } from '../utils/format';
 import { AdMobBanner } from './AdMobBanner';
 import { CosmeticShopModal } from './CosmeticShopModal';
-import { getGalaxyTheme, PlanetSkinId } from '../constants/cosmetics';
+import { GalaxyThemeId, getGalaxyTheme, PlanetSkinId } from '../constants/cosmetics';
 
 const WALL_THICKNESS = 6;
+
+const GALAXY_BACKGROUND_IMAGES: Partial<Record<GalaxyThemeId, {
+  portrait: ReturnType<typeof require>;
+  landscape: ReturnType<typeof require>;
+}>> = {
+  'starlit-milky-way': {
+    portrait: require('../../assets/themes/starlit-milky-way.png'),
+    landscape: require('../../assets/themes/starlit-milky-way-landscape.png'),
+  },
+};
 
 const MemoizedPlanetView = React.memo(PlanetView);
 const MemoizedStarView = React.memo(StarView);
@@ -97,6 +108,7 @@ export function GameScreen() {
 }
 
 function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth: number; gameHeight: number; onSessionActiveChange: (active: boolean) => void }) {
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const {
     state,
     setPointerX,
@@ -154,6 +166,10 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
   const [showFreeDiamond, setShowFreeDiamond] = useState(false);
   const [showCosmeticShop, setShowCosmeticShop] = useState(false);
   const galaxyTheme = getGalaxyTheme(state.equippedGalaxyTheme);
+  const galaxyBackgroundVariants = GALAXY_BACKGROUND_IMAGES[state.equippedGalaxyTheme];
+  const galaxyBackground = viewportWidth > viewportHeight
+    ? galaxyBackgroundVariants?.landscape
+    : galaxyBackgroundVariants?.portrait;
 
   useEffect(() => {
     if (state.streakReward !== null && !showTutorial) {
@@ -288,8 +304,16 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
         }
       ]}
     >
+      {galaxyBackground && (
+        <Image
+          source={galaxyBackground}
+          resizeMode="cover"
+          fadeDuration={0}
+          style={StyleSheet.absoluteFillObject}
+        />
+      )}
       {/* ── Stars background ─────────────────────────────────── */}
-      <Stars color={galaxyTheme.starColor} />
+      {!galaxyBackground && <Stars color={galaxyTheme.starColor} />}
 
       {/* ── Row 1: ⚙️ | BEST | SCORE | 🏆 ──────────────────────── */}
       <View style={[styles.header, { width: gameWidth + WALL_THICKNESS * 2 }]}>

@@ -90,6 +90,23 @@ Dokumen ini berisi daftar tugas optimasi teknis, perbaikan bug, peningkatan *gam
     - [ ] *Steampunk Orbit* — tembaga, roda gigi, pipa, dan cincin Saturnus berbentuk mesin.
     - [ ] *Paper Craft* — tampilan seperti potongan kertas atau stiker dengan bayangan bertingkat.
     - [ ] Setiap skin baru harus mencakup planet normal, varian sakit, Mystery Planet, Virus, Black Hole, dan Star dengan satu bahasa visual yang konsisten.
+  - [ ] **Roadmap Galaxy Theme Berikutnya**
+    - [ ] *Pastel Dreamscape* — langit biru muda, lavender, dan pink dengan awan kosmik serta sparkle lembut.
+    - [ ] *Mecha Space Station* — interior stasiun luar angkasa, panel logam, lampu cyan, dan grid holografik.
+    - [ ] *Candy Wonderland* — nebula warna permen dengan bintang sprinkle dan kristal gula.
+    - [ ] *Retro Arcade Grid* — langit synthwave, matahari retro, grid perspektif, dan bintang pixel.
+    - [ ] *Solar Inferno* — ruang angkasa merah-jingga dengan solar flare dan bara kosmik.
+    - [ ] *Deep Ocean Cosmos* — gradasi laut gelap, caustic light, gelembung, dan siluet karang.
+    - [ ] *Celestial Sanctuary* — rune, rasi bintang emas, partikel magis, dan langit biru-ungu.
+    - [ ] *Ancient Olympus* — langit senja, awan emas, pilar kuil samar, dan simbol mitologi.
+    - [ ] *Haunted Void* — kabut hijau, bulan besar, bintang redup, dan siluet hantu.
+    - [ ] *Clockwork Nebula* — nebula tembaga dengan roda gigi, orbit berbentuk pipa, dan bintang hangat.
+    - [ ] *Paper Diorama* — latar bertingkat seperti potongan kertas dengan bayangan berlapis.
+    - [ ] *Frozen Expanse* — kristal es, aurora pucat, dan salju kosmik.
+    - [ ] *Cherry Blossom Galaxy* — langit biru-pink, kelopak sakura, dan bulan pastel.
+    - [ ] *Golden Royal Cosmos* — ruang hitam, debu bintang emas, dan garis konstelasi elegan.
+    - [ ] *Alien Bioverse* — nebula hijau-cyan, pola organik bercahaya, dan spora kosmik.
+    - [x] *Starlit Milky Way* — pita Bimasakti diagonal, pusat galaksi cream-emas, dust lane lavender, dan bintang alami.
 - [ ] **Mode Permainan Baru**
   - [ ] *Time Attack (2 Menit):* Kecepatan drop lebih singkat, kejar skor tertinggi sebelum waktu habis.
   - [ ] *Daily Seed Challenge:* Urutan planet menggunakan *seeded PRNG* yang sama untuk semua pemain setiap harinya, lengkap dengan *tab leaderboard* harian.

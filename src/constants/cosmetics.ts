@@ -1,5 +1,5 @@
 export type PlanetSkinId = 'classic' | 'neon' | 'pixel' | 'candy' | 'mecha' | 'pastel';
-export type GalaxyThemeId = 'deep-space' | 'nebula' | 'aurora';
+export type GalaxyThemeId = 'deep-space' | 'nebula' | 'aurora' | 'starlit-milky-way';
 
 export interface PlanetSkinDefinition {
   id: PlanetSkinId;
@@ -99,6 +99,17 @@ export const GALAXY_THEMES: readonly GalaxyThemeDefinition[] = [
     accentColor: '#00F5C8',
     boardColor: 'rgba(2,25,34,0.76)',
     wallColor: '#00D8B4',
+  },
+  {
+    id: 'starlit-milky-way',
+    name: 'Starlit Milky Way',
+    description: 'A serene panorama of our galaxy beneath countless stars.',
+    price: 300,
+    gradient: ['#02040D', '#10183A', '#24143D'],
+    starColor: '#F8F1DC',
+    accentColor: '#D9B8FF',
+    boardColor: 'rgba(2,5,18,0.70)',
+    wallColor: '#8E9BFF',
   },
 ];
 

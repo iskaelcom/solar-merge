@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -15,6 +16,10 @@ import {
   PlanetSkinId,
 } from '../constants/cosmetics';
 import { PlanetThumb } from './PlanetView';
+
+const THEME_PREVIEW_IMAGES: Partial<Record<GalaxyThemeId, ReturnType<typeof require>>> = {
+  'starlit-milky-way': require('../../assets/themes/starlit-milky-way.png'),
+};
 
 interface Props {
   visible: boolean;
@@ -98,9 +103,11 @@ export function CosmeticShopModal({
             }) : GALAXY_THEMES.map((theme) => {
               const owned = ownedGalaxyThemes.includes(theme.id);
               const equipped = equippedGalaxyTheme === theme.id;
+              const previewImage = THEME_PREVIEW_IMAGES[theme.id];
               return (
                 <View key={theme.id} style={[styles.item, equipped && styles.equippedItem]}>
                   <LinearGradient colors={[...theme.gradient]} style={styles.themePreview}>
+                    {previewImage && <Image source={previewImage} resizeMode="cover" style={StyleSheet.absoluteFillObject} />}
                     <Text style={{ color: theme.starColor, fontSize: 20 }}>✦</Text>
                     <View style={[styles.themePlanet, { backgroundColor: theme.accentColor }]} />
                   </LinearGradient>
