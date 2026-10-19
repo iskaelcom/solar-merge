@@ -424,13 +424,13 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
             >
               <View style={{ transform: [{ translateX: -previewRadius }] }}>
                 {state.currentIsVirus
-                  ? <VirusPlanetView x={previewRadius} y={previewRadius} size={vRadius} ghost />
+                  ? <VirusPlanetView x={previewRadius} y={previewRadius} size={vRadius} ghost skinId={state.equippedPlanetSkin} />
                   : state.currentIsMystery
-                    ? <MysteryPlanetView x={previewRadius} y={previewRadius} size={mRadius} ghost />
+                    ? <MysteryPlanetView x={previewRadius} y={previewRadius} size={mRadius} ghost skinId={state.equippedPlanetSkin} />
                     : state.currentIsBlackHole
-                      ? <BlackHoleView x={previewRadius} y={previewRadius} size={bhRadius} ghost />
+                      ? <BlackHoleView x={previewRadius} y={previewRadius} size={bhRadius} ghost skinId={state.equippedPlanetSkin} />
                       : state.currentIsStar
-                        ? <StarView x={previewRadius} y={previewRadius} size={sRadius} ghost />
+                        ? <StarView x={previewRadius} y={previewRadius} size={sRadius} ghost skinId={state.equippedPlanetSkin} />
                         : <PlanetView
                           planetId={state.currentPlanetId}
                           x={previewRadius}
@@ -470,6 +470,7 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
                 size={p.size}
                 angle={p.angle}
                 registerTransform={registerBodyTransform}
+                skinId={state.equippedPlanetSkin}
               />
             ) : (
               <MemoizedPlanetView
@@ -491,17 +492,17 @@ function GameView({ gameWidth, gameHeight, onSessionActiveChange }: { gameWidth:
 
           {/* Star power-ups */}
           {state.stars.map((s) => (
-            <MemoizedStarView key={s.id} id={s.id} x={s.x} y={s.y} angle={s.angle} size={s.size} registerTransform={registerBodyTransform} />
+            <MemoizedStarView key={s.id} id={s.id} x={s.x} y={s.y} angle={s.angle} size={s.size} skinId={state.equippedPlanetSkin} registerTransform={registerBodyTransform} />
           ))}
 
           {/* Black holes */}
           {state.blackHoles.map((bh) => (
-            <MemoizedBlackHoleView key={bh.id} id={bh.id} x={bh.x} y={bh.y} size={bh.size} registerTransform={registerBodyTransform} />
+            <MemoizedBlackHoleView key={bh.id} id={bh.id} x={bh.x} y={bh.y} size={bh.size} skinId={state.equippedPlanetSkin} registerTransform={registerBodyTransform} />
           ))}
 
           {/* Virus planets */}
           {state.viruses.map((v) => (
-            <MemoizedVirusPlanetView key={v.id} id={v.id} x={v.x} y={v.y} size={v.size} registerTransform={registerBodyTransform} />
+            <MemoizedVirusPlanetView key={v.id} id={v.id} x={v.x} y={v.y} size={v.size} skinId={state.equippedPlanetSkin} registerTransform={registerBodyTransform} />
           ))}
 
           {/* Merge explosions */}

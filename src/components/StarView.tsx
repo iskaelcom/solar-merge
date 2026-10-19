@@ -1,7 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { Animated, Easing, Image, View } from 'react-native';
 import Svg, { Polygon, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
+import { PlanetSkinId } from '../constants/cosmetics';
+
+const STAR_SOURCES = {
+  neon: require('../../assets/skins/neon/star.png'),
+  pixel: require('../../assets/skins/pixel/star.png'),
+} as const;
 
 const DIAMETER = 34; // visual diameter (physics radius = 15, a bit larger for visual flair)
 
@@ -25,10 +31,11 @@ interface Props {
   isDropped?: boolean;
   ghost?: boolean;  // true → semi-transparent drop preview
   registerTransform?: RegisterBodyTransform;
+  skinId?: PlanetSkinId;
 }
 
 /** Full physics star rendered in the game area. */
-export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = true, ghost = false, registerTransform }: Props) => {
+export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = true, ghost = false, registerTransform, skinId = 'classic' }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const { positionRef, translateX, translateY, rotate: physicsRotate } = usePhysicsTransform({
@@ -108,6 +115,9 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
     >
       <Animated.View style={[{ width: diameter, height: diameter, transform: [{ rotate }] }]}>
       <Animated.View style={[{ width: diameter, height: diameter, transform: [{ scale: pulseAnim }] }]}>
+      {skinId !== 'classic' ? (
+        <Image source={STAR_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: diameter, height: diameter }} />
+      ) : <>
       {/* Outer glow (soft aura) — hidden on ghost preview */}
       {!ghost && (
         <Svg width={diameter} height={diameter} style={{ position: 'absolute' }}>
@@ -131,6 +141,7 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
           strokeLinejoin="round"
         />
       </Svg>
+      </>}
       </Animated.View>
       </Animated.View>
     </Animated.View>
@@ -138,7 +149,7 @@ export const StarView = React.memo(({ id, x, y, size, angle = 0, isDropped = tru
 });
 
 /** Small inline star thumbnail for the drop-queue preview panel. */
-export const StarThumb = React.memo(({ size = 36 }: { size?: number }) => {
+export const StarThumb = React.memo(({ size = 36, skinId = 'classic' }: { size?: number; skinId?: PlanetSkinId }) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -170,7 +181,9 @@ export const StarThumb = React.memo(({ size = 36 }: { size?: number }) => {
       style={{ width: size, height: size, transform: [{ rotate }] }}
     >
       <View style={{ width: size, height: size }}>
-        <Svg width={size} height={size}>
+        {skinId !== 'classic' ? (
+          <Image source={STAR_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: size, height: size }} />
+        ) : <Svg width={size} height={size}>
           <Polygon
             points={pts}
             fill="#FFD600"
@@ -178,7 +191,7 @@ export const StarThumb = React.memo(({ size = 36 }: { size?: number }) => {
             strokeWidth={1.2}
             strokeLinejoin="round"
           />
-        </Svg>
+        </Svg>}
       </View>
     </Animated.View>
   );

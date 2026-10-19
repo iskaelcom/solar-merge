@@ -1,6 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Animated, Easing, Image } from 'react-native';
 import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
+import { PlanetSkinId } from '../constants/cosmetics';
+
+const MYSTERY_SOURCES = {
+  classic: require('../../assets/planets/mystery.png'),
+  neon: require('../../assets/skins/neon/mystery.png'),
+  pixel: require('../../assets/skins/pixel/mystery.png'),
+} as const;
 interface Props {
   id?: string;
   x: number;
@@ -9,14 +16,15 @@ interface Props {
   angle?: number;
   ghost?: boolean;
   registerTransform?: RegisterBodyTransform;
+  skinId?: PlanetSkinId;
 }
 
-export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, angle = 0, ghost = false, registerTransform }) => {
+export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, angle = 0, ghost = false, registerTransform, skinId = 'classic' }) => {
   const rotation = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(1)).current;
 
   // Use the pre-baked PNG asset
-  const source = require('../../assets/planets/mystery.png');
+  const source = MYSTERY_SOURCES[skinId];
   const { positionRef, translateX, translateY, rotate } = usePhysicsTransform({
     id,
     x,
@@ -75,8 +83,8 @@ export const MysteryPlanetView: React.FC<Props> = React.memo(({ id, x, y, size, 
   );
 });
 
-export const MysteryPlanetThumb: React.FC<{ size: number }> = ({ size }) => {
-  const source = require('../../assets/planets/mystery.png');
+export const MysteryPlanetThumb: React.FC<{ size: number; skinId?: PlanetSkinId }> = ({ size, skinId = 'classic' }) => {
+  const source = MYSTERY_SOURCES[skinId];
   return (
     <Image 
       source={source} 

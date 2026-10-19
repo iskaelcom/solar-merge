@@ -1,7 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { Animated, Easing, Image, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
+import { PlanetSkinId } from '../constants/cosmetics';
+
+const BLACK_HOLE_SOURCES = {
+  neon: require('../../assets/skins/neon/blackhole.png'),
+  pixel: require('../../assets/skins/pixel/blackhole.png'),
+} as const;
 
 // Visual diameter is larger than physics radius (30) to show the glow aura
 const DIAMETER = 75;
@@ -13,10 +19,11 @@ interface Props {
   size: number;
   ghost?: boolean;
   registerTransform?: RegisterBodyTransform;
+  skinId?: PlanetSkinId;
 }
 
 /** Live black hole rendered in the game area. */
-export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, registerTransform }: Props) => {
+export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, registerTransform, skinId = 'classic' }: Props) => {
   const diskRotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const visualDiameter = size * 2.5;
@@ -88,6 +95,11 @@ export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, regist
       }}
     >
       <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ scale: pulseAnim }] }}>
+      {skinId !== 'classic' ? (
+        <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ rotate: diskRotate }] }}>
+          <Image source={BLACK_HOLE_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: visualDiameter, height: visualDiameter }} />
+        </Animated.View>
+      ) : <>
       {/* Outer radial glow */}
       <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Defs>
@@ -129,13 +141,14 @@ export const BlackHoleView = React.memo(({ id, x, y, size, ghost = false, regist
       <Svg width={visualDiameter} height={visualDiameter} style={{ position: 'absolute' }}>
         <Circle cx={half} cy={half} r={half * 0.38} fill="#000000" />
       </Svg>
+      </>}
       </Animated.View>
     </Animated.View>
   );
 });
 
 /** Small black hole thumbnail for the drop-queue preview panel. */
-export const BlackHoleThumb = React.memo(({ size = 36 }: { size?: number }) => {
+export const BlackHoleThumb = React.memo(({ size = 36, skinId = 'classic' }: { size?: number; skinId?: PlanetSkinId }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -161,6 +174,11 @@ export const BlackHoleThumb = React.memo(({ size = 36 }: { size?: number }) => {
 
   return (
     <View style={{ width: size, height: size }}>
+      {skinId !== 'classic' ? (
+        <Animated.View style={{ width: size, height: size, transform: [{ rotate }] }}>
+          <Image source={BLACK_HOLE_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: size, height: size }} />
+        </Animated.View>
+      ) : <>
       {/* Glow */}
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Defs>
@@ -200,6 +218,7 @@ export const BlackHoleThumb = React.memo(({ size = 36 }: { size?: number }) => {
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={half} cy={half} r={half * 0.38} fill="#000000" />
       </Svg>
+      </>}
     </View>
   );
 });

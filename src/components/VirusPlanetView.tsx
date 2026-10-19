@@ -1,7 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, View } from 'react-native';
+import { Animated, Easing, Image, View } from 'react-native';
 import Svg, { Circle, Line, Path, Defs, RadialGradient, Stop, G } from 'react-native-svg';
 import { RegisterBodyTransform, usePhysicsTransform } from '../hooks/usePhysicsTransform';
+import { PlanetSkinId } from '../constants/cosmetics';
+
+const VIRUS_SOURCES = {
+  neon: require('../../assets/skins/neon/virus.png'),
+  pixel: require('../../assets/skins/pixel/virus.png'),
+} as const;
 
 // Visual diameter — larger than physics radius (22) to show spikes
 const DIAMETER = 60;
@@ -13,6 +19,7 @@ interface Props {
   size: number;
   ghost?: boolean;
   registerTransform?: RegisterBodyTransform;
+  skinId?: PlanetSkinId;
 }
 
 // Pre-compute 8 spike positions on a circle
@@ -29,7 +36,7 @@ function buildSpikes(cx: number, cy: number, coreR: number, spikeCenterR: number
 }
 
 /** Live virus planet rendered in the game area. */
-export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, registerTransform }: Props) => {
+export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, registerTransform, skinId = 'classic' }: Props) => {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const visualDiameter = size * 2.7;
@@ -108,6 +115,11 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
       }}
     >
       <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ scale: pulseAnim }] }}>
+      {skinId !== 'classic' ? (
+        <Animated.View style={{ width: visualDiameter, height: visualDiameter, transform: [{ rotate }] }}>
+          <Image source={VIRUS_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: visualDiameter, height: visualDiameter }} />
+        </Animated.View>
+      ) : <>
       {/* Rotating spike layer */}
       <Animated.View
         style={{
@@ -174,13 +186,14 @@ export const VirusPlanetView = React.memo(({ id, x, y, size, ghost = false, regi
           strokeLinejoin="round"
         />
       </Svg>
+      </>}
       </Animated.View>
     </Animated.View>
   );
 });
 
 /** Small virus thumbnail for the drop-queue preview panel. */
-export const VirusPlanetThumb = React.memo(({ size = 36 }: { size?: number }) => {
+export const VirusPlanetThumb = React.memo(({ size = 36, skinId = 'classic' }: { size?: number; skinId?: PlanetSkinId }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -210,6 +223,11 @@ export const VirusPlanetThumb = React.memo(({ size = 36 }: { size?: number }) =>
 
   return (
     <View style={{ width: size, height: size }}>
+      {skinId !== 'classic' ? (
+        <Animated.View style={{ width: size, height: size, transform: [{ rotate }] }}>
+          <Image source={VIRUS_SOURCES[skinId]} fadeDuration={0} resizeMode="contain" style={{ width: size, height: size }} />
+        </Animated.View>
+      ) : <>
       <Animated.View style={{ position: 'absolute', width: size, height: size, transform: [{ rotate }] }}>
         <Svg width={size} height={size}>
           {spikes.map((s, i) => (
@@ -231,6 +249,7 @@ export const VirusPlanetThumb = React.memo(({ size = 36 }: { size?: number }) =>
         <Circle cx={half} cy={half} r={coreR} fill="url(#vgt_core)" />
         <Circle cx={half - 2} cy={half - 2} r={coreR * 0.28} fill="rgba(255,255,255,0.2)" />
       </Svg>
+      </>}
     </View>
   );
 });
